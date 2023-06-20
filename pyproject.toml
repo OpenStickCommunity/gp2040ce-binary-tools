@@ -1,0 +1,14 @@
+[project]
+name = "openstickcommunity-binary-tools"
+version = "0"
+description = "Tools for working with GP2040-CE binary dumps."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Brian S. Stephan", email = "bss@incorporeal.org"},
+]
+requires-python = ">=3.8"
+dependencies = ["argparse", "protobuf"]
+
+[project.optional-dependencies]
+dev = ["flake8", "pip-tools"]
