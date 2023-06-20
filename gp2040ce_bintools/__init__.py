@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # parse flags that are common to many tools (e.g. adding paths for finding .proto files)
 core_parser = argparse.ArgumentParser(add_help=False)
 core_parser.add_argument('-v', '--version', action='version', version=f"%(prog)s {__version__}")
-core_parser.add_argument('--proto-files-path', type=pathlib.Path, default=list(), action='append',
+core_parser.add_argument('-P', '--proto-files-path', type=pathlib.Path, default=list(), action='append',
                          help="path to .proto files to read, including dependencies; you will likely need "
                               "to supply this twice, once for GP2040-CE's .proto files and once for nanopb's")
 args, _ = core_parser.parse_known_args()

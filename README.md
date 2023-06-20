@@ -36,9 +36,7 @@ from the main GP2040-CE project, e.g. pointing this tool at your clone of the co
 this would suffice for a working invocation (note: you do not need to compile the files yourself):
 
 ```
-% visualize-storage --proto-files-path=~/proj/GP2040-CE/proto \
---proto-files-path=~/proj/GP2040-CE/lib/nanopb/generator/proto \
-memory.bin
+% visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto memory.bin
 ```
 
 (In the future we will look into publishing complete packages that include the compiled `_pb2.py` files, so that you
@@ -47,7 +45,7 @@ don't need to provide them yourself.)
 Sample output:
 
 ```
-% visualize-storage --proto-files-path=~/proj/GP2040-CE/proto --proto-files-path=~/proj/GP2040-CE/lib/nanopb/generator/proto ~/proj/GP2040-CE/demo-memory.bin
+% visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto ~/proj/GP2040-CE/demo-memory.bin
 boardVersion: "v0.7.2"
 gamepadOptions {
   inputMode: INPUT_MODE_HID
