@@ -26,8 +26,7 @@ def get_config_pb2():
     except ModuleNotFoundError:
         if args.proto_files_path:
             # compile the proto files in realtime, leave them in this package
-            package_path = pathlib.Path(__file__).parent
-            logger.info("Generating Protobuf Python files into %s...", package_path)
+            logger.info("Invoking gRPC tool to compile config.proto...")
             return grpc.protos('config.proto')
 
         raise
