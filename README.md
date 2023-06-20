@@ -112,13 +112,8 @@ forcedSetupOptions {
 
 ### Dumping the storage section
 
-The storage section of a GP2040-CE board starts at `0x101FE000`. A current limitation of the **visualize-storage** tool
-is that it can only read the Protobuf serialized data, not the footer that is also used as part of the storage engine.
-As such, currently, the binary is expected to be truncated slightly. This will be improved to read the storage footer in
-the near future, but for now, know your `picotool` invocation will be slightly different.
-
-To dump your board's storage:
+The storage section of a GP2040-CE board is a reserved 8 KB starting at `0x101FE000`. To dump your board's storage:
 
 ```
-% picotool save -r 101FE000 101FFFF4 memory.bin
+% picotool save -r 101FE000 10200000 memory.bin
 ```
