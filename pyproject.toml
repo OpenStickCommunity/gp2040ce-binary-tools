@@ -1,6 +1,8 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+
 [project]
 name = "gp2040ce-binary-tools"
-version = "0"
 description = "Tools for working with GP2040-CE binary dumps."
 readme = "README.md"
 license = {text = "MIT"}
@@ -9,13 +11,17 @@ authors = [
 ]
 requires-python = ">=3.8"
 dependencies = ["grpcio-tools"]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = ["flake8", "flake8-blind-except", "flake8-builtins", "flake8-docstrings", "flake8-executable", "flake8-fixme",
-       "flake8-isort", "flake8-logging-format", "flake8-mutable", "flake8-pyproject", "pip-tools"]
+       "flake8-isort", "flake8-logging-format", "flake8-mutable", "flake8-pyproject", "pip-tools", "setuptools-scm"]
 
 [project.scripts]
 visualize-storage = "gp2040ce_bintools.storage:visualize"
 
 [tool.flake8]
 max-line-length = 120
+
+[tool.setuptools_scm]
+write_to = "gp2040ce_bintools/_version.py"

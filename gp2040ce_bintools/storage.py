@@ -24,7 +24,6 @@ def get_config(filename):
 def visualize():
     """Pretty print the contents of GP2040-CE's storage."""
     parser = argparse.ArgumentParser(
-        prog="visualize-storage",
         description="Read a the configuration storage section from a GP2040-CE board dump and print out its contents.",
         parents=[core_parser],
     )
