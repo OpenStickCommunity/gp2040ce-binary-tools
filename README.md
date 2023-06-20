@@ -1,2 +1,3 @@
-# binary-tools
-Tools for working with GP2040-CE binary dumps
+# OpenStickCommunity Binary Tools
+
+Tools for working with GP2040-CE binary dumps.
