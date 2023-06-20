@@ -2,6 +2,11 @@
 
 Tools for working with GP2040-CE binary dumps.
 
+## Dependencies
+
+Interacting with your board (e.g. getting dumps, etc.) requires [picotool](https://github.com/raspberrypi/picotool), and
+currently the expectation is that you can run it yourself before invoking these tools. That may change one day.
+
 ## Installation
 
 ```
