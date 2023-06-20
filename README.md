@@ -7,6 +7,8 @@ Tools for working with GP2040-CE binary dumps.
 ```
 % git clone [URL to this repository]
 % cd gp2040ce-binary-tools
+% python -m venv venv
+% source ./venv/bin/activate
 % pip install -e .
 ```
 

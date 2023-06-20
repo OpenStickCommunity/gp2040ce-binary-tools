@@ -1,20 +1,4 @@
-"""Interact with the protobuf config from a picotool flash dump of a GP2040-CE board.
-
-This is more manual than I'd like at the moment, but this demonstrates/documents the means
-to display the config on a board. It requires a checkout that matches the version of the
-firmware on the board (so that the protobuf messages match the flash, though protobuf
-tolerates differences well, so it'll probably work, just be misnamed or incomplete).
-
-Generating the Python proto code:
-[env setup]
-% protoc  ../../proto/* -I../../proto/ -I../../lib/nanopb/generator/proto --python_out=build
-
-Usage:
-[env setup]
-% picotool save -r 101FE000 101FFFF4 build/memory.bin   # 101FE000 = storage start, 101FFFF4 storage end - footer
-% export PYTHONPATH=../../lib/nanopb/generator/proto:build
-% python visualize.py
-"""
+"""Interact with the protobuf config from a picotool flash dump of a GP2040-CE board."""
 import argparse
 import pprint
 
@@ -44,7 +28,8 @@ def visualize():
         description="Read a the configuration storage section from a GP2040-CE board dump and print out its contents.",
         parents=[core_parser],
     )
-    parser.add_argument('filename', help=".bin file of a GP2040-CE board's storage section, bytes 101FE000-101FFFF4")
+    parser.add_argument('filename', help=".bin file of a GP2040-CE board's storage section, bytes 101FE000-101FFFF4 "
+                                         "(e.g. picotool save -r 101FE000 101FFFF4 memory.bin")
     args, _ = parser.parse_known_args()
 
     config = get_config(args.filename)
