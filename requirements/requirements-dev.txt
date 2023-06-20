@@ -43,6 +43,10 @@ isort==5.12.0
     # via flake8-isort
 mccabe==0.7.0
     # via flake8
+mypy==1.4.0
+    # via gp2040ce-binary-tools (pyproject.toml)
+mypy-extensions==1.0.0
+    # via mypy
 packaging==23.1
     # via
     #   build
@@ -67,9 +71,12 @@ tomli==2.0.1
     # via
     #   build
     #   flake8-pyproject
+    #   mypy
     #   setuptools-scm
 typing-extensions==4.6.3
-    # via setuptools-scm
+    # via
+    #   mypy
+    #   setuptools-scm
 wheel==0.40.0
     # via pip-tools
 
