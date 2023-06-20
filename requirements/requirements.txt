@@ -4,7 +4,12 @@
 #
 #    pip-compile --output-file=requirements/requirements.txt pyproject.toml
 #
-argparse==1.4.0
-    # via openstickcommunity-binary-tools (pyproject.toml)
+grpcio==1.54.2
+    # via grpcio-tools
+grpcio-tools==1.54.2
+    # via gp2040ce-binary-tools (pyproject.toml)
 protobuf==4.23.3
-    # via openstickcommunity-binary-tools (pyproject.toml)
+    # via grpcio-tools
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools
