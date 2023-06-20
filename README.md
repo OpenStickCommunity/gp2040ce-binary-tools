@@ -47,7 +47,7 @@ don't need to provide them yourself.)
 Sample output:
 
 ```
-% visualize-storage --proto-files-path=~/proj/GP2040-CE/proto --proto-files-path=~/proj/GP2040-CE/lib/nanopb/generator/proto ~/proj/GP2040-CE/BETTER-fn+4way+SMW+demo-memory.bin
+% visualize-storage --proto-files-path=~/proj/GP2040-CE/proto --proto-files-path=~/proj/GP2040-CE/lib/nanopb/generator/proto ~/proj/GP2040-CE/demo-memory.bin
 boardVersion: "v0.7.2"
 gamepadOptions {
   inputMode: INPUT_MODE_HID
