@@ -14,18 +14,25 @@ dependencies = ["grpcio-tools"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = ["decorator", "flake8", "flake8-blind-except", "flake8-builtins", "flake8-docstrings", "flake8-executable",
-       "flake8-fixme", "flake8-isort", "flake8-logging-format", "flake8-mutable", "flake8-pyproject", "mypy",
-       "pip-tools", "pytest", "setuptools-scm"]
+dev = ["bandit", "decorator", "flake8", "flake8-blind-except", "flake8-builtins", "flake8-docstrings",
+       "flake8-executable", "flake8-fixme", "flake8-isort", "flake8-logging-format", "flake8-mutable",
+       "flake8-pyproject", "mypy", "pip-tools", "pytest", "pytest-cov", "setuptools-scm", "tox"]
 
 [project.scripts]
 visualize-storage = "gp2040ce_bintools.storage:visualize"
 
 [tool.flake8]
+enable-extensions = "G,M"
+exclude = [".tox/", "venv/", "_version.py", "tests/test-files/"]
+extend-ignore = "T101"
+max-complexity = 10
 max-line-length = 120
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.pytest]
+python_files = ["*_tests.py", "tests.py", "test_*.py"]
 
 [tool.setuptools_scm]
 write_to = "gp2040ce_bintools/_version.py"

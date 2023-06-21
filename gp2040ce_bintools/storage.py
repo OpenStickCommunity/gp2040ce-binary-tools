@@ -10,6 +10,28 @@ FOOTER_SIZE = 12
 FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
 
 
+###############
+# LIB METHODS #
+###############
+
+
+def get_config(content: bytes) -> dict:
+    """Read the config from a GP2040-CE storage section.
+
+    Args:
+        content: bytes from a GP2040-CE board's storage section
+    Returns:
+        the parsed configuration
+    """
+    size, _, _ = get_config_footer(content)
+
+    config_pb2 = get_config_pb2()
+    config = config_pb2.Config()
+    config.ParseFromString(content[-(size + FOOTER_SIZE):-FOOTER_SIZE])
+    logger.debug("parsed: %s", config)
+    return config
+
+
 def get_config_footer(content: bytes) -> tuple[int, int, str]:
     """Confirm and retrieve the config footer from a series of bytes of GP2040-CE storage.
 
@@ -40,21 +62,9 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     return config_size, config_crc, config_magic
 
 
-def get_config(content: bytes) -> dict:
-    """Read the config from a GP2040-CE storage section.
-
-    Args:
-        content: bytes from a GP2040-CE board's storage section
-    Returns:
-        the parsed configuration
-    """
-    size, _, _ = get_config_footer(content)
-
-    config_pb2 = get_config_pb2()
-    config = config_pb2.Config()
-    config.ParseFromString(content[-(size+FOOTER_SIZE):-FOOTER_SIZE])
-    logger.debug("parsed: %s", config)
-    return config
+############
+# COMMANDS #
+############
 
 
 def visualize():
