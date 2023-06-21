@@ -14,9 +14,9 @@ dependencies = ["grpcio-tools"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = ["flake8", "flake8-blind-except", "flake8-builtins", "flake8-docstrings", "flake8-executable", "flake8-fixme",
-       "flake8-isort", "flake8-logging-format", "flake8-mutable", "flake8-pyproject", "mypy", "pip-tools", "pytest",
-       "setuptools-scm"]
+dev = ["decorator", "flake8", "flake8-blind-except", "flake8-builtins", "flake8-docstrings", "flake8-executable",
+       "flake8-fixme", "flake8-isort", "flake8-logging-format", "flake8-mutable", "flake8-pyproject", "mypy",
+       "pip-tools", "pytest", "setuptools-scm"]
 
 [project.scripts]
 visualize-storage = "gp2040ce_bintools.storage:visualize"
