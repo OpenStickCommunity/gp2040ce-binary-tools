@@ -50,9 +50,6 @@ def get_config_pb2():
     try:
         return importlib.import_module('config_pb2')
     except ModuleNotFoundError:
-        if args.proto_files_path:
-            # compile the proto files in realtime, leave them in this package
-            logger.info("Invoking gRPC tool to compile config.proto...")
-            return grpc.protos('config.proto')
-
-        raise
+        # compile the proto files in realtime, leave them in this package
+        logger.info("Invoking gRPC tool to compile config.proto...")
+        return grpc.protos('config.proto')
