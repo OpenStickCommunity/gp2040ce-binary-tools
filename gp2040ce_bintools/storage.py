@@ -72,6 +72,7 @@ def get_config_from_file(filename: str, whole_board: bool = False) -> dict:
 
     Args:
         filename: the filename of the file to open and read
+        whole_board: optional, if true, attempt to find the storage section from its normal location on a board
     Returns:
         the parsed configuration
     """

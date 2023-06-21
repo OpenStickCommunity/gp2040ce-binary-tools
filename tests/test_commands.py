@@ -15,3 +15,19 @@ def test_help_flag():
     result = run(['visualize-storage', '-h'], capture_output=True, encoding='utf8')
     assert 'usage: visualize-storage' in result.stdout
     assert 'Read the configuration section from a dump of a GP2040-CE board' in result.stdout
+
+
+def test_storage_dump_invocation():
+    """Test that a normal invocation against a dump works."""
+    result = run(['visualize-storage', '-P', 'tests/test-files/proto-files', 'tests/test-files/test-storage-area.bin'],
+                 capture_output=True, encoding='utf8')
+    assert 'boardVersion: "v0.7.2"' in result.stdout
+
+
+def test_debug_storage_dump_invocation():
+    """Test that a normal invocation against a dump works."""
+    result = run(['visualize-storage', '-d', '-P', 'tests/test-files/proto-files',
+                  'tests/test-files/test-storage-area.bin'],
+                 capture_output=True, encoding='utf8')
+    assert 'boardVersion: "v0.7.2"' in result.stdout
+    assert 'length of content to look for footer in: 8192' in result.stderr
