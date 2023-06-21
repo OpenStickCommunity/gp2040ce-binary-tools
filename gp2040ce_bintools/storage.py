@@ -6,6 +6,9 @@ from gp2040ce_bintools import core_parser, get_config_pb2
 
 logger = logging.getLogger(__name__)
 
+STORAGE_LOCATION = 0x1FE000
+STORAGE_SIZE = 8192
+
 FOOTER_SIZE = 12
 FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
 
@@ -43,10 +46,12 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
         ValueError: if the provided bytes are not a config footer
     """
     # last 12 bytes are the footer
+    logger.debug("length of content to look for footer in: %s", len(content))
     if len(content) < FOOTER_SIZE:
         raise ValueError("provided content is not large enough to have a config footer!")
 
     footer = content[-FOOTER_SIZE:]
+    logger.debug("suspected footer magic: %s", footer[-4:])
     if footer[-4:] != FOOTER_MAGIC:
         raise ValueError("content's magic is not as expected!")
 
@@ -62,6 +67,39 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     return config_size, config_crc, config_magic
 
 
+def get_config_from_file(filename: str, whole_board: bool = False) -> dict:
+    """Read the specified file (memory dump or whole board dump) and get back its config section.
+
+    Args:
+        filename: the filename of the file to open and read
+    Returns:
+        the parsed configuration
+    """
+    with open(filename, 'rb') as dump:
+        content = dump.read()
+
+    if whole_board:
+        return get_config(get_storage_section(content))
+    else:
+        return get_config(content)
+
+
+def get_storage_section(content: bytes) -> bytes:
+    """Pull out what should be the GP2040-CE storage section from a whole board dump.
+
+    Args:
+        content: bytes of a GP2040-CE whole board dump
+    Returns:
+        the presumed storage section from the binary
+    """
+    # a whole board must be at least as big as the known fences
+    logger.debug("length of content to look for storage in: %s", len(content))
+    if len(content) < STORAGE_LOCATION + STORAGE_SIZE:
+        raise ValueError("provided content is not large enough to have a storage section!")
+
+    logger.debug("returning bytes from %s to %s", hex(STORAGE_LOCATION), hex(STORAGE_LOCATION + STORAGE_SIZE))
+    return content[STORAGE_LOCATION:(STORAGE_LOCATION + STORAGE_SIZE)]
+
 ############
 # COMMANDS #
 ############
@@ -74,10 +112,8 @@ def visualize():
                     "its contents.",
         parents=[core_parser],
     )
-    parser.add_argument('filename', help=".bin file of a GP2040-CE board's storage section, bytes 101FE000-10200000")
+    parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
+    parser.add_argument('filename', help=".bin file of a GP2040-CE board's storage section, bytes 101FE000-10200000, "
+                                         "or of a GP2040-CE's whole board dump if --whole-board is specified")
     args, _ = parser.parse_known_args()
-    with open(args.filename, 'rb') as dump:
-        content = dump.read()
-
-    config = get_config(content)
-    print(config)
+    print(get_config_from_file(args.filename, whole_board=args.whole_board))

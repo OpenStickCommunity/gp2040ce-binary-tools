@@ -14,3 +14,13 @@ def storage_dump():
         content = file.read()
 
     yield content
+
+
+@pytest.fixture
+def whole_board_dump():
+    """Read in a test whole board dump file of a GP2040-CE board."""
+    filename = os.path.join(HERE, 'test-files', 'test-whole-board.bin')
+    with open(filename, 'rb') as file:
+        content = file.read()
+
+    yield content
