@@ -2,6 +2,9 @@
 import argparse
 import logging
 
+from google.protobuf.json_format import MessageToJson
+from google.protobuf.message import Message
+
 from gp2040ce_bintools import core_parser, get_config_pb2
 
 logger = logging.getLogger(__name__)
@@ -18,7 +21,7 @@ FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
 ###############
 
 
-def get_config(content: bytes) -> dict:
+def get_config(content: bytes) -> Message:
     """Read the config from a GP2040-CE storage section.
 
     Args:
@@ -67,7 +70,7 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     return config_size, config_crc, config_magic
 
 
-def get_config_from_file(filename: str, whole_board: bool = False) -> dict:
+def get_config_from_file(filename: str, whole_board: bool = False) -> Message:
     """Read the specified file (memory dump or whole board dump) and get back its config section.
 
     Args:
@@ -114,7 +117,12 @@ def visualize():
         parents=[core_parser],
     )
     parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
+    parser.add_argument('--json', action='store_true', help="print the config out as a JSON document")
     parser.add_argument('filename', help=".bin file of a GP2040-CE board's storage section, bytes 101FE000-10200000, "
                                          "or of a GP2040-CE's whole board dump if --whole-board is specified")
     args, _ = parser.parse_known_args()
-    print(get_config_from_file(args.filename, whole_board=args.whole_board))
+    config = get_config_from_file(args.filename, whole_board=args.whole_board)
+    if args.json:
+        print(MessageToJson(config))
+    else:
+        print(config)
