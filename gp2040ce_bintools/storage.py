@@ -16,9 +16,17 @@ FOOTER_SIZE = 12
 FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
 
 
-###############
-# LIB METHODS #
-###############
+#################
+# LIBRARY ITEMS #
+#################
+
+
+class ConfigLengthError(ValueError):
+    """Exception raised when a length sanity check fails."""
+
+
+class ConfigMagicError(ValueError):
+    """Exception raised when the config section does not have the magic value in its footer."""
 
 
 def get_config(content: bytes) -> Message:
@@ -46,17 +54,17 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     Returns:
         the discovered config size, config CRC, and magic from the config footer
     Raises:
-        ValueError: if the provided bytes are not a config footer
+        ConfigLengthError, ConfigMagicError: if the provided bytes are not a config footer
     """
     # last 12 bytes are the footer
     logger.debug("length of content to look for footer in: %s", len(content))
     if len(content) < FOOTER_SIZE:
-        raise ValueError("provided content is not large enough to have a config footer!")
+        raise ConfigLengthError("provided content is not large enough to have a config footer!")
 
     footer = content[-FOOTER_SIZE:]
     logger.debug("suspected footer magic: %s", footer[-4:])
     if footer[-4:] != FOOTER_MAGIC:
-        raise ValueError("content's magic is not as expected!")
+        raise ConfigMagicError("content's magic is not as expected!")
 
     config_size = int.from_bytes(reversed(footer[:4]), 'big')
     config_crc = int.from_bytes(reversed(footer[4:8]), 'big')
@@ -64,7 +72,7 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
 
     # one last sanity check
     if len(content) < config_size + FOOTER_SIZE:
-        raise ValueError("provided content is not large enough according to the config footer!")
+        raise ConfigLengthError("provided content is not large enough according to the config footer!")
 
     logger.debug("detected footer (size:%s, crc:%s, magic:%s", config_size, config_crc, config_magic)
     return config_size, config_crc, config_magic
@@ -95,11 +103,13 @@ def get_storage_section(content: bytes) -> bytes:
         content: bytes of a GP2040-CE whole board dump
     Returns:
         the presumed storage section from the binary
+    Raises:
+        ConfigLengthError: if the provided bytes don't appear to have a storage section
     """
     # a whole board must be at least as big as the known fences
     logger.debug("length of content to look for storage in: %s", len(content))
     if len(content) < STORAGE_LOCATION + STORAGE_SIZE:
-        raise ValueError("provided content is not large enough to have a storage section!")
+        raise ConfigLengthError("provided content is not large enough to have a storage section!")
 
     logger.debug("returning bytes from %s to %s", hex(STORAGE_LOCATION), hex(STORAGE_LOCATION + STORAGE_SIZE))
     return content[STORAGE_LOCATION:(STORAGE_LOCATION + STORAGE_SIZE)]
