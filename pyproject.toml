@@ -19,6 +19,7 @@ dev = ["bandit", "decorator", "flake8", "flake8-blind-except", "flake8-builtins"
        "flake8-pyproject", "mypy", "pip-tools", "pytest", "pytest-cov", "setuptools-scm", "tox"]
 
 [project.scripts]
+concatenate = "gp2040ce_bintools.builder:concatenate"
 visualize-storage = "gp2040ce_bintools.storage:visualize"
 
 [tool.flake8]

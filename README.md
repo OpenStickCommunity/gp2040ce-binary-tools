@@ -25,6 +25,22 @@ As above, plus also `pip install -Ur requirements/requirements-dev.txt` to get l
 
 ## Tools
 
+In all cases, online help can be retrieved by providing the `-h` or ``--help`` flags to the below programs.
+
+### concatenate
+
+**concatenate** combines a GP2040-CE firmware .bin file (such as from a fresh build) and a GP2040-CE board's storage
+section .bin, and produces a properly-offset .bin file suitable for flashing to a board. This may be useful to ensure
+the board is flashed with a particular configuration, for instances such as producing a binary to flash many boards with
+a particular configuration (specific customizations, etc.), or keeping documented backups of what you're testing with
+during development.
+
+Sample usage:
+
+```
+% concatenate build/GP2040-CE_foo_bar.bin storage-dump.bin new-firmware-with-config.bin
+```
+
 ### visualize-storage
 
 **visualize-storage** reads a dump of a GP2040-CE board's flash storage section, where the configuration lives, and
@@ -121,6 +137,7 @@ context. The storage section of a GP2040-CE board is a reserved 8 KB starting at
 ```
 
 And to dump your whole board:
+
 ```
 % picotool save -a whole-board.bin
 ```
