@@ -69,6 +69,7 @@ def test_get_config_from_file_storage_dump():
     config = storage.get_config_from_file(filename)
     assert config.boardVersion == 'v0.7.2'
     assert config.addonOptions.bootselButtonOptions.enabled is False
+    assert config.addonOptions.ps4Options.enabled is False
 
 
 @with_pb2s
