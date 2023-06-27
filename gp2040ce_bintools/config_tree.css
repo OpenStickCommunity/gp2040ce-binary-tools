@@ -1,0 +1,50 @@
+Tree {
+    padding: 1;
+}
+
+Button {
+    border: round gray;
+    content-align: center middle;
+    width: 100%;
+    height: 100%;
+    margin: 0 1;
+}
+
+EditScreen, MessageScreen {
+    align: center middle;
+}
+
+EditScreen Label {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+#edit-dialog {
+    grid-size: 2;
+    grid-rows: 1fr 3fr 1fr 2fr;
+    padding: 0 1;
+    width: 50%;
+    height: 50%;
+    border: tall gray 100%;
+}
+
+#message-dialog {
+    padding: 0 1;
+    grid-rows: 3fr 2fr;
+    width: 50%;
+    height: 50%;
+    border: tall gray 100%;
+}
+
+#field-name, #field-input, #input-errors {
+    column-span: 2;
+}
+
+#field-input {
+    border: solid white;
+}

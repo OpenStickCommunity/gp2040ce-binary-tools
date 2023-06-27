@@ -4,12 +4,37 @@
 #
 #    pip-compile --output-file=requirements/requirements.txt
 #
-grpcio==1.54.2
+grpcio==1.56.0
     # via grpcio-tools
-grpcio-tools==1.54.2
+grpcio-tools==1.56.0
     # via gp2040ce-binary-tools (pyproject.toml)
+importlib-metadata==6.7.0
+    # via textual
+linkify-it-py==2.0.2
+    # via markdown-it-py
+markdown-it-py[linkify,plugins]==2.2.0
+    # via
+    #   mdit-py-plugins
+    #   rich
+    #   textual
+mdit-py-plugins==0.4.0
+    # via markdown-it-py
+mdurl==0.1.2
+    # via markdown-it-py
 protobuf==4.23.3
     # via grpcio-tools
+pygments==2.15.1
+    # via rich
+rich==13.4.2
+    # via textual
+textual==0.28.1
+    # via gp2040ce-binary-tools (pyproject.toml)
+typing-extensions==4.6.3
+    # via textual
+uc-micro-py==1.0.2
+    # via linkify-it-py
+zipp==3.15.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

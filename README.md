@@ -23,6 +23,28 @@ At some point we may publish packages to e.g. pypi.
 
 As above, plus also `pip install -Ur requirements/requirements-dev.txt` to get linters and whatnot.
 
+## Config Editor
+
+[![asciicast](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo.svg)](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo)
+
+A terminal UI config editor, capable of viewing and editing existing configurations, can be launched via
+**edit-config**. It supports navigation both via the keyboard or the mouse.
+
+Simple usage:
+
+| Key(s)                | Action                                                 |
+|-----------------------|--------------------------------------------------------|
+| Up, Down              | Move up and down the config tree                       |
+| Left, Right           | Scroll the tree left and right (when content is long)  |
+| Space                 | Expand a tree node to show its children                |
+| Enter                 | Expand a tree node, or edit a leaf node (bools toggle) |
+| Tab (in edit popup)   | Cycle highlight between input field and buttons        |
+| Enter (in edit popup) | Choose dropdown option or activate button              |
+| S                     | Save the config to the opened file                     |
+| Q                     | Quit without saving                                    |
+
+A quick demonstration of the editor is available [on asciinema.org](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo).
+
 ## Tools
 
 In all cases, online help can be retrieved by providing the `-h` or ``--help`` flags to the below programs.

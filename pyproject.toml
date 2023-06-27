@@ -10,16 +10,18 @@ authors = [
     {name = "Brian S. Stephan", email = "bss@incorporeal.org"},
 ]
 requires-python = ">=3.9"
-dependencies = ["grpcio-tools"]
+dependencies = ["grpcio-tools", "textual"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = ["bandit", "decorator", "flake8", "flake8-blind-except", "flake8-builtins", "flake8-docstrings",
        "flake8-executable", "flake8-fixme", "flake8-isort", "flake8-logging-format", "flake8-mutable",
-       "flake8-pyproject", "mypy", "pip-tools", "pytest", "pytest-cov", "setuptools-scm", "tox"]
+       "flake8-pyproject", "mypy", "pip-tools", "pytest", "pytest-asyncio", "pytest-cov", "setuptools-scm",
+       "tox"]
 
 [project.scripts]
 concatenate = "gp2040ce_bintools.builder:concatenate"
+edit-config = "gp2040ce_bintools.gui:edit_config"
 visualize-storage = "gp2040ce_bintools.storage:visualize"
 
 [tool.flake8]
@@ -38,6 +40,14 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "google.protobuf.*"
 ignore_missing_imports = true
+
+# there's a lot of class inheritance and so on going on in textual that I haven't figured out
+# e.g. assigning Select or Input to the same variable is valid but not type-safe, bindings
+# can just exit but mypy thinks they should return coroutines... better just to disable it for
+# now until I can figure things out and learn more about doing proper type checking
+[[tool.mypy.overrides]]
+module = "gp2040ce_bintools.gui"
+ignore_errors = true
 
 [tool.pytest]
 python_files = ["*_tests.py", "tests.py", "test_*.py"]

@@ -59,21 +59,30 @@ gitdb==4.0.10
     # via gitpython
 gitpython==3.1.31
     # via bandit
-grpcio==1.54.2
+grpcio==1.56.0
     # via grpcio-tools
-grpcio-tools==1.54.2
+grpcio-tools==1.56.0
     # via gp2040ce-binary-tools (pyproject.toml)
+importlib-metadata==6.7.0
+    # via textual
 iniconfig==2.0.0
     # via pytest
 isort==5.12.0
     # via flake8-isort
-markdown-it-py==3.0.0
-    # via rich
+linkify-it-py==2.0.2
+    # via markdown-it-py
+markdown-it-py[linkify,plugins]==2.2.0
+    # via
+    #   mdit-py-plugins
+    #   rich
+    #   textual
 mccabe==0.7.0
     # via flake8
+mdit-py-plugins==0.4.0
+    # via markdown-it-py
 mdurl==0.1.2
     # via markdown-it-py
-mypy==1.4.0
+mypy==1.4.1
     # via gp2040ce-binary-tools (pyproject.toml)
 mypy-extensions==1.0.0
     # via mypy
@@ -88,7 +97,7 @@ pbr==5.11.1
     # via stevedore
 pip-tools==6.13.0
     # via gp2040ce-binary-tools (pyproject.toml)
-platformdirs==3.7.0
+platformdirs==3.8.0
     # via
     #   tox
     #   virtualenv
@@ -110,16 +119,21 @@ pyproject-api==1.5.2
     # via tox
 pyproject-hooks==1.0.0
     # via build
-pytest==7.3.2
+pytest==7.4.0
     # via
     #   gp2040ce-binary-tools (pyproject.toml)
+    #   pytest-asyncio
     #   pytest-cov
+pytest-asyncio==0.21.0
+    # via gp2040ce-binary-tools (pyproject.toml)
 pytest-cov==4.1.0
     # via gp2040ce-binary-tools (pyproject.toml)
 pyyaml==6.0
     # via bandit
 rich==13.4.2
-    # via bandit
+    # via
+    #   bandit
+    #   textual
 setuptools-scm==7.1.0
     # via gp2040ce-binary-tools (pyproject.toml)
 smmap==5.0.0
@@ -128,6 +142,8 @@ snowballstemmer==2.2.0
     # via pydocstyle
 stevedore==5.1.0
     # via bandit
+textual==0.28.1
+    # via gp2040ce-binary-tools (pyproject.toml)
 tomli==2.0.1
     # via
     #   build
@@ -145,10 +161,15 @@ typing-extensions==4.6.3
     # via
     #   mypy
     #   setuptools-scm
+    #   textual
+uc-micro-py==1.0.2
+    # via linkify-it-py
 virtualenv==20.23.1
     # via tox
 wheel==0.40.0
     # via pip-tools
+zipp==3.15.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
