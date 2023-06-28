@@ -1,5 +1,6 @@
 """Interact with the protobuf config from a picotool flash dump of a GP2040-CE board."""
 import argparse
+import binascii
 import logging
 
 from google.protobuf.json_format import MessageToJson
@@ -19,6 +20,10 @@ FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
 #################
 # LIBRARY ITEMS #
 #################
+
+
+class ConfigCrcError(ValueError):
+    """Exception raised when the CRC checksum in the footer doesn't match the actual content's."""
 
 
 class ConfigLengthError(ValueError):
@@ -52,7 +57,7 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     Args:
         content: bytes from a GP2040-CE board's storage section
     Returns:
-        the discovered config size, config CRC, and magic from the config footer
+        the discovered config size, config CRC checksum, and magic from the config footer
     Raises:
         ConfigLengthError, ConfigMagicError: if the provided bytes are not a config footer
     """
@@ -70,9 +75,14 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     config_crc = int.from_bytes(reversed(footer[4:8]), 'big')
     config_magic = f'0x{footer[8:12].hex()}'
 
-    # one last sanity check
+    # more sanity checks
     if len(content) < config_size + FOOTER_SIZE:
         raise ConfigLengthError("provided content is not large enough according to the config footer!")
+
+    content_crc = binascii.crc32(content[-(config_size + 12):-12])
+    if config_crc != content_crc:
+        raise ConfigCrcError(f"provided content CRC checksum {content_crc} does not match footer's expected CRC "
+                             f"checksum {config_crc}!")
 
     logger.debug("detected footer (size:%s, crc:%s, magic:%s", config_size, config_crc, config_magic)
     return config_size, config_crc, config_magic
