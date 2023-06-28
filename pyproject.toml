@@ -35,6 +35,10 @@ line_length = 120
 [tool.mypy]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "google.protobuf.*"
+ignore_missing_imports = true
+
 [tool.pytest]
 python_files = ["*_tests.py", "tests.py", "test_*.py"]
 
