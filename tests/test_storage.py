@@ -95,3 +95,15 @@ def test_config_from_whole_board_parses(whole_board_dump):
     config = storage.get_config(storage.get_storage_section(whole_board_dump))
     assert config.boardVersion == 'v0.7.2'
     assert config.hotkeyOptions.hotkeyF1Up.dpadMask == 1
+
+
+def test_pad_config_to_storage(config_binary):
+    """Test that we can properly pad a config section to the correct storage section size."""
+    storage_section = storage.pad_config_to_storage_size(config_binary)
+    assert len(storage_section) == 8192
+
+
+def test_pad_config_to_storage_raises(config_binary):
+    """Test that we raise an exception if the config is bigger than the storage section."""
+    with pytest.raises(storage.ConfigLengthError):
+        _ = storage.pad_config_to_storage_size(config_binary * 5)

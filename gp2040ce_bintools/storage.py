@@ -114,6 +114,25 @@ def get_storage_section(content: bytes) -> bytes:
     logger.debug("returning bytes from %s to %s", hex(STORAGE_LOCATION), hex(STORAGE_LOCATION + STORAGE_SIZE))
     return content[STORAGE_LOCATION:(STORAGE_LOCATION + STORAGE_SIZE)]
 
+
+def pad_config_to_storage_size(config: bytes) -> bytearray:
+    """Provide a copy of the config (with footer) padded with zero bytes to be the proper storage section size.
+
+    Args:
+        firmware: the config section binary to process
+    Returns:
+        the resulting padded binary as a bytearray
+    Raises:
+        FirmwareLengthError: if the  is larger than the storage location
+    """
+    bytes_to_pad = STORAGE_SIZE - len(config)
+    logger.debug("config is length %s, padding %s bytes", len(config), bytes_to_pad)
+    if bytes_to_pad < 0:
+        raise ConfigLengthError(f"provided config binary is larger than the allowed storage of "
+                                f"storage at {STORAGE_SIZE} bytes!")
+
+    return bytearray(b'\x00' * bytes_to_pad) + bytearray(config)
+
 ############
 # COMMANDS #
 ############

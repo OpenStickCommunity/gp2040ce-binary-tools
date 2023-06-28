@@ -7,6 +7,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.fixture
+def config_binary():
+    """Read in a test GP2040-CE configuration, Protobuf serialized binary form with footer."""
+    filename = os.path.join(HERE, 'test-files', 'test-config.bin')
+    with open(filename, 'rb') as file:
+        content = file.read()
+
+    yield content
+
+
+@pytest.fixture
 def firmware_binary():
     """Read in a test GP2040-CE firmware binary file."""
     filename = os.path.join(HERE, 'test-files', 'test-firmware.bin')

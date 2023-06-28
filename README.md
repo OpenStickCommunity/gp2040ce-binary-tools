@@ -30,10 +30,10 @@ In all cases, online help can be retrieved by providing the `-h` or ``--help`` f
 ### concatenate
 
 **concatenate** combines a GP2040-CE firmware .bin file (such as from a fresh build) and a GP2040-CE board's storage
-section .bin, and produces a properly-offset .bin file suitable for flashing to a board. This may be useful to ensure
-the board is flashed with a particular configuration, for instances such as producing a binary to flash many boards with
-a particular configuration (specific customizations, etc.), or keeping documented backups of what you're testing with
-during development.
+section .bin or config (with footer) .bin, and produces a properly-offset .bin file suitable for flashing to a board.
+This may be useful to ensure the board is flashed with a particular configuration, for instances such as producing a
+binary to flash many boards with a particular configuration (specific customizations, etc.), or keeping documented
+backups of what you're testing with during development.
 
 Sample usage:
 
