@@ -64,7 +64,7 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     # last 12 bytes are the footer
     logger.debug("length of content to look for footer in: %s", len(content))
     if len(content) < FOOTER_SIZE:
-        raise ConfigLengthError("provided content is not large enough to have a config footer!")
+        raise ConfigLengthError(f"provided content ({len(content)} bytes) is not large enough to have a config footer!")
 
     footer = content[-FOOTER_SIZE:]
     logger.debug("suspected footer magic: %s", footer[-4:])
@@ -77,7 +77,8 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
 
     # more sanity checks
     if len(content) < config_size + FOOTER_SIZE:
-        raise ConfigLengthError("provided content is not large enough according to the config footer!")
+        raise ConfigLengthError(f"provided content ({len(content)} bytes) is not large enough according to the "
+                                f"config footer!")
 
     content_crc = binascii.crc32(content[-(config_size + 12):-12])
     if config_crc != content_crc:
