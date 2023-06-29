@@ -105,6 +105,26 @@ def test_config_from_whole_board_parses(whole_board_dump):
     assert config.hotkeyOptions.hotkeyF1Up.dpadMask == 1
 
 
+@with_pb2s
+def test_serialize_config_with_footer(storage_dump):
+    """Test that reserializing a read in config matches the original."""
+    config = storage.get_config(storage_dump)
+    assert config.boardVersion == 'v0.7.2'
+    reserialized = storage.serialize_config_with_footer(config)
+    assert storage_dump[-12:] == reserialized[-12:]
+
+
+@with_pb2s
+def test_serialize_modified_config_with_footer(storage_dump):
+    """Test that we can serialize a modified config."""
+    config = storage.get_config(storage_dump)
+    config.boardVersion == 'v0.7.2-cool'
+    serialized = storage.serialize_config_with_footer(config)
+    config_size, _, _ = storage.get_config_footer(serialized)
+    assert config_size == config.ByteSize()
+    assert len(serialized) == config_size + 12
+
+
 def test_pad_config_to_storage(config_binary):
     """Test that we can properly pad a config section to the correct storage section size."""
     storage_section = storage.pad_config_to_storage_size(config_binary)

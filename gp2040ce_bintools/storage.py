@@ -144,6 +144,17 @@ def pad_config_to_storage_size(config: bytes) -> bytearray:
 
     return bytearray(b'\x00' * bytes_to_pad) + bytearray(config)
 
+
+def serialize_config_with_footer(config: Message) -> bytearray:
+    """Given a config, generate the config footer as expected by GP2040-CE."""
+    config_bytes = config.SerializeToString()
+    config_size = bytes(reversed(config.ByteSize().to_bytes(4, 'big')))
+    config_crc = bytes(reversed(binascii.crc32(config_bytes).to_bytes(4, 'big')))
+    config_magic = FOOTER_MAGIC
+
+    return config_bytes + config_size + config_crc + config_magic
+
+
 ############
 # COMMANDS #
 ############
