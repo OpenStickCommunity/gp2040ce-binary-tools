@@ -59,7 +59,7 @@ def test_config_footer_bad_magic(storage_dump):
 def test_config_footer_bad_crc(storage_dump):
     """Test that a config footer isn't detected if the CRC checksums don't match."""
     corrupt = bytearray(storage_dump)
-    corrupt[-50:-40] = bytearray(0*10)
+    corrupt[-50:-40] = bytearray(0 * 10)
     with pytest.raises(storage.ConfigCrcError):
         _, _, _ = storage.get_config_footer(corrupt)
 

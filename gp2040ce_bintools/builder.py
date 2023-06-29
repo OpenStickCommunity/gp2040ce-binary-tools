@@ -1,9 +1,13 @@
 """Build binary files for a GP2040-CE board."""
 import argparse
+import copy
 import logging
 
+from google.protobuf.message import Message
+
 from gp2040ce_bintools import core_parser
-from gp2040ce_bintools.storage import STORAGE_LOCATION, pad_config_to_storage_size
+from gp2040ce_bintools.storage import (STORAGE_LOCATION, STORAGE_SIZE, pad_config_to_storage_size,
+                                       serialize_config_with_footer)
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +64,52 @@ def pad_firmware_up_to_storage(firmware: bytes) -> bytearray:
                                   f"storage at {STORAGE_LOCATION}!")
 
     return bytearray(firmware) + bytearray(b'\x00' * bytes_to_pad)
+
+
+def replace_config_in_binary(board_binary: bytearray, config_binary: bytearray) -> bytearray:
+    """Given (presumed) whole board and config binaries, combine the two to one, with proper offsets for GP2040-CE.
+
+    Whatever is in the board binary is not sanity checked, and is overwritten. If it is
+    too small to be a board dump, it is nonetheless expanded and overwritten to fit the
+    proper size.
+
+    Args:
+        board_binary: binary data of a whole board dump from a GP2040-CE board
+        config_binary: binary data of board config + footer, possibly padded to be a full storage section
+    Returns:
+        the resulting correctly-offset binary suitable for a GP2040-CE board
+    """
+    if len(board_binary) < STORAGE_LOCATION + STORAGE_SIZE:
+        # this is functionally the same, since this doesn't sanity check the firmware
+        return combine_firmware_and_config(board_binary, config_binary)
+    else:
+        new_binary = bytearray(copy.copy(board_binary))
+        new_binary[STORAGE_LOCATION:(STORAGE_LOCATION + STORAGE_SIZE)] = pad_config_to_storage_size(config_binary)
+        return new_binary
+
+
+def write_new_config_to_filename(config: Message, filename: str, inject: bool = False) -> None:
+    """Serialize the provided config to the specified file.
+
+    The file may be replaced, creating a configuration section-only binary, or appended to
+    an existing file that is grown to place the config section in the proper location.
+
+    Args:
+        config: the Protobuf configuration to write to disk
+        filename: the filename to write the serialized configuration to
+        inject: if True, the file is read in and has its storage section replaced; if False,
+                the whole file is replaced
+    """
+    if inject:
+        config_binary = serialize_config_with_footer(config)
+        with open(filename, 'rb') as file:
+            existing_binary = file.read()
+        binary = replace_config_in_binary(bytearray(existing_binary), config_binary)
+    else:
+        binary = serialize_config_with_footer(config)
+
+    with open(filename, 'wb') as file:
+        file.write(binary)
 
 
 ############
