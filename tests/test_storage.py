@@ -90,6 +90,21 @@ def test_get_config_from_file_whole_board_dump():
 
 
 @with_pb2s
+def test_get_config_from_file_file_not_fonud_ok():
+    """If we allow opening a file that doesn't exist (e.g. for the editor), check we get an empty config."""
+    filename = os.path.join(HERE, 'test-files', 'nope.bin')
+    config = storage.get_config_from_file(filename, allow_no_file=True)
+    assert config.boardVersion == ''
+
+
+def test_get_config_from_file_file_not_fonud_raise():
+    """If we don't allow opening a file that doesn't exist (e.g. for the editor), check we get an error."""
+    filename = os.path.join(HERE, 'test-files', 'nope.bin')
+    with pytest.raises(FileNotFoundError):
+        _ = storage.get_config_from_file(filename)
+
+
+@with_pb2s
 def test_config_parses(storage_dump):
     """Test that we need the config_pb2 to exist/be compiled for reading the config to work."""
     config = storage.get_config(storage_dump)

@@ -89,17 +89,24 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     return config_size, config_crc, config_magic
 
 
-def get_config_from_file(filename: str, whole_board: bool = False) -> Message:
+def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file: bool = False) -> Message:
     """Read the specified file (memory dump or whole board dump) and get back its config section.
 
     Args:
         filename: the filename of the file to open and read
         whole_board: optional, if true, attempt to find the storage section from its normal location on a board
+        allow_no_file: if true, attempting to open a nonexistent file returns an empty config, else it errors
     Returns:
         the parsed configuration
     """
-    with open(filename, 'rb') as dump:
-        content = dump.read()
+    try:
+        with open(filename, 'rb') as dump:
+            content = dump.read()
+    except FileNotFoundError:
+        if not allow_no_file:
+            raise
+        config_pb2 = get_config_pb2()
+        return config_pb2.Config()
 
     if whole_board:
         return get_config(get_storage_section(content))
