@@ -20,9 +20,10 @@ async def test_simple_tree_building():
     async with app.run_test() as pilot:
         check_node = pilot.app.query_one(Tree).root.children[2]
         assert "boardVersion = 'v0.7.2'" in check_node.label
-        parent_config, field_descriptor = check_node.data
+        parent_config, field_descriptor, field_value = check_node.data
         assert parent_config == pilot.app.config
         assert field_descriptor == pilot.app.config.DESCRIPTOR.fields_by_name['boardVersion']
+        assert field_value == 'v0.7.2'
 
 
 @pytest.mark.asyncio

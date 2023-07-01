@@ -29,7 +29,7 @@ class EditScreen(ModalScreen):
         """Save the config field info for later usage."""
         logger.debug("constructing EditScreen for %s", node.label)
         self.node = node
-        parent_config, field_descriptor = node.data
+        parent_config, field_descriptor, _ = node.data
         self.parent_config = parent_config
         self.field_descriptor = field_descriptor
         self.field_value = field_value
@@ -151,7 +151,7 @@ class ConfigEditor(App):
         self.config = get_config_from_file(self.config_filename, whole_board=self.whole_board)
         tree = self.query_one(Tree)
 
-        tree.root.data = (None, self.config.DESCRIPTOR)
+        tree.root.data = (None, self.config.DESCRIPTOR, self.config)
         tree.root.set_label(self.config_filename)
         for field_descriptor, field_value in sorted(self.config.ListFields(), key=lambda f: f[0].name):
             ConfigEditor._add_node(tree.root, self.config, field_descriptor, field_value)
@@ -183,7 +183,7 @@ class ConfigEditor(App):
         """
         # all nodes relate to their parent and retain info about themselves
         this_node = parent_node.add("")
-        this_node.data = (parent_config, field_descriptor)
+        this_node.data = (parent_config, field_descriptor, field_value)
         this_node.set_label(pb_field_to_node_label(field_descriptor, field_value))
 
         if field_descriptor.type == descriptor.FieldDescriptor.TYPE_MESSAGE:
@@ -208,7 +208,7 @@ class ConfigEditor(App):
 
     def _modify_node(self, node: TreeNode) -> None:
         """Modify the selected node by context of what type of config item it is."""
-        parent_config, field_descriptor = node.data
+        parent_config, field_descriptor, _ = node.data
 
         # don't do anything special with selecting expandable nodes, since the framework already expands them
         if (isinstance(field_descriptor, descriptor.Descriptor) or
@@ -222,7 +222,7 @@ class ConfigEditor(App):
             field_value = not field_value
             logger.debug("...to %s", field_value)
             setattr(parent_config, field_descriptor.name, field_value)
-            node.data = (parent_config, field_descriptor)
+            node.data = (parent_config, field_descriptor, field_value)
             node.set_label(pb_field_to_node_label(field_descriptor, field_value))
             logger.debug(self.config)
         else:
