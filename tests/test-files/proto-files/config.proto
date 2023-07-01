@@ -13,6 +13,7 @@ message GamepadOptions
 	optional bool switchTpShareForDs4 = 6;
 	optional bool lockHotkeys = 7;
 	optional bool fourWayMode = 8;
+	optional uint32 profileNumber = 9;
 }
 
 message KeyboardMapping
@@ -41,18 +42,24 @@ message HotkeyEntry
 {
 	optional uint32 dpadMask = 1;
 	optional GamepadHotkey action = 2;
+	optional uint32 buttonsMask = 3;
+	optional uint32 auxMask = 4;
 }
 
 message HotkeyOptions
 {
-	optional HotkeyEntry hotkeyF1Up = 1;
-	optional HotkeyEntry hotkeyF1Down = 2;
-	optional HotkeyEntry hotkeyF1Left = 3;
-	optional HotkeyEntry hotkeyF1Right = 4;
-	optional HotkeyEntry hotkeyF2Up = 5;
-	optional HotkeyEntry hotkeyF2Down = 6;
-	optional HotkeyEntry hotkeyF2Left = 7;
-	optional HotkeyEntry hotkeyF2Right = 8;
+	optional HotkeyEntry hotkey01 = 1;
+	optional HotkeyEntry hotkey02 = 2;
+	optional HotkeyEntry hotkey03 = 3;
+	optional HotkeyEntry hotkey04 = 4;
+	optional HotkeyEntry hotkey05 = 5;
+	optional HotkeyEntry hotkey06 = 6;
+	optional HotkeyEntry hotkey07 = 7;
+	optional HotkeyEntry hotkey08 = 8;
+	optional HotkeyEntry hotkey09 = 9;
+	optional HotkeyEntry hotkey10 = 10;
+	optional HotkeyEntry hotkey11 = 11;
+	optional HotkeyEntry hotkey12 = 12;
 }
 
 message ForcedSetupOptions
@@ -106,6 +113,26 @@ message PinMappings
 	optional int32 pinButtonR3 = 16;
 	optional int32 pinButtonA1 = 17;
 	optional int32 pinButtonA2 = 18;
+	optional int32 pinButtonFn = 19;
+}
+
+
+message AlternativePinMappings
+{
+	optional int32 pinButtonB1 = 1;
+	optional int32 pinButtonB2 = 2;
+	optional int32 pinButtonB3 = 3;
+	optional int32 pinButtonB4 = 4;
+	optional int32 pinButtonL1 = 5;
+	optional int32 pinButtonR1 = 6;
+	optional int32 pinButtonL2 = 7;
+	optional int32 pinButtonR2 = 8;
+}
+
+
+message ProfileOptions
+{
+	repeated AlternativePinMappings alternativePinMappings = 1 [(nanopb).max_count = 3];
 }
 
 message DisplayOptions
@@ -325,6 +352,25 @@ message DualDirectionalOptions
 	optional bool fourWayMode = 8;
 }
 
+message TiltOptions
+{
+	optional bool enabled = 1;
+
+	optional int32 tilt1Pin = 2;
+	optional int32 tilt2Pin = 3;
+	optional int32 tiltFunctionPin = 4;
+	optional int32 tiltLeftAnalogUpPin = 5;
+	optional int32 tiltLeftAnalogDownPin = 6;
+	optional int32 tiltLeftAnalogLeftPin = 7;
+	optional int32 tiltLeftAnalogRightPin = 8;
+	optional int32 tiltRightAnalogUpPin = 9;
+	optional int32 tiltRightAnalogDownPin = 10;
+	optional int32 tiltRightAnalogLeftPin = 11;
+	optional int32 tiltRightAnalogRightPin = 12;
+
+	optional SOCDMode tiltSOCDMode = 13;
+}
+
 message BuzzerOptions
 {
 	optional bool enabled = 1;
@@ -380,6 +426,13 @@ message SNESOptions
 	optional int32 dataPin = 4;
 }
 
+message KeyboardHostOptions
+{
+	optional bool enabled = 1;
+	optional int32 pinDplus = 2;
+	optional KeyboardMapping mapping = 3;
+}
+
 message FocusModeOptions
 {
 	optional bool enabled = 1;
@@ -408,6 +461,8 @@ message AddonOptions
 	optional SOCDSliderOptions socdSliderOptions = 14;
 	optional SNESOptions snesOptions = 15;
 	optional FocusModeOptions focusModeOptions = 16;
+	optional KeyboardHostOptions keyboardHostOptions = 17;
+	optional TiltOptions tiltOptions = 18;
 }
 
 message Config
@@ -423,4 +478,5 @@ message Config
 	optional AnimationOptions_Proto animationOptions = 8;
 	optional AddonOptions addonOptions = 9;
 	optional ForcedSetupOptions forcedSetupOptions = 10;
+	optional ProfileOptions profileOptions = 11;
 }

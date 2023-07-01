@@ -109,7 +109,7 @@ def test_config_parses(storage_dump):
     """Test that we need the config_pb2 to exist/be compiled for reading the config to work."""
     config = storage.get_config(storage_dump)
     assert config.boardVersion == 'v0.7.2'
-    assert config.hotkeyOptions.hotkeyF1Up.dpadMask == 1
+    assert config.hotkeyOptions.hotkey01.dpadMask == 1
 
 
 @with_pb2s
@@ -117,7 +117,7 @@ def test_config_from_whole_board_parses(whole_board_dump):
     """Test that we can read in a whole board and still find the config section."""
     config = storage.get_config(storage.get_storage_section(whole_board_dump))
     assert config.boardVersion == 'v0.7.2'
-    assert config.hotkeyOptions.hotkeyF1Up.dpadMask == 1
+    assert config.hotkeyOptions.hotkey01.dpadMask == 1
 
 
 @with_pb2s
