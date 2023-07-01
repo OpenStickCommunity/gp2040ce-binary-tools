@@ -3,17 +3,29 @@ import os
 import sys
 
 import pytest
+from decorator import decorator
 from textual.widgets import Tree
 
 from gp2040ce_bintools.gui import ConfigEditor
 from gp2040ce_bintools.storage import get_config_from_file
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-proto_path = os.path.join(HERE, 'test-files', 'pb2-files')
-sys.path.append(proto_path)
+
+
+@decorator
+async def with_pb2s(test, *args, **kwargs):
+    """Wrap a test with precompiled pb2 files on the path."""
+    proto_path = os.path.join(HERE, 'test-files', 'pb2-files')
+    sys.path.append(proto_path)
+
+    await test(*args, **kwargs)
+
+    sys.path.pop()
+    del sys.modules['config_pb2']
 
 
 @pytest.mark.asyncio
+@with_pb2s
 async def test_simple_tree_building():
     """Test some basics of the config tree being built."""
     app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
@@ -24,9 +36,11 @@ async def test_simple_tree_building():
         assert parent_config == pilot.app.config
         assert field_descriptor == pilot.app.config.DESCRIPTOR.fields_by_name['boardVersion']
         assert field_value == 'v0.7.2'
+        app.exit()
 
 
 @pytest.mark.asyncio
+@with_pb2s
 async def test_simple_toggle():
     """Test that we can navigate a bit and toggle a bool."""
     app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
@@ -41,6 +55,7 @@ async def test_simple_toggle():
 
 
 @pytest.mark.asyncio
+@with_pb2s
 async def test_simple_edit_via_input_field():
     """Test that we can change an int via UI and see it reflected in the config."""
     app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
@@ -64,6 +79,7 @@ async def test_simple_edit_via_input_field():
 
 
 @pytest.mark.asyncio
+@with_pb2s
 async def test_simple_edit_via_input_field_enum():
     """Test that we can change an enum via the UI and see it reflected in the config."""
     app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
@@ -87,6 +103,7 @@ async def test_simple_edit_via_input_field_enum():
 
 
 @pytest.mark.asyncio
+@with_pb2s
 async def test_simple_edit_via_input_field_string():
     """Test that we can change a string via the UI and see it reflected in the config."""
     app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
@@ -95,8 +112,6 @@ async def test_simple_edit_via_input_field_string():
         version_node = tree.root.children[2]
         assert pilot.app.config.boardVersion == 'v0.7.2'
 
-        # tree.root.expand_all()
-        # await pilot.wait_for_scheduled_animations()
         tree.select_node(version_node)
         tree.action_select_cursor()
         await pilot.wait_for_scheduled_animations()
@@ -109,6 +124,38 @@ async def test_simple_edit_via_input_field_string():
 
 
 @pytest.mark.asyncio
+@with_pb2s
+async def test_add_node_to_repeated():
+    """Test that we can navigate to an empty repeated and add a node."""
+    app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
+    async with app.run_test() as pilot:
+        tree = pilot.app.query_one(Tree)
+        profile_node = tree.root.children[10]
+        altpinmappings_node = profile_node.children[0]
+
+        tree.root.expand_all()
+        await pilot.wait_for_scheduled_animations()
+        tree.select_node(altpinmappings_node)
+        await pilot.press('a')
+        newpinmappings_node = altpinmappings_node.children[0]
+        newpinmappings_node.expand()
+        await pilot.wait_for_scheduled_animations()
+        tree.select_node(newpinmappings_node)
+        b4_node = newpinmappings_node.children[3]
+        tree.select_node(b4_node)
+        tree.action_select_cursor()
+        await pilot.wait_for_scheduled_animations()
+        await pilot.click('Input#field-input')
+        await pilot.wait_for_scheduled_animations()
+        await pilot.press('backspace', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', '5')
+        await pilot.wait_for_scheduled_animations()
+        await pilot.click('Button#save-button')
+
+        assert pilot.app.config.profileOptions.alternativePinMappings[0].pinButtonB4 == 5
+
+
+@pytest.mark.asyncio
+@with_pb2s
 async def test_save(config_binary, tmp_path):
     """Test that the tree builds and things are kind of where they should be."""
     new_filename = os.path.join(tmp_path, 'config-copy.bin')

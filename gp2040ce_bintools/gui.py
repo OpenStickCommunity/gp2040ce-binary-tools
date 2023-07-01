@@ -121,6 +121,7 @@ class ConfigEditor(App):
     """Display the GP2040-CE configuration as a tree."""
 
     BINDINGS = [
+        ('a', 'add_node', "Add Node"),
         ('s', 'save', "Save Config"),
         ('q', 'quit', "Quit"),
     ]
@@ -153,13 +154,49 @@ class ConfigEditor(App):
 
         tree.root.data = (None, self.config.DESCRIPTOR, self.config)
         tree.root.set_label(self.config_filename)
+        missing_fields = [f for f in self.config.DESCRIPTOR.fields
+                          if f not in [fp for fp, vp in self.config.ListFields()]]
         for field_descriptor, field_value in sorted(self.config.ListFields(), key=lambda f: f[0].name):
-            ConfigEditor._add_node(tree.root, self.config, field_descriptor, field_value)
+            child_is_message = ConfigEditor._descriptor_is_message(field_descriptor)
+            ConfigEditor._add_node(tree.root, self.config, field_descriptor, field_value,
+                                   value_is_config=child_is_message)
+        for child_field_descriptor in sorted(missing_fields, key=lambda f: f.name):
+            child_is_message = ConfigEditor._descriptor_is_message(field_descriptor)
+            ConfigEditor._add_node(tree.root, self.config, child_field_descriptor,
+                                   getattr(self.config, child_field_descriptor.name),
+                                   value_is_config=child_is_message)
         tree.root.expand()
 
     def on_tree_node_selected(self, node_event: Tree.NodeSelected) -> None:
         """Take the appropriate action for this type of node."""
         self._modify_node(node_event.node)
+
+    def action_add_node(self) -> None:
+        """Add a node to the tree item, if allowed by the tree and config section."""
+        tree = self.query_one(Tree)
+        current_node = tree.cursor_node
+
+        if not current_node or not current_node.allow_expand:
+            logger.debug("no node selected, or it does not allow expansion")
+            return
+
+        parent_config, field_descriptor, field_value = current_node.data
+        if not parent_config:
+            logger.debug("adding to the root is unsupported!")
+            return
+
+        if field_descriptor.type == descriptor.FieldDescriptor.TYPE_MESSAGE:
+            config = field_value
+        else:
+            config = getattr(parent_config, field_descriptor.name)
+        logger.debug("config: %s", config)
+        if hasattr(config, 'add'):
+            field_value = config.add()
+            actual_field_descriptor = parent_config.DESCRIPTOR.fields_by_name[field_descriptor.name]
+            logger.debug("adding new node %s", field_value.DESCRIPTOR.name)
+            ConfigEditor._add_node(current_node, config, actual_field_descriptor, field_value,
+                                   value_is_config=True)
+            current_node.expand()
 
     def action_save(self) -> None:
         """Save the configuration."""
@@ -172,7 +209,8 @@ class ConfigEditor(App):
 
     @staticmethod
     def _add_node(parent_node: TreeNode, parent_config: Message,
-                  field_descriptor: descriptor.FieldDescriptor, field_value: object) -> None:
+                  field_descriptor: descriptor.FieldDescriptor, field_value: object,
+                  value_is_config: bool = False, uninitialized: bool = False) -> None:
         """Add a node to the overall tree, recursively.
 
         Args:
@@ -180,31 +218,61 @@ class ConfigEditor(App):
             parent_config: the Config object parent. parent_config + field_descriptor.name = this node
             field_descriptor: descriptor for the protobuf field
             field_value: data to add to the parent node as new node(s)
+            value_is_config: get the config from the value rather than deriving it (important for repeated)
+            uninitialized: this node's data is from the spec and not the actual config, handle with care
         """
         # all nodes relate to their parent and retain info about themselves
         this_node = parent_node.add("")
+        if uninitialized and 'google._upb._message.RepeatedCompositeContainer' in str(type(field_value)):
+            # python segfaults if I refer to/retain its actual, presumably uninitialized in C, value
+            logger.warning("PROBLEM: %s %s", type(field_value), field_value)
+            # WORKAROUND  BEGINS HERE
+            if not field_value:
+                x = field_value.add()
+                field_value.remove(x)
+            # WORKAROUND ENDS HERE
         this_node.data = (parent_config, field_descriptor, field_value)
-        this_node.set_label(pb_field_to_node_label(field_descriptor, field_value))
 
-        if field_descriptor.type == descriptor.FieldDescriptor.TYPE_MESSAGE:
-            this_config = getattr(parent_config, field_descriptor.name)
+        if uninitialized:
+            this_node.set_label(Text.from_markup("[red][b]NEW:[/b][/red] ") +
+                                pb_field_to_node_label(field_descriptor, field_value))
+        else:
+            this_node.set_label(pb_field_to_node_label(field_descriptor, field_value))
+
+        if ConfigEditor._descriptor_is_message(field_descriptor):
+            if value_is_config:
+                this_config = field_value
+            else:
+                this_config = getattr(parent_config, field_descriptor.name)
+
             if hasattr(field_value, 'add'):
                 # support repeated
                 for child in field_value:
-                    ConfigEditor._add_node(this_node, this_config, child.DESCRIPTOR, child)
+                    child_is_message = ConfigEditor._descriptor_is_message(child.DESCRIPTOR)
+                    ConfigEditor._add_node(this_node, this_config, child.DESCRIPTOR, child,
+                                           value_is_config=child_is_message)
             else:
                 # a message has stuff under it, recurse into it
                 missing_fields = [f for f in field_value.DESCRIPTOR.fields
                                   if f not in [fp for fp, vp in field_value.ListFields()]]
                 for child_field_descriptor, child_field_value in sorted(field_value.ListFields(),
                                                                         key=lambda f: f[0].name):
-                    ConfigEditor._add_node(this_node, this_config, child_field_descriptor, child_field_value)
+                    child_is_message = ConfigEditor._descriptor_is_message(child_field_descriptor)
+                    ConfigEditor._add_node(this_node, this_config, child_field_descriptor, child_field_value,
+                                           value_is_config=child_is_message)
                 for child_field_descriptor in sorted(missing_fields, key=lambda f: f.name):
+                    child_is_message = ConfigEditor._descriptor_is_message(child_field_descriptor)
                     ConfigEditor._add_node(this_node, this_config, child_field_descriptor,
-                                           getattr(this_config, child_field_descriptor.name))
+                                           getattr(this_config, child_field_descriptor.name), uninitialized=True,
+                                           value_is_config=child_is_message)
         else:
             # leaf node, stop here
             this_node.allow_expand = False
+
+    @staticmethod
+    def _descriptor_is_message(desc: descriptor.Descriptor) -> bool:
+        return (getattr(desc, 'type', None) == descriptor.FieldDescriptor.TYPE_MESSAGE or
+                hasattr(desc, 'fields'))
 
     def _modify_node(self, node: TreeNode) -> None:
         """Modify the selected node by context of what type of config item it is."""
@@ -240,7 +308,10 @@ def pb_field_to_node_label(field_descriptor, field_value):
         prettified text representation of the field
     """
     highlighter = ReprHighlighter()
-    if field_descriptor.type == descriptor.FieldDescriptor.TYPE_MESSAGE:
+    if hasattr(field_value, 'add'):
+        label = Text.from_markup(f"[b]{field_descriptor.name}[][/b]")
+    elif (getattr(field_descriptor, 'type', None) == descriptor.FieldDescriptor.TYPE_MESSAGE or
+          hasattr(field_descriptor, 'fields')):
         label = Text.from_markup(f"[b]{field_descriptor.name}[/b]")
     elif field_descriptor.type == descriptor.FieldDescriptor.TYPE_ENUM:
         enum_selection = field_descriptor.enum_type.values_by_number[field_value].name
