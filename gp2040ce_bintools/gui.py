@@ -151,35 +151,10 @@ class ConfigEditor(App):
         self.config = get_config_from_file(self.config_filename, whole_board=self.whole_board)
         tree = self.query_one(Tree)
 
-        def add_node(parent_node: TreeNode, parent_config: Message,
-                     field_descriptor: descriptor.FieldDescriptor, field_value: object) -> None:
-            """Add a node to the overall tree, recursively.
-
-            Args:
-                parent_node: parent node to attach the new node(s) to
-                parent_config: the Config object parent. parent_config + field_descriptor.name = this node
-                field_descriptor: descriptor for the protobuf field
-                field_value: data to add to the parent node as new node(s)
-            """
-            # all nodes relate to their parent and retain info about themselves
-            this_node = parent_node.add("")
-            this_node.data = (parent_config, field_descriptor)
-            this_node.set_label(pb_field_to_node_label(field_descriptor, field_value))
-
-            if field_descriptor.type == descriptor.FieldDescriptor.TYPE_MESSAGE:
-                # a message has stuff under it, recurse into it
-                this_config = getattr(parent_config, field_descriptor.name)
-                for child_field_descriptor, child_field_value in sorted(field_value.ListFields(),
-                                                                        key=lambda f: f[0].name):
-                    add_node(this_node, this_config, child_field_descriptor, child_field_value)
-            else:
-                # leaf node, stop here
-                this_node.allow_expand = False
-
         tree.root.data = (None, self.config.DESCRIPTOR)
         tree.root.set_label(self.config_filename)
         for field_descriptor, field_value in sorted(self.config.ListFields(), key=lambda f: f[0].name):
-            add_node(tree.root, self.config, field_descriptor, field_value)
+            ConfigEditor._add_node(tree.root, self.config, field_descriptor, field_value)
         tree.root.expand()
 
     def on_tree_node_selected(self, node_event: Tree.NodeSelected) -> None:
@@ -194,6 +169,42 @@ class ConfigEditor(App):
     def action_quit(self) -> None:
         """Quit the application."""
         self.exit()
+
+    @staticmethod
+    def _add_node(parent_node: TreeNode, parent_config: Message,
+                  field_descriptor: descriptor.FieldDescriptor, field_value: object) -> None:
+        """Add a node to the overall tree, recursively.
+
+        Args:
+            parent_node: parent node to attach the new node(s) to
+            parent_config: the Config object parent. parent_config + field_descriptor.name = this node
+            field_descriptor: descriptor for the protobuf field
+            field_value: data to add to the parent node as new node(s)
+        """
+        # all nodes relate to their parent and retain info about themselves
+        this_node = parent_node.add("")
+        this_node.data = (parent_config, field_descriptor)
+        this_node.set_label(pb_field_to_node_label(field_descriptor, field_value))
+
+        if field_descriptor.type == descriptor.FieldDescriptor.TYPE_MESSAGE:
+            this_config = getattr(parent_config, field_descriptor.name)
+            if hasattr(field_value, 'add'):
+                # support repeated
+                for child in field_value:
+                    ConfigEditor._add_node(this_node, this_config, child.DESCRIPTOR, child)
+            else:
+                # a message has stuff under it, recurse into it
+                missing_fields = [f for f in field_value.DESCRIPTOR.fields
+                                  if f not in [fp for fp, vp in field_value.ListFields()]]
+                for child_field_descriptor, child_field_value in sorted(field_value.ListFields(),
+                                                                        key=lambda f: f[0].name):
+                    ConfigEditor._add_node(this_node, this_config, child_field_descriptor, child_field_value)
+                for child_field_descriptor in sorted(missing_fields, key=lambda f: f.name):
+                    ConfigEditor._add_node(this_node, this_config, child_field_descriptor,
+                                           getattr(this_config, child_field_descriptor.name))
+        else:
+            # leaf node, stop here
+            this_node.allow_expand = False
 
     def _modify_node(self, node: TreeNode) -> None:
         """Modify the selected node by context of what type of config item it is."""
