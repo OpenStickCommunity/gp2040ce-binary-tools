@@ -10,18 +10,19 @@ currently the expectation is that you can run it yourself before invoking these 
 ## Installation
 
 ```
+% pip install gp2040ce-binary-tools
+```
+
+### Development Installation
+
+```
 % git clone [URL to this repository]
 % cd gp2040ce-binary-tools
 % python -m venv venv
 % source ./venv/bin/activate
 % pip install -e .
+% pip install -Ur requirements/requirements-dev.txt
 ```
-
-At some point we may publish packages to e.g. pypi.
-
-### Development Installation
-
-As above, plus also `pip install -Ur requirements/requirements-dev.txt` to get linters and whatnot.
 
 ## Config Editor
 
