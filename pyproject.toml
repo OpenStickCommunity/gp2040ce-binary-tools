@@ -1,9 +1,10 @@
 [build-system]
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "gp2040ce-binary-tools"
-description = "Tools for working with GP2040-CE binary dumps."
+description = "Tools for working with GP2040-CE firmware and storage binaries."
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -12,6 +13,18 @@ authors = [
 requires-python = ">=3.9"
 dependencies = ["grpcio-tools", "textual"]
 dynamic = ["version"]
+classifiers = [
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/OpenStickCommunity/gp2040ce-binary-tools"
+"Bug Tracker" = "https://github.com/OpenStickCommunity/gp2040ce-binary-tools/issues"
+
 
 [project.optional-dependencies]
 dev = ["bandit", "decorator", "flake8", "flake8-blind-except", "flake8-builtins", "flake8-docstrings",
