@@ -22,7 +22,7 @@ decorator==5.1.1
     # via gp2040ce-binary-tools (pyproject.toml)
 distlib==0.3.6
     # via virtualenv
-exceptiongroup==1.1.1
+exceptiongroup==1.1.2
     # via pytest
 filelock==3.12.2
     # via
@@ -71,7 +71,7 @@ isort==5.12.0
     # via flake8-isort
 linkify-it-py==2.0.2
     # via markdown-it-py
-markdown-it-py[linkify,plugins]==2.2.0
+markdown-it-py[linkify,plugins]==3.0.0
     # via
     #   mdit-py-plugins
     #   rich
@@ -95,7 +95,7 @@ packaging==23.1
     #   tox
 pbr==5.11.1
     # via stevedore
-pip-tools==6.13.0
+pip-tools==6.14.0
     # via gp2040ce-binary-tools (pyproject.toml)
 platformdirs==3.8.0
     # via
@@ -128,6 +128,8 @@ pytest-asyncio==0.21.0
     # via gp2040ce-binary-tools (pyproject.toml)
 pytest-cov==4.1.0
     # via gp2040ce-binary-tools (pyproject.toml)
+pyusb==1.2.1
+    # via gp2040ce-binary-tools (pyproject.toml)
 pyyaml==6.0
     # via bandit
 rich==13.4.2
@@ -142,7 +144,7 @@ snowballstemmer==2.2.0
     # via pydocstyle
 stevedore==5.1.0
     # via bandit
-textual==0.28.1
+textual==0.29.0
     # via gp2040ce-binary-tools (pyproject.toml)
 tomli==2.0.1
     # via
@@ -150,6 +152,7 @@ tomli==2.0.1
     #   coverage
     #   flake8-pyproject
     #   mypy
+    #   pip-tools
     #   pyproject-api
     #   pyproject-hooks
     #   pytest
@@ -157,7 +160,7 @@ tomli==2.0.1
     #   tox
 tox==4.6.3
     # via gp2040ce-binary-tools (pyproject.toml)
-typing-extensions==4.6.3
+typing-extensions==4.7.1
     # via
     #   mypy
     #   setuptools-scm

@@ -12,7 +12,7 @@ importlib-metadata==6.7.0
     # via textual
 linkify-it-py==2.0.2
     # via markdown-it-py
-markdown-it-py[linkify,plugins]==2.2.0
+markdown-it-py[linkify,plugins]==3.0.0
     # via
     #   mdit-py-plugins
     #   rich
@@ -25,11 +25,13 @@ protobuf==4.23.3
     # via grpcio-tools
 pygments==2.15.1
     # via rich
+pyusb==1.2.1
+    # via gp2040ce-binary-tools (pyproject.toml)
 rich==13.4.2
     # via textual
-textual==0.28.1
+textual==0.29.0
     # via gp2040ce-binary-tools (pyproject.toml)
-typing-extensions==4.6.3
+typing-extensions==4.7.1
     # via textual
 uc-micro-py==1.0.2
     # via linkify-it-py
