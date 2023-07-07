@@ -1,6 +1,7 @@
 """Test our tools themselves to make sure they adhere to certain flags."""
 import json
 import os
+import unittest.mock as mock
 from subprocess import run
 
 from gp2040ce_bintools import __version__
@@ -32,7 +33,8 @@ def test_concatenate_invocation(tmpdir):
 
 def test_storage_dump_invocation():
     """Test that a normal invocation against a dump works."""
-    result = run(['visualize-storage', '-P', 'tests/test-files/proto-files', 'tests/test-files/test-storage-area.bin'],
+    result = run(['visualize-storage', '-P', 'tests/test-files/proto-files',
+                  '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
     assert 'boardVersion: "v0.7.2"' in result.stdout
 
@@ -40,7 +42,7 @@ def test_storage_dump_invocation():
 def test_debug_storage_dump_invocation():
     """Test that a normal invocation against a dump works."""
     result = run(['visualize-storage', '-d', '-P', 'tests/test-files/proto-files',
-                  'tests/test-files/test-storage-area.bin'],
+                  '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
     assert 'boardVersion: "v0.7.2"' in result.stdout
     assert 'length of content to look for footer in: 8192' in result.stderr
@@ -49,7 +51,16 @@ def test_debug_storage_dump_invocation():
 def test_storage_dump_json_invocation():
     """Test that a normal invocation against a dump works."""
     result = run(['visualize-storage', '-P', 'tests/test-files/proto-files', '--json',
-                  'tests/test-files/test-storage-area.bin'],
+                  '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
     to_dict = json.loads(result.stdout)
     assert to_dict['boardVersion'] == 'v0.7.2'
+
+
+def test_visualize_usb_invocation(storage_dump):
+    """Test that a normal invocation against a dump works."""
+    with mock.patch('gp2040ce_bintools.pico.get_bootsel_endpoints', return_value=(mock.MagicMock(), mock.MagicMock())):
+        with mock.patch('gp2040ce_bintools.pico.read', return_value=storage_dump):
+            result = run(['visualize-storage', '-P', 'tests/test-files/proto-files', '--usb'],
+                         capture_output=True, encoding='utf8')
+    assert 'boardVersion: "v0.7.2"' in result.stdout

@@ -66,17 +66,17 @@ Sample usage:
 
 ### visualize-storage
 
-**visualize-storage** reads a dump of a GP2040-CE board's flash storage section, where the configuration lives, and
-prints it out for visual inspection or diffing with other tools. It can also find the storage section from a GP2040-CE
-whole board dump, if you have that instead. Usage is simple; just pass the tool your binary file to analyze along with
-the path to the Protobuf files.
+**visualize-storage** reads a GP2040-CE board's configuration, either over USB or from a dump of the board's flash
+storage section, and prints it out for visual inspection or diffing with other tools. It can also find the storage
+section from a GP2040-CE whole board dump, if you have that instead. Usage is simple; just connect your board in BOOTSEL
+mode or pass the tool your binary file to analyze along with the path to the Protobuf files.
 
 Because Protobuf relies on .proto files to convey the serialized structure, you must supply them from the main GP2040-CE
 project, e.g. pointing this tool at your clone of the core project. Something like this would suffice for a working
 invocation (note: you do not need to compile the files yourself):
 
 ```
-% visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto memory.bin
+% visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --filename memory.bin
 ```
 
 (In the future we will look into publishing complete packages that include the compiled `_pb2.py` files, so that you
@@ -85,7 +85,7 @@ don't need to provide them yourself.)
 Sample output:
 
 ```
-% visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto ~/proj/GP2040-CE/demo-memory.bin
+% visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --usb
 boardVersion: "v0.7.2"
 gamepadOptions {
   inputMode: INPUT_MODE_HID
@@ -152,8 +152,9 @@ forcedSetupOptions {
 
 ### Dumping the GP2040-CE board
 
-These tools require a dump of your GP2040-CE board, either the storage section or the whole board, depending on the
-context. The storage section of a GP2040-CE board is a reserved 8 KB starting at `0x101FE000`. To dump your board's storage:
+Some of these tools require a dump of your GP2040-CE board, either the storage section or the whole board, depending on
+the context. The storage section of a GP2040-CE board is a reserved 8 KB starting at `0x101FE000`. To dump your board's
+storage:
 
 ```
 % picotool save -r 101FE000 10200000 memory.bin

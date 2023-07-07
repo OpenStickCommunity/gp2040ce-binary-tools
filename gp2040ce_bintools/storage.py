@@ -7,10 +7,12 @@ from google.protobuf.json_format import MessageToJson
 from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser, get_config_pb2
+from gp2040ce_bintools.pico import get_bootsel_endpoints, read
 
 logger = logging.getLogger(__name__)
 
-STORAGE_LOCATION = 0x1FE000
+STORAGE_BINARY_LOCATION = 0x1FE000
+STORAGE_MEMORY_ADDRESS = 0x101FE000
 STORAGE_SIZE = 8192
 
 FOOTER_SIZE = 12
@@ -126,11 +128,12 @@ def get_storage_section(content: bytes) -> bytes:
     """
     # a whole board must be at least as big as the known fences
     logger.debug("length of content to look for storage in: %s", len(content))
-    if len(content) < STORAGE_LOCATION + STORAGE_SIZE:
+    if len(content) < STORAGE_BINARY_LOCATION + STORAGE_SIZE:
         raise ConfigLengthError("provided content is not large enough to have a storage section!")
 
-    logger.debug("returning bytes from %s to %s", hex(STORAGE_LOCATION), hex(STORAGE_LOCATION + STORAGE_SIZE))
-    return content[STORAGE_LOCATION:(STORAGE_LOCATION + STORAGE_SIZE)]
+    logger.debug("returning bytes from %s to %s", hex(STORAGE_BINARY_LOCATION),
+                 hex(STORAGE_BINARY_LOCATION + STORAGE_SIZE))
+    return content[STORAGE_BINARY_LOCATION:(STORAGE_BINARY_LOCATION + STORAGE_SIZE)]
 
 
 def pad_config_to_storage_size(config: bytes) -> bytearray:
@@ -174,12 +177,23 @@ def visualize():
                     "its contents.",
         parents=[core_parser],
     )
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--usb', action='store_true', help="retrieve the config from a Pico board connected over USB "
+                                                          "and in BOOTSEL mode")
+    group.add_argument('--filename', help=".bin file of a GP2040-CE board's storage section, bytes "
+                                          "101FE000-10200000, or of a GP2040-CE's whole board dump "
+                                          "if --whole-board is specified")
     parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
     parser.add_argument('--json', action='store_true', help="print the config out as a JSON document")
-    parser.add_argument('filename', help=".bin file of a GP2040-CE board's storage section, bytes 101FE000-10200000, "
-                                         "or of a GP2040-CE's whole board dump if --whole-board is specified")
     args, _ = parser.parse_known_args()
-    config = get_config_from_file(args.filename, whole_board=args.whole_board)
+
+    if args.usb:
+        endpoint_out, endpoint_in = get_bootsel_endpoints()
+        storage = read(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE)
+        config = get_config(bytes(storage))
+    else:
+        config = get_config_from_file(args.filename, whole_board=args.whole_board)
+
     if args.json:
         print(MessageToJson(config))
     else:

@@ -6,7 +6,7 @@ import logging
 from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser
-from gp2040ce_bintools.storage import (STORAGE_LOCATION, STORAGE_SIZE, pad_config_to_storage_size,
+from gp2040ce_bintools.storage import (STORAGE_BINARY_LOCATION, STORAGE_SIZE, pad_config_to_storage_size,
                                        serialize_config_with_footer)
 
 logger = logging.getLogger(__name__)
@@ -57,11 +57,11 @@ def pad_firmware_up_to_storage(firmware: bytes) -> bytearray:
     Raises:
         FirmwareLengthError: if the firmware is larger than the storage location
     """
-    bytes_to_pad = STORAGE_LOCATION - len(firmware)
+    bytes_to_pad = STORAGE_BINARY_LOCATION - len(firmware)
     logger.debug("firmware is length %s, padding %s bytes", len(firmware), bytes_to_pad)
     if bytes_to_pad < 0:
         raise FirmwareLengthError(f"provided firmware binary is larger than the start of "
-                                  f"storage at {STORAGE_LOCATION}!")
+                                  f"storage at {STORAGE_BINARY_LOCATION}!")
 
     return bytearray(firmware) + bytearray(b'\x00' * bytes_to_pad)
 
@@ -79,12 +79,13 @@ def replace_config_in_binary(board_binary: bytearray, config_binary: bytearray) 
     Returns:
         the resulting correctly-offset binary suitable for a GP2040-CE board
     """
-    if len(board_binary) < STORAGE_LOCATION + STORAGE_SIZE:
+    if len(board_binary) < STORAGE_BINARY_LOCATION + STORAGE_SIZE:
         # this is functionally the same, since this doesn't sanity check the firmware
         return combine_firmware_and_config(board_binary, config_binary)
     else:
         new_binary = bytearray(copy.copy(board_binary))
-        new_binary[STORAGE_LOCATION:(STORAGE_LOCATION + STORAGE_SIZE)] = pad_config_to_storage_size(config_binary)
+        new_config = pad_config_to_storage_size(config_binary)
+        new_binary[STORAGE_BINARY_LOCATION:(STORAGE_BINARY_LOCATION + STORAGE_SIZE)] = new_config
         return new_binary
 
 
