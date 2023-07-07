@@ -17,7 +17,8 @@ from textual.widgets.tree import TreeNode
 
 from gp2040ce_bintools import core_parser, handler
 from gp2040ce_bintools.builder import write_new_config_to_filename
-from gp2040ce_bintools.storage import get_config_from_file
+from gp2040ce_bintools.pico import get_bootsel_endpoints, read
+from gp2040ce_bintools.storage import STORAGE_MEMORY_ADDRESS, STORAGE_SIZE, get_config, get_config_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -130,8 +131,19 @@ class ConfigEditor(App):
 
     def __init__(self, *args, **kwargs):
         """Initialize config."""
-        self.config_filename = kwargs.pop('config_filename')
+        self.config_filename = kwargs.pop('config_filename', None)
         self.whole_board = kwargs.pop('whole_board', False)
+        usb = kwargs.pop('usb', False)
+        # load the config
+        if usb:
+            endpoint_out, endpoint_in = get_bootsel_endpoints()
+            storage = read(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE)
+            self.config = get_config(bytes(storage))
+            self.source_name = (f"DEVICE ID {hex(endpoint_out.device.idVendor)}:{hex(endpoint_out.device.idProduct)} "
+                                f"on bus {endpoint_out.device.bus} address {endpoint_out.device.address}")
+        else:
+            self.config = get_config_from_file(self.config_filename, whole_board=self.whole_board)
+            self.source_name = self.config_filename
         super().__init__(*args, **kwargs)
 
         # disable normal logging and enable console logging if we're not headless
@@ -149,11 +161,10 @@ class ConfigEditor(App):
 
     def on_mount(self) -> None:
         """Load the configuration object into the tree view."""
-        self.config = get_config_from_file(self.config_filename, whole_board=self.whole_board)
         tree = self.query_one(Tree)
 
         tree.root.data = (None, self.config.DESCRIPTOR, self.config)
-        tree.root.set_label(self.config_filename)
+        tree.root.set_label(self.source_name)
         missing_fields = [f for f in self.config.DESCRIPTOR.fields
                           if f not in [fp for fp, vp in self.config.ListFields()]]
         for field_descriptor, field_value in sorted(self.config.ListFields(), key=lambda f: f[0].name):
@@ -200,6 +211,9 @@ class ConfigEditor(App):
 
     def action_save(self) -> None:
         """Save the configuration."""
+        if not self.config_filename:
+            raise NotImplementedError("saving to USB is not yet implemented!")
+
         write_new_config_to_filename(self.config, self.config_filename, inject=self.whole_board)
         self.push_screen(MessageScreen(f"Configuration saved to {self.config_filename}."))
 
@@ -339,9 +353,16 @@ def edit_config():
         description="Utilize a GUI to view and alter the contents of a GP2040-CE configuration.",
         parents=[core_parser],
     )
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--usb', action='store_true', help="retrieve the config from a Pico board connected over USB "
+                                                          "and in BOOTSEL mode")
+    group.add_argument('--filename', help=".bin file of a GP2040-CE board's config + footer or entire storage section, "
+                                          "or of a GP2040-CE's whole board dump if --whole-board is specified")
     parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
-    parser.add_argument('filename', help=".bin file of a GP2040-CE board's config + footer or entire storage section, "
-                                         "or of a GP2040-CE's whole board dump if --whole-board is specified")
     args, _ = parser.parse_known_args()
-    app = ConfigEditor(config_filename=args.filename, whole_board=args.whole_board)
+
+    if args.usb:
+        app = ConfigEditor(usb=True)
+    else:
+        app = ConfigEditor(config_filename=args.filename, whole_board=args.whole_board)
     app.run()
