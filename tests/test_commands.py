@@ -1,10 +1,28 @@
 """Test our tools themselves to make sure they adhere to certain flags."""
 import json
 import os
+import sys
 import unittest.mock as mock
 from subprocess import run
 
+from decorator import decorator
+
 from gp2040ce_bintools import __version__
+from gp2040ce_bintools.storage import get_config_from_file
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+@decorator
+def with_pb2s(test, *args, **kwargs):
+    """Wrap a test with precompiled pb2 files on the path."""
+    proto_path = os.path.join(HERE, 'test-files', 'pb2-files')
+    sys.path.append(proto_path)
+
+    test(*args, **kwargs)
+
+    sys.path.pop()
+    del sys.modules['config_pb2']
 
 
 def test_version_flag():
@@ -29,6 +47,17 @@ def test_concatenate_invocation(tmpdir):
         out = out_file.read()
         storage = storage_file.read()
     assert out[2088960:2097152] == storage
+
+
+@with_pb2s
+def test_dump_config_invocation(tmpdir, storage_dump, config_binary):
+    """Test that dumping a config to file works."""
+    out_filename = os.path.join(tmpdir, 'out.bin')
+    with mock.patch('gp2040ce_bintools.pico.get_bootsel_endpoints', return_value=(mock.MagicMock(), mock.MagicMock())):
+        with mock.patch('gp2040ce_bintools.pico.read', return_value=storage_dump):
+            run(['dump-config', '-P', 'tests/test-files/proto-files', '--filename', out_filename])
+    new_config = get_config_from_file(out_filename)
+    assert new_config.boardVersion == "v0.7.2"
 
 
 def test_storage_dump_invocation():
