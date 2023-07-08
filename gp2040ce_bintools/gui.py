@@ -17,8 +17,7 @@ from textual.widgets.tree import TreeNode
 
 from gp2040ce_bintools import core_parser, handler
 from gp2040ce_bintools.builder import write_new_config_to_filename
-from gp2040ce_bintools.pico import get_bootsel_endpoints, read
-from gp2040ce_bintools.storage import STORAGE_MEMORY_ADDRESS, STORAGE_SIZE, get_config, get_config_from_file
+from gp2040ce_bintools.storage import get_config_from_file, get_config_from_usb
 
 logger = logging.getLogger(__name__)
 
@@ -136,9 +135,7 @@ class ConfigEditor(App):
         usb = kwargs.pop('usb', False)
         # load the config
         if usb:
-            endpoint_out, endpoint_in = get_bootsel_endpoints()
-            storage = read(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE)
-            self.config = get_config(bytes(storage))
+            self.config, endpoint_out, endpoint_in = get_config_from_usb()
             self.source_name = (f"DEVICE ID {hex(endpoint_out.device.idVendor)}:{hex(endpoint_out.device.idProduct)} "
                                 f"on bus {endpoint_out.device.bus} address {endpoint_out.device.address}")
         else:

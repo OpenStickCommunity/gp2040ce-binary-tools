@@ -116,6 +116,20 @@ def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file
         return get_config(content)
 
 
+def get_config_from_usb() -> tuple[Message, object, object]:
+    """Read the config section from a USB device and get back its config section.
+
+    Returns:
+        the parsed configuration, along with the USB out and in endpoints for reference
+    """
+    # open the USB device and get the config
+    endpoint_out, endpoint_in = get_bootsel_endpoints()
+    logger.debug("reading DEVICE ID %s:%s, bus %s, address %s", hex(endpoint_out.device.idVendor),
+                 hex(endpoint_out.device.idProduct), endpoint_out.device.bus, endpoint_out.device.address)
+    storage = read(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE)
+    return get_config(bytes(storage)), endpoint_out, endpoint_in
+
+
 def get_storage_section(content: bytes) -> bytes:
     """Pull out what should be the GP2040-CE storage section from a whole board dump.
 
@@ -188,9 +202,7 @@ def visualize():
     args, _ = parser.parse_known_args()
 
     if args.usb:
-        endpoint_out, endpoint_in = get_bootsel_endpoints()
-        storage = read(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE)
-        config = get_config(bytes(storage))
+        config, _, _ = get_config_from_usb()
     else:
         config = get_config_from_file(args.filename, whole_board=args.whole_board)
 
