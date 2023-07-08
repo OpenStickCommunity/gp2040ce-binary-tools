@@ -28,7 +28,7 @@ currently the expectation is that you can run it yourself before invoking these 
 
 In all cases, online help can be retrieved by providing the `-h` or ``--help`` flags to the below programs.
 
-## Config Editor
+### Config Editor
 
 [![asciicast](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo.svg)](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo)
 
