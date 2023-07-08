@@ -184,6 +184,19 @@ def serialize_config_with_footer(config: Message) -> bytearray:
 ############
 
 
+def dump_config():
+    """Save the GP2040-CE's configuration to a binary file."""
+    parser = argparse.ArgumentParser(
+        description="Read the configuration section from a USB device and save it to a binary file.",
+        parents=[core_parser],
+    )
+    parser.add_argument('--filename', help=".bin file to save the GP2040-CE board's config section to")
+    args, _ = parser.parse_known_args()
+    config, _, _ = get_config_from_usb()
+    with open(args.filename, 'wb') as out_file:
+        out_file.write(serialize_config_with_footer(config))
+
+
 def visualize():
     """Print the contents of GP2040-CE's storage."""
     parser = argparse.ArgumentParser(

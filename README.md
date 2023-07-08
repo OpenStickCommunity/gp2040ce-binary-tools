@@ -33,7 +33,7 @@ In all cases, online help can be retrieved by providing the `-h` or ``--help`` f
 [![asciicast](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo.svg)](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo)
 
 A terminal UI config editor, capable of viewing and editing existing configurations, can be launched via
-**edit-config**. It supports navigation both via the keyboard or the mouse, and can either view and edit a binary file
+`edit-config`. It supports navigation both via the keyboard or the mouse, and can either view and edit a binary file
 made via `picotool`, or view the configuration directly on the board in BOOTSEL mode over USB (editing coming soon).
 
 Simple usage:
@@ -53,7 +53,7 @@ A quick demonstration of the editor is available [on asciinema.org](https://asci
 
 ### concatenate
 
-**concatenate** combines a GP2040-CE firmware .bin file (such as from a fresh build) and a GP2040-CE board's storage
+`concatenate` combines a GP2040-CE firmware .bin file (such as from a fresh build) and a GP2040-CE board's storage
 section .bin or config (with footer) .bin, and produces a properly-offset .bin file suitable for flashing to a board.
 This may be useful to ensure the board is flashed with a particular configuration, for instances such as producing a
 binary to flash many boards with a particular configuration (specific customizations, etc.), or keeping documented
@@ -65,9 +65,20 @@ Sample usage:
 % concatenate build/GP2040-CE_foo_bar.bin storage-dump.bin new-firmware-with-config.bin
 ```
 
+### dump-config
+
+`dump-config` replaces the need for picotool in order to make a copy of the GP2040-CE configuration as a binary file.
+This could be used with the other tools, or just to keep a backup.
+
+Sample usage:
+
+```
+% dump-config -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --filename `date +%Y%m%d`-config-backup.bin
+```
+
 ### visualize-storage
 
-**visualize-storage** reads a GP2040-CE board's configuration, either over USB or from a dump of the board's flash
+`visualize-storage` reads a GP2040-CE board's configuration, either over USB or from a dump of the board's flash
 storage section, and prints it out for visual inspection or diffing with other tools. It can also find the storage
 section from a GP2040-CE whole board dump, if you have that instead. Usage is simple; just connect your board in BOOTSEL
 mode or pass the tool your binary file to analyze along with the path to the Protobuf files.
@@ -151,11 +162,13 @@ forcedSetupOptions {
 }
 ```
 
-### Dumping the GP2040-CE board
+## Miscellaneous
+
+### Dumping the GP2040-CE board with picotool
 
 Some of these tools require a dump of your GP2040-CE board, either the storage section or the whole board, depending on
 the context. The storage section of a GP2040-CE board is a reserved 8 KB starting at `0x101FE000`. To dump your board's
-storage:
+storage with picotool:
 
 ```
 % picotool save -r 101FE000 10200000 memory.bin

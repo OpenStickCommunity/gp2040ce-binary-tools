@@ -117,6 +117,7 @@ def write_new_config_to_filename(config: Message, filename: str, inject: bool = 
 # COMMANDS #
 ############
 
+
 def concatenate():
     """Combine a built firmware .bin and a storage .bin."""
     parser = argparse.ArgumentParser(
