@@ -33,8 +33,8 @@ In all cases, online help can be retrieved by providing the `-h` or ``--help`` f
 [![asciicast](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo.svg)](https://asciinema.org/a/67hELtUNkKCit4dFwYeAUa2fo)
 
 A terminal UI config editor, capable of viewing and editing existing configurations, can be launched via
-`edit-config`. It supports navigation both via the keyboard or the mouse, and can either view and edit a binary file
-made via `picotool`, or view the configuration directly on the board in BOOTSEL mode over USB (editing coming soon).
+`edit-config`. It supports navigation both via the keyboard or the mouse, and can view and edit either a binary file
+made via `picotool` or configuration directly on the board in BOOTSEL mode over USB.
 
 Simple usage:
 
