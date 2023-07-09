@@ -16,7 +16,7 @@ from textual.widgets import Button, Footer, Header, Input, Label, Pretty, Select
 from textual.widgets.tree import TreeNode
 
 from gp2040ce_bintools import core_parser, handler
-from gp2040ce_bintools.builder import write_new_config_to_filename
+from gp2040ce_bintools.builder import write_new_config_to_filename, write_new_config_to_usb
 from gp2040ce_bintools.storage import get_config_from_file, get_config_from_usb
 
 logger = logging.getLogger(__name__)
@@ -132,12 +132,13 @@ class ConfigEditor(App):
         """Initialize config."""
         self.config_filename = kwargs.pop('config_filename', None)
         self.whole_board = kwargs.pop('whole_board', False)
-        usb = kwargs.pop('usb', False)
+        self.usb = kwargs.pop('usb', False)
         # load the config
-        if usb:
-            self.config, endpoint_out, endpoint_in = get_config_from_usb()
-            self.source_name = (f"DEVICE ID {hex(endpoint_out.device.idVendor)}:{hex(endpoint_out.device.idProduct)} "
-                                f"on bus {endpoint_out.device.bus} address {endpoint_out.device.address}")
+        if self.usb:
+            self.config, self.endpoint_out, self.endpoint_in = get_config_from_usb()
+            self.source_name = (f"DEVICE ID {hex(self.endpoint_out.device.idVendor)}:"
+                                f"{hex(self.endpoint_out.device.idProduct)} "
+                                f"on bus {self.endpoint_out.device.bus} address {self.endpoint_out.device.address}")
         else:
             self.config = get_config_from_file(self.config_filename, whole_board=self.whole_board)
             self.source_name = self.config_filename
@@ -208,11 +209,14 @@ class ConfigEditor(App):
 
     def action_save(self) -> None:
         """Save the configuration."""
-        if not self.config_filename:
-            raise NotImplementedError("saving to USB is not yet implemented!")
-
-        write_new_config_to_filename(self.config, self.config_filename, inject=self.whole_board)
-        self.push_screen(MessageScreen(f"Configuration saved to {self.config_filename}."))
+        if self.usb:
+            write_new_config_to_usb(self.config, self.endpoint_out, self.endpoint_in)
+            self.push_screen(MessageScreen(f"Configuration saved to "
+                                           f"{hex(self.endpoint_out.device.idVendor)}:"
+                                           f"{hex(self.endpoint_out.device.idProduct)}."))
+        elif self.config_filename:
+            write_new_config_to_filename(self.config, self.config_filename, inject=self.whole_board)
+            self.push_screen(MessageScreen(f"Configuration saved to {self.config_filename}."))
 
     def action_quit(self) -> None:
         """Quit the application."""
