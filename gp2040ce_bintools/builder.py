@@ -6,8 +6,9 @@ import logging
 from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser
-from gp2040ce_bintools.storage import (STORAGE_BINARY_LOCATION, STORAGE_SIZE, pad_config_to_storage_size,
-                                       serialize_config_with_footer)
+from gp2040ce_bintools.pico import write
+from gp2040ce_bintools.storage import (STORAGE_BINARY_LOCATION, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE,
+                                       pad_config_to_storage_size, serialize_config_with_footer)
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,22 @@ def write_new_config_to_filename(config: Message, filename: str, inject: bool = 
 
     with open(filename, 'wb') as file:
         file.write(binary)
+
+
+def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: object):
+    """Serialize the provided config to a device over USB, in the proper location for a GP2040-CE board.
+
+    Args:
+        config: the Protobuf configuration to write to a Pico board in BOOTSEL mode
+        endpoint_out: the USB endpoint to write to
+        endpoint_in: the USB endpoint to read from
+    """
+    serialized = serialize_config_with_footer(config)
+    # we don't write the whole area, just the minimum from the end of the storage section
+    # nevertheless, the USB device needs writes to start at 256 byte boundaries
+    padding = 256 - (len(serialized) % 256)
+    binary = bytearray(b'\x00' * padding) + serialized
+    write(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS + (STORAGE_SIZE - len(binary)), binary)
 
 
 ############

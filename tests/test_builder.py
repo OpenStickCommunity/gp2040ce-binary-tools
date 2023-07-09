@@ -1,14 +1,15 @@
 """Tests for the image builder module."""
 import os
 import sys
+import unittest.mock as mock
 
 import pytest
 from decorator import decorator
 
 from gp2040ce_bintools import get_config_pb2
 from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and_config, pad_firmware_up_to_storage,
-                                       replace_config_in_binary, write_new_config_to_filename)
-from gp2040ce_bintools.storage import get_config, get_config_footer, get_storage_section
+                                       replace_config_in_binary, write_new_config_to_filename, write_new_config_to_usb)
+from gp2040ce_bintools.storage import get_config, get_config_footer, get_storage_section, serialize_config_with_footer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -134,3 +135,18 @@ def test_write_new_config_to_config_bin(firmware_binary, tmp_path):
     config_size, _, _ = get_config_footer(config_dump)
     assert config.boardVersion == 'v0.7.2-COOL'
     assert len(config_dump) == config_size + 12
+
+
+@with_pb2s
+def test_write_new_config_to_usb(config_binary):
+    """Test that the config can be written to USB at the proper alignment."""
+    config = get_config(config_binary)
+    serialized = serialize_config_with_footer(config)
+    end_out, end_in = mock.MagicMock(), mock.MagicMock()
+    with mock.patch('gp2040ce_bintools.builder.write') as mock_write:
+        write_new_config_to_usb(config, end_out, end_in)
+
+    # check that it got padded
+    padded_serialized = bytearray(b'\x00' * 4) + serialized
+    assert mock_write.call_args.args[2] % 256 == 0
+    assert mock_write.call_args.args[3] == padded_serialized
