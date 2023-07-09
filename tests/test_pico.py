@@ -126,3 +126,21 @@ def test_reboot():
 
     payload = struct.pack('<LLBBxxLLLL4x', 0x431fd10b, 1, 0x2, 12, 0, 0, 0x20042000, 500)
     end_out.write.assert_called_with(payload)
+
+
+def test_write():
+    """Test that we can write to a board in BOOTSEL mode."""
+    end_out, end_in = mock.MagicMock(), mock.MagicMock()
+    _ = pico.write(end_out, end_in, 0x101FE000, b'\x00\x01\x02\x03')
+
+    expected_writes = [
+        mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 1)),
+        mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FE000, 4)),
+        mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x5, 8, 4, 0x101FE000, 4)),
+        mock.call(b'\x00\x01\x02\x03'),
+        mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 0)),
+    ]
+    end_out.write.assert_has_calls(expected_writes)
+    assert end_in.read.call_count == 6

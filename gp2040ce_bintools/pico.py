@@ -27,6 +27,7 @@ PICO_COMMANDS = {
     'REBOOT': 0x2,
     'ERASE': 0x3,
     'READ': 0x4,
+    'WRITE': 0x5,
     'EXIT_XIP': 0x6,
 }
 
@@ -89,6 +90,7 @@ def erase(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, 
         location: memory address of where to start erasing from
         size: number of bytes to erase
     """
+    logger.debug("clearing %s bytes starting at %s", size, hex(location))
     # set up the data
     pico_token = 1
     command_size = 8
@@ -173,3 +175,36 @@ def reboot(out_end: usb.core.Endpoint) -> None:
                               PICO_MAGIC, pico_token, PICO_COMMANDS['REBOOT'], command_size, transfer_len,
                               boot_start, boot_end, boot_delay_ms))
     # we don't even bother reading here because it may have already rebooted
+
+
+def write(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, content: bytes) -> None:
+    """Write content to a Pico in BOOTSEL, starting from the specified location.
+
+    This also prepares the USB device for writing, so it expects to be able to grab
+    exclusive access.
+
+    Args:
+        out_endpoint: the out direction USB endpoint to write to
+        in_endpoint: the in direction USB endpoint to read from
+        location: memory address of where to start reading from
+        content: the data to write
+    """
+    # set up the data
+    command_size = 8
+
+    exclusive_access(out_end, in_end, is_exclusive=True)
+    exit_xip(out_end, in_end)
+    erase(out_end, in_end, location, len(content))
+    exit_xip(out_end, in_end)
+    pico_token = 1
+    logger.debug("writing %s bytes to %s", len(content), location)
+    payload = struct.pack(PICOBOOT_CMD_STRUCT + PICOBOOT_CMD_READ_SUFFIX_STRUCT,
+                          PICO_MAGIC, pico_token, PICO_COMMANDS['WRITE'], command_size, len(content),
+                          location, len(content))
+    logger.debug("WRITE: %s", payload)
+    out_end.write(payload)
+    logger.debug("actually writing bytes now...")
+    out_end.write(content)
+    res = in_end.read(256)
+    logger.debug("res: %s", res)
+    exclusive_access(out_end, in_end, is_exclusive=False)
