@@ -1,6 +1,7 @@
 """Unit tests for the storage module."""
 import os
 import sys
+import unittest.mock as mock
 
 import pytest
 from decorator import decorator
@@ -150,3 +151,21 @@ def test_pad_config_to_storage_raises(config_binary):
     """Test that we raise an exception if the config is bigger than the storage section."""
     with pytest.raises(storage.ConfigLengthError):
         _ = storage.pad_config_to_storage_size(config_binary * 5)
+
+
+@with_pb2s
+def test_get_config_from_usb(config_binary):
+    """Test we attempt to read from the proper location over USB."""
+    mock_out = mock.MagicMock()
+    mock_out.device.idVendor = 0xbeef
+    mock_out.device.idProduct = 0xcafe
+    mock_out.device.bus = 1
+    mock_out.device.address = 2
+    mock_in = mock.MagicMock()
+    with mock.patch('gp2040ce_bintools.storage.get_bootsel_endpoints', return_value=(mock_out, mock_in)) as mock_get:
+        with mock.patch('gp2040ce_bintools.storage.read', return_value=config_binary) as mock_read:
+            config, _, _ = storage.get_config_from_usb()
+
+    mock_get.assert_called_once()
+    mock_read.assert_called_with(mock_out, mock_in, 0x101FE000, 8192)
+    assert config == storage.get_config(config_binary)

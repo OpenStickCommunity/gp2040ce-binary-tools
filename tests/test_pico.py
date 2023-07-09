@@ -25,6 +25,46 @@ def with_pb2s(test, *args, **kwargs):
     del sys.modules['config_pb2']
 
 
+def test_get_bootsel_endpoints():
+    """Test our expected method of finding the BOOTSEL mode Pico board."""
+    mock_device = mock.MagicMock(name='mock_device')
+    mock_device.is_kernel_driver_active.return_value = False
+    mock_configuration = mock.MagicMock(name='mock_configuration')
+    mock_device.get_active_configuration.return_value = mock_configuration
+    mock_interface = mock.MagicMock(name='mock_interface')
+    with mock.patch('usb.core.find', return_value=mock_device) as mock_find:
+        with mock.patch('usb.util.find_descriptor', return_value=mock_interface) as mock_find_descriptor:
+            _, _ = pico.get_bootsel_endpoints()
+
+    mock_find.assert_called_with(idVendor=pico.PICO_VENDOR, idProduct=pico.PICO_PRODUCT)
+    mock_device.is_kernel_driver_active.assert_called_with(0)
+    mock_device.detach_kernel_driver.assert_not_called()
+    mock_device.get_active_configuration.assert_called_once()
+    assert mock_find_descriptor.call_args_list[0].args[0] == mock_configuration
+    assert mock_find_descriptor.call_args_list[1].args[0] == mock_interface
+    assert mock_find_descriptor.call_args_list[2].args[0] == mock_interface
+
+
+def test_get_bootsel_endpoints_with_kernel_disconnect():
+    """Test our expected method of finding the BOOTSEL mode Pico board."""
+    mock_device = mock.MagicMock(name='mock_device')
+    mock_device.is_kernel_driver_active.return_value = True
+    mock_configuration = mock.MagicMock(name='mock_configuration')
+    mock_device.get_active_configuration.return_value = mock_configuration
+    mock_interface = mock.MagicMock(name='mock_interface')
+    with mock.patch('usb.core.find', return_value=mock_device) as mock_find:
+        with mock.patch('usb.util.find_descriptor', return_value=mock_interface) as mock_find_descriptor:
+            _, _ = pico.get_bootsel_endpoints()
+
+    mock_find.assert_called_with(idVendor=pico.PICO_VENDOR, idProduct=pico.PICO_PRODUCT)
+    mock_device.is_kernel_driver_active.assert_called_with(0)
+    mock_device.detach_kernel_driver.assert_called_with(0)
+    mock_device.get_active_configuration.assert_called_once()
+    assert mock_find_descriptor.call_args_list[0].args[0] == mock_configuration
+    assert mock_find_descriptor.call_args_list[1].args[0] == mock_interface
+    assert mock_find_descriptor.call_args_list[2].args[0] == mock_interface
+
+
 def test_exclusive_access():
     """Test that we can get exclusive access to a BOOTSEL board."""
     end_out, end_in = mock.MagicMock(), mock.MagicMock()
