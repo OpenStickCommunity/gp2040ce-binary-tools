@@ -13,6 +13,7 @@ PICO_VENDOR = 0x2e8a
 PICO_PRODUCT = 0x0003
 
 PICOBOOT_CMD_STRUCT = '<LLBBxxL'
+PICOBOOT_CMD_ERASE_SUFFIX_STRUCT = 'LL8x'
 PICOBOOT_CMD_EXCLUSIVE_ACCESS_SUFFIX_STRUCT = 'L12x'
 PICOBOOT_CMD_EXIT_XIP_SUFFIX_STRUCT = '16x'
 PICOBOOT_CMD_READ_SUFFIX_STRUCT = 'LL8x'
@@ -24,6 +25,7 @@ PICO_SRAM_END = 0x20042000
 PICO_COMMANDS = {
     'EXCLUSIVE_ACCESS': 0x1,
     'REBOOT': 0x2,
+    'ERASE': 0x3,
     'READ': 0x4,
     'EXIT_XIP': 0x6,
 }
@@ -74,6 +76,27 @@ def exclusive_access(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, is_e
                           PICO_MAGIC, pico_token, PICO_COMMANDS['EXCLUSIVE_ACCESS'], command_size, transfer_len,
                           exclusive)
     logger.debug("EXCLUSIVE_ACCESS: %s", payload)
+    out_end.write(payload)
+    _ = in_end.read(256)
+
+
+def erase(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, size: int) -> None:
+    """Erase a section of flash memory on a Pico in BOOTSEL mode.
+
+    Args:
+        out_endpoint: the out direction USB endpoint to write to
+        in_endpoint: the in direction USB endpoint to read from
+        location: memory address of where to start erasing from
+        size: number of bytes to erase
+    """
+    # set up the data
+    pico_token = 1
+    command_size = 8
+    transfer_len = 0
+    payload = struct.pack(PICOBOOT_CMD_STRUCT + PICOBOOT_CMD_ERASE_SUFFIX_STRUCT,
+                          PICO_MAGIC, pico_token, PICO_COMMANDS['ERASE'], command_size, transfer_len,
+                          location, size)
+    logger.debug("ERASE: %s", payload)
     out_end.write(payload)
     _ = in_end.read(256)
 

@@ -52,6 +52,16 @@ def test_exit_xip():
     end_in.read.assert_called_once()
 
 
+def test_erase():
+    """Test that we can send a command to erase a section of memory."""
+    end_out, end_in = mock.MagicMock(), mock.MagicMock()
+    pico.erase(end_out, end_in, 0x101FE000, 8192)
+
+    payload = struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FE000, 8192)
+    end_out.write.assert_called_with(payload)
+    end_in.read.assert_called_once()
+
+
 def test_read():
     """Test that we can read a memory of a BOOTSEL board in a variety of conditions."""
     end_out, end_in = mock.MagicMock(), mock.MagicMock()
