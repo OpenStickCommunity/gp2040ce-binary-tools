@@ -5,6 +5,7 @@ import sys
 import unittest.mock as mock
 from array import array
 
+import pytest
 from decorator import decorator
 
 import gp2040ce_bintools.pico as pico
@@ -139,6 +140,39 @@ def test_write():
         mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FE000, 4)),
         mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
         mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x5, 8, 4, 0x101FE000, 4)),
+        mock.call(b'\x00\x01\x02\x03'),
+        mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 0)),
+    ]
+    end_out.write.assert_has_calls(expected_writes)
+    assert end_in.read.call_count == 6
+
+
+def test_misaligned_write():
+    """Test that we can't write to a board at invalid memory addresses."""
+    end_out, end_in = mock.MagicMock(), mock.MagicMock()
+    with pytest.raises(pico.PicoAlignmentError):
+        _ = pico.write(end_out, end_in, 0x101FE001, b'\x00\x01\x02\x03')
+    with pytest.raises(pico.PicoAlignmentError):
+        _ = pico.write(end_out, end_in, 0x101FE008, b'\x00\x01\x02\x03')
+    with pytest.raises(pico.PicoAlignmentError):
+        _ = pico.write(end_out, end_in, 0x101FE010, b'\x00\x01\x02\x03')
+    with pytest.raises(pico.PicoAlignmentError):
+        _ = pico.write(end_out, end_in, 0x101FE020, b'\x00\x01\x02\x03')
+    with pytest.raises(pico.PicoAlignmentError):
+        _ = pico.write(end_out, end_in, 0x101FE040, b'\x00\x01\x02\x03')
+    with pytest.raises(pico.PicoAlignmentError):
+        _ = pico.write(end_out, end_in, 0x101FE080, b'\x00\x01\x02\x03')
+    with pytest.raises(pico.PicoAlignmentError):
+        _ = pico.write(end_out, end_in, 0x101FE0FF, b'\x00\x01\x02\x03')
+
+    _ = pico.write(end_out, end_in, 0x101FE100, b'\x00\x01\x02\x03')
+
+    expected_writes = [
+        mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 1)),
+        mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FE100, 4)),
+        mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x5, 8, 4, 0x101FE100, 4)),
         mock.call(b'\x00\x01\x02\x03'),
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 0)),
     ]

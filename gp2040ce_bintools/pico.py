@@ -32,6 +32,15 @@ PICO_COMMANDS = {
 }
 
 
+#################
+# LIBRARY ITEMS #
+#################
+
+
+class PicoAlignmentError(ValueError):
+    """Exception raised when the address provided for an operation is invalid."""
+
+
 def get_bootsel_endpoints() -> tuple[usb.core.Endpoint, usb.core.Endpoint]:
     """Retrieve the USB endpoint for purposes of interacting with a Pico in BOOTSEL mode.
 
@@ -189,6 +198,9 @@ def write(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, 
         location: memory address of where to start reading from
         content: the data to write
     """
+    if (location % 256) != 0:
+        raise PicoAlignmentError("writes must start at 256 byte boundaries, please pad or align as appropriate!")
+
     # set up the data
     command_size = 8
 
