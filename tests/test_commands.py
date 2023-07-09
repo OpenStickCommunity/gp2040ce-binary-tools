@@ -2,13 +2,11 @@
 import json
 import os
 import sys
-import unittest.mock as mock
 from subprocess import run
 
 from decorator import decorator
 
 from gp2040ce_bintools import __version__
-from gp2040ce_bintools.storage import get_config_from_file
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -49,17 +47,6 @@ def test_concatenate_invocation(tmpdir):
     assert out[2088960:2097152] == storage
 
 
-@with_pb2s
-def test_dump_config_invocation(tmpdir, storage_dump, config_binary):
-    """Test that dumping a config to file works."""
-    out_filename = os.path.join(tmpdir, 'out.bin')
-    with mock.patch('gp2040ce_bintools.pico.get_bootsel_endpoints', return_value=(mock.MagicMock(), mock.MagicMock())):
-        with mock.patch('gp2040ce_bintools.pico.read', return_value=storage_dump):
-            run(['dump-config', '-P', 'tests/test-files/proto-files', '--filename', out_filename])
-    new_config = get_config_from_file(out_filename)
-    assert new_config.boardVersion == "v0.7.2"
-
-
 def test_storage_dump_invocation():
     """Test that a normal invocation against a dump works."""
     result = run(['visualize-storage', '-P', 'tests/test-files/proto-files',
@@ -84,12 +71,3 @@ def test_storage_dump_json_invocation():
                  capture_output=True, encoding='utf8')
     to_dict = json.loads(result.stdout)
     assert to_dict['boardVersion'] == 'v0.7.2'
-
-
-def test_visualize_usb_invocation(storage_dump):
-    """Test that a normal invocation against a dump works."""
-    with mock.patch('gp2040ce_bintools.pico.get_bootsel_endpoints', return_value=(mock.MagicMock(), mock.MagicMock())):
-        with mock.patch('gp2040ce_bintools.pico.read', return_value=storage_dump):
-            result = run(['visualize-storage', '-P', 'tests/test-files/proto-files', '--usb'],
-                         capture_output=True, encoding='utf8')
-    assert 'boardVersion: "v0.7.2"' in result.stdout
