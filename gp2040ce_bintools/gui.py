@@ -170,7 +170,7 @@ class ConfigEditor(App):
             ConfigEditor._add_node(tree.root, self.config, field_descriptor, field_value,
                                    value_is_config=child_is_message)
         for child_field_descriptor in sorted(missing_fields, key=lambda f: f.name):
-            child_is_message = ConfigEditor._descriptor_is_message(field_descriptor)
+            child_is_message = ConfigEditor._descriptor_is_message(child_field_descriptor)
             ConfigEditor._add_node(tree.root, self.config, child_field_descriptor,
                                    getattr(self.config, child_field_descriptor.name),
                                    value_is_config=child_is_message)
