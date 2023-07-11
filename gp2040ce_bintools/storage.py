@@ -65,6 +65,7 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     """
     # last 12 bytes are the footer
     logger.debug("length of content to look for footer in: %s", len(content))
+    logger.debug("content searching in for a footer: %s", content)
     if len(content) < FOOTER_SIZE:
         raise ConfigLengthError(f"provided content ({len(content)} bytes) is not large enough to have a config footer!")
 
@@ -78,11 +79,18 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     config_magic = f'0x{footer[8:12].hex()}'
 
     # more sanity checks
+    logger.debug("length of content + footer: %s", len(content))
     if len(content) < config_size + FOOTER_SIZE:
         raise ConfigLengthError(f"provided content ({len(content)} bytes) is not large enough according to the "
                                 f"config footer!")
 
-    content_crc = binascii.crc32(content[-(config_size + 12):-12])
+    logger.debug("config size according to footer: %s", config_size)
+
+    content_config = content[-(config_size + 12):-12]
+    content_crc = binascii.crc32(content_config)
+    logger.debug("content used to calculate CRC: %s", content_config)
+    logger.debug("calculated config CRC: %s", content_crc)
+    logger.debug("expected config CRC: %s", config_crc)
     if config_crc != content_crc:
         raise ConfigCrcError(f"provided content CRC checksum {content_crc} does not match footer's expected CRC "
                              f"checksum {config_crc}!")
@@ -190,10 +198,10 @@ def dump_config():
         description="Read the configuration section from a USB device and save it to a binary file.",
         parents=[core_parser],
     )
-    parser.add_argument('--filename', help=".bin file to save the GP2040-CE board's config section to")
+    parser.add_argument('binary_filename', help=".bin file to save the GP2040-CE board's config section to")
     args, _ = parser.parse_known_args()
     config, _, _ = get_config_from_usb()
-    with open(args.filename, 'wb') as out_file:
+    with open(args.binary_filename, 'wb') as out_file:
         out_file.write(serialize_config_with_footer(config))
 
 

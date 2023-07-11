@@ -73,7 +73,7 @@ This could be used with the other tools, or just to keep a backup.
 Sample usage:
 
 ```
-% dump-config -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --filename `date +%Y%m%d`-config-backup.bin
+% dump-config -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto `date +%Y%m%d`-config-backup.bin
 ```
 
 ### dump-gp2040ce
