@@ -33,6 +33,12 @@ def test_padding_firmware(firmware_binary):
     assert len(padded) == 2088960
 
 
+def test_padding_firmware_can_truncate():
+    """Test that firmware is padded to the expected size."""
+    padded = pad_firmware_up_to_storage(bytearray(b'\x00' * 4 * 1024 * 1024), or_truncate=True)
+    assert len(padded) == 2088960
+
+
 def test_firmware_plus_storage(firmware_binary, storage_dump):
     """Test that combining firmware and storage produces a valid combined binary."""
     whole_board = combine_firmware_and_config(firmware_binary, storage_dump)
@@ -45,6 +51,15 @@ def test_firmware_plus_storage(firmware_binary, storage_dump):
 def test_firmware_plus_config_binary(firmware_binary, config_binary):
     """Test that combining firmware and storage produces a valid combined binary."""
     whole_board = combine_firmware_and_config(firmware_binary, config_binary)
+    # if this is valid, we should be able to find the storage and footer again
+    storage = get_storage_section(whole_board)
+    footer_size, _, _ = get_config_footer(storage)
+    assert footer_size == 2032
+
+
+def test_chunky_firmware_plus_config_binary(config_binary):
+    """Test that combining giant firmware and storage produces a valid combined binary."""
+    whole_board = combine_firmware_and_config(bytearray(b'\x00' * 4 * 1024 * 1024), config_binary, replace_extra=True)
     # if this is valid, we should be able to find the storage and footer again
     storage = get_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)

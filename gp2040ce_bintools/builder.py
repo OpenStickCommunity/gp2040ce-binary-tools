@@ -25,28 +25,34 @@ class FirmwareLengthError(ValueError):
     """Exception raised when the firmware is too large to fit the known storage location."""
 
 
-def combine_firmware_and_config(firmware_binary: bytearray, config_binary: bytearray) -> bytearray:
+def combine_firmware_and_config(firmware_binary: bytearray, config_binary: bytearray,
+                                replace_extra: bool = False) -> bytearray:
     """Given firmware and config binaries, combine the two to one, with proper offsets for GP2040-CE.
 
     Args:
         firmware_binary: binary data of the raw GP2040-CE firmware, probably but not necessarily unpadded
         config_binary: binary data of board config + footer, possibly padded to be a full storage section
+        replace_extra: if larger than normal firmware files should have their overage replaced
     Returns:
         the resulting correctly-offset binary suitable for a GP2040-CE board
     """
-    return pad_firmware_up_to_storage(firmware_binary) + pad_config_to_storage_size(config_binary)
+    return (pad_firmware_up_to_storage(firmware_binary, or_truncate=replace_extra) +
+            pad_config_to_storage_size(config_binary))
 
 
-def concatenate_firmware_and_storage_files(firmware_filename: str, storage_filename: str, combined_filename: str):
+def concatenate_firmware_and_storage_files(firmware_filename: str, storage_filename: str, combined_filename: str,
+                                           replace_extra: bool = False):
     """Open the provided binary files and combine them into one combined GP2040-CE with config file.
 
     Args:
         firmware_filename: filename of the firmware binary to read
         storage_filename: filename of the storage section to read
         combined_filename: filename of where to write the combine binary
+        replace_extra: if larger than normal firmware files should have their overage replaced
     """
     with open(firmware_filename, 'rb') as firmware, open(storage_filename, 'rb') as storage:
-        new_binary = combine_firmware_and_config(bytearray(firmware.read()), bytearray(storage.read()))
+        new_binary = combine_firmware_and_config(bytearray(firmware.read()), bytearray(storage.read()),
+                                                 replace_extra=replace_extra)
     with open(combined_filename, 'wb') as combined:
         combined.write(new_binary)
 
@@ -65,11 +71,12 @@ def get_gp2040ce_from_usb() -> tuple[bytes, object, object]:
     return content, endpoint_out, endpoint_in
 
 
-def pad_firmware_up_to_storage(firmware: bytes) -> bytearray:
+def pad_firmware_up_to_storage(firmware: bytes, or_truncate: bool = False) -> bytearray:
     """Provide a copy of the firmware padded with zero bytes up to the provided position.
 
     Args:
         firmware: the firmware binary to process
+        or_truncate: if the firmware is longer than expected, just return the max size
     Returns:
         the resulting padded binary as a bytearray
     Raises:
@@ -78,6 +85,8 @@ def pad_firmware_up_to_storage(firmware: bytes) -> bytearray:
     bytes_to_pad = STORAGE_BINARY_LOCATION - len(firmware)
     logger.debug("firmware is length %s, padding %s bytes", len(firmware), bytes_to_pad)
     if bytes_to_pad < 0:
+        if or_truncate:
+            return bytearray(firmware[0:STORAGE_BINARY_LOCATION])
         raise FirmwareLengthError(f"provided firmware binary is larger than the start of "
                                   f"storage at {STORAGE_BINARY_LOCATION}!")
 
@@ -165,9 +174,13 @@ def concatenate():
     parser.add_argument('firmware_filename', help=".bin file of a GP2040-CE firmware, probably from a build")
     parser.add_argument('config_filename', help=".bin file of a GP2040-CE board's storage section or config w/footer")
     parser.add_argument('new_binary_filename', help="output .bin file of the resulting firmware + storage")
+    parser.add_argument('--replace-extra', action='store_true',
+                        help="if the firmware file is larger than the location of storage, perhaps because it's "
+                             "actually a full board dump, overwrite its config section with the config binary")
 
     args, _ = parser.parse_known_args()
-    concatenate_firmware_and_storage_files(args.firmware_filename, args.config_filename, args.new_binary_filename)
+    concatenate_firmware_and_storage_files(args.firmware_filename, args.config_filename, args.new_binary_filename,
+                                           replace_extra=args.replace_extra)
 
 
 def dump_gp2040ce():
