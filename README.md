@@ -76,6 +76,17 @@ Sample usage:
 % dump-config -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --filename `date +%Y%m%d`-config-backup.bin
 ```
 
+### dump-gp2040ce
+
+`dump-gp2040ce` replaces the need for picotool in order to make a copy of a board's full GP2040-CE image as a binary file.
+This could be used with the other tools, or just to keep a backup.
+
+Sample usage:
+
+```
+% dump-gp2040ce `date +%Y%m%d`-backup.bin
+```
+
 ### visualize-storage
 
 `visualize-storage` reads a GP2040-CE board's configuration, either over USB or from a dump of the board's flash

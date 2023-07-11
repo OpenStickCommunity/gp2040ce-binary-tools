@@ -6,11 +6,14 @@ import logging
 from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser
-from gp2040ce_bintools.pico import write
+from gp2040ce_bintools.pico import get_bootsel_endpoints, read, write
 from gp2040ce_bintools.storage import (STORAGE_BINARY_LOCATION, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE,
                                        pad_config_to_storage_size, serialize_config_with_footer)
 
 logger = logging.getLogger(__name__)
+
+GP2040CE_START_ADDRESS = 0x10000000
+GP2040CE_SIZE = 2 * 1024 * 1024
 
 
 #################
@@ -46,6 +49,20 @@ def concatenate_firmware_and_storage_files(firmware_filename: str, storage_filen
         new_binary = combine_firmware_and_config(bytearray(firmware.read()), bytearray(storage.read()))
     with open(combined_filename, 'wb') as combined:
         combined.write(new_binary)
+
+
+def get_gp2040ce_from_usb() -> tuple[bytes, object, object]:
+    """Read the firmware + config sections from a USB device.
+
+    Returns:
+        the bytes from the board, along with the USB out and in endpoints for reference
+    """
+    # open the USB device and get the config
+    endpoint_out, endpoint_in = get_bootsel_endpoints()
+    logger.debug("reading DEVICE ID %s:%s, bus %s, address %s", hex(endpoint_out.device.idVendor),
+                 hex(endpoint_out.device.idProduct), endpoint_out.device.bus, endpoint_out.device.address)
+    content = read(endpoint_out, endpoint_in, GP2040CE_START_ADDRESS, GP2040CE_SIZE)
+    return content, endpoint_out, endpoint_in
 
 
 def pad_firmware_up_to_storage(firmware: bytes) -> bytearray:
@@ -125,8 +142,11 @@ def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: 
     serialized = serialize_config_with_footer(config)
     # we don't write the whole area, just the minimum from the end of the storage section
     # nevertheless, the USB device needs writes to start at 256 byte boundaries
+    logger.debug("serialized: %s", serialized)
     padding = 256 - (len(serialized) % 256)
+    logger.debug("length: %s with %s bytes of padding", len(serialized), padding)
     binary = bytearray(b'\x00' * padding) + serialized
+    logger.debug("binary for writing: %s", binary)
     write(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS + (STORAGE_SIZE - len(binary)), binary)
 
 
@@ -148,3 +168,17 @@ def concatenate():
 
     args, _ = parser.parse_known_args()
     concatenate_firmware_and_storage_files(args.firmware_filename, args.config_filename, args.new_binary_filename)
+
+
+def dump_gp2040ce():
+    """Copy the whole GP2040-CE section off of a BOOTSEL mode board."""
+    parser = argparse.ArgumentParser(
+        description="Read the GP2040-CE firmware + storage section off of a connected USB RP2040 in BOOTSEL mode.",
+        parents=[core_parser],
+    )
+    parser.add_argument('binary_filename', help="output .bin file of the resulting firmware + storage")
+
+    args, _ = parser.parse_known_args()
+    content, _, _ = get_gp2040ce_from_usb()
+    with open(args.binary_filename, 'wb') as out_file:
+        out_file.write(content)

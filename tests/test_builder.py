@@ -7,8 +7,9 @@ import pytest
 from decorator import decorator
 
 from gp2040ce_bintools import get_config_pb2
-from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and_config, pad_firmware_up_to_storage,
-                                       replace_config_in_binary, write_new_config_to_filename, write_new_config_to_usb)
+from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and_config, get_gp2040ce_from_usb,
+                                       pad_firmware_up_to_storage, replace_config_in_binary,
+                                       write_new_config_to_filename, write_new_config_to_usb)
 from gp2040ce_bintools.storage import get_config, get_config_footer, get_storage_section, serialize_config_with_footer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -150,3 +151,19 @@ def test_write_new_config_to_usb(config_binary):
     padded_serialized = bytearray(b'\x00' * 4) + serialized
     assert mock_write.call_args.args[2] % 256 == 0
     assert mock_write.call_args.args[3] == padded_serialized
+
+
+def test_get_gp2040ce_from_usb():
+    """Test we attempt to read from the proper location over USB."""
+    mock_out = mock.MagicMock()
+    mock_out.device.idVendor = 0xbeef
+    mock_out.device.idProduct = 0xcafe
+    mock_out.device.bus = 1
+    mock_out.device.address = 2
+    mock_in = mock.MagicMock()
+    with mock.patch('gp2040ce_bintools.builder.get_bootsel_endpoints', return_value=(mock_out, mock_in)) as mock_get:
+        with mock.patch('gp2040ce_bintools.builder.read') as mock_read:
+            config, _, _ = get_gp2040ce_from_usb()
+
+    mock_get.assert_called_once()
+    mock_read.assert_called_with(mock_out, mock_in, 0x10000000, 2 * 1024 * 1024)
