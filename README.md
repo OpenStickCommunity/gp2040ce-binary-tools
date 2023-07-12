@@ -59,10 +59,13 @@ This may be useful to ensure the board is flashed with a particular configuratio
 binary to flash many boards with a particular configuration (specific customizations, etc.), or keeping documented
 backups of what you're testing with during development.
 
+The produced binary can be written to a file with `--new-binary-filename FILENAME` or straight to a RP2040 in BOOTSEL
+ mode with `--usb`.
+
 Sample usage:
 
 ```
-% concatenate build/GP2040-CE_foo_bar.bin storage-dump.bin new-firmware-with-config.bin
+% concatenate build/GP2040-CE_foo_bar.bin storage-dump.bin --new-binary-filename new-firmware-with-config.bin
 ```
 
 ### dump-config

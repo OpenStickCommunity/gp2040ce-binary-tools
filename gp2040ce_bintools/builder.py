@@ -40,8 +40,9 @@ def combine_firmware_and_config(firmware_binary: bytearray, config_binary: bytea
             pad_config_to_storage_size(config_binary))
 
 
-def concatenate_firmware_and_storage_files(firmware_filename: str, storage_filename: str, combined_filename: str,
-                                           replace_extra: bool = False):
+def concatenate_firmware_and_storage_files(firmware_filename: str, storage_filename: str,
+                                           combined_filename: str = '', usb: bool = False,
+                                           replace_extra: bool = False) -> None:
     """Open the provided binary files and combine them into one combined GP2040-CE with config file.
 
     Args:
@@ -53,8 +54,12 @@ def concatenate_firmware_and_storage_files(firmware_filename: str, storage_filen
     with open(firmware_filename, 'rb') as firmware, open(storage_filename, 'rb') as storage:
         new_binary = combine_firmware_and_config(bytearray(firmware.read()), bytearray(storage.read()),
                                                  replace_extra=replace_extra)
-    with open(combined_filename, 'wb') as combined:
-        combined.write(new_binary)
+    if combined_filename:
+        with open(combined_filename, 'wb') as combined:
+            combined.write(new_binary)
+    if usb:
+        endpoint_out, endpoint_in = get_bootsel_endpoints()
+        write(endpoint_out, endpoint_in, GP2040CE_START_ADDRESS, bytes(new_binary))
 
 
 def get_gp2040ce_from_usb() -> tuple[bytes, object, object]:
@@ -174,15 +179,18 @@ def concatenate():
                     "into one file suitable for flashing onto a board.",
         parents=[core_parser],
     )
-    parser.add_argument('firmware_filename', help=".bin file of a GP2040-CE firmware, probably from a build")
-    parser.add_argument('config_filename', help=".bin file of a GP2040-CE board's storage section or config w/footer")
-    parser.add_argument('new_binary_filename', help="output .bin file of the resulting firmware + storage")
     parser.add_argument('--replace-extra', action='store_true',
                         help="if the firmware file is larger than the location of storage, perhaps because it's "
                              "actually a full board dump, overwrite its config section with the config binary")
+    parser.add_argument('firmware_filename', help=".bin file of a GP2040-CE firmware, probably from a build")
+    parser.add_argument('config_filename', help=".bin file of a GP2040-CE board's storage section or config w/footer")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--usb', action='store_true', help="write the resulting firmware + storage to USB")
+    group.add_argument('--new-binary-filename', help="output .bin file of the resulting firmware + storage")
 
     args, _ = parser.parse_known_args()
-    concatenate_firmware_and_storage_files(args.firmware_filename, args.config_filename, args.new_binary_filename,
+    concatenate_firmware_and_storage_files(args.firmware_filename, args.config_filename,
+                                           combined_filename=args.new_binary_filename, usb=args.usb,
                                            replace_extra=args.replace_extra)
 
 

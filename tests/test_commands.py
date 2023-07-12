@@ -40,7 +40,7 @@ def test_concatenate_invocation(tmpdir):
     """Test that a normal invocation against a dump works."""
     out_filename = os.path.join(tmpdir, 'out.bin')
     _ = run(['concatenate', 'tests/test-files/test-firmware.bin', 'tests/test-files/test-storage-area.bin',
-             out_filename])
+             '--new-binary-filename', out_filename])
     with open(out_filename, 'rb') as out_file, open('tests/test-files/test-storage-area.bin', 'rb') as storage_file:
         out = out_file.read()
         storage = storage_file.read()

@@ -7,7 +7,8 @@ import pytest
 from decorator import decorator
 
 from gp2040ce_bintools import get_config_pb2
-from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and_config, get_gp2040ce_from_usb,
+from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and_config,
+                                       concatenate_firmware_and_storage_files, get_gp2040ce_from_usb,
                                        pad_firmware_up_to_storage, replace_config_in_binary,
                                        write_new_config_to_filename, write_new_config_to_usb)
 from gp2040ce_bintools.storage import get_config, get_config_footer, get_storage_section, serialize_config_with_footer
@@ -25,6 +26,30 @@ def with_pb2s(test, *args, **kwargs):
 
     sys.path.pop()
     del sys.modules['config_pb2']
+
+
+def test_concatenate_to_file(tmp_path):
+    """Test that we write a file as expected."""
+    tmp_file = os.path.join(tmp_path, 'concat.bin')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
+    concatenate_firmware_and_storage_files(firmware_file, config_file, combined_filename=tmp_file)
+    with open(tmp_file, 'rb') as file:
+        content = file.read()
+    assert len(content) == 2 * 1024 * 1024
+
+
+def test_concatenate_to_usb(tmp_path):
+    """Test that we write a file as expected."""
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
+    end_out, end_in = mock.MagicMock(), mock.MagicMock()
+    with mock.patch('gp2040ce_bintools.builder.get_bootsel_endpoints', return_value=(end_out, end_in)):
+        with mock.patch('gp2040ce_bintools.builder.write') as mock_write:
+            concatenate_firmware_and_storage_files(firmware_file, config_file, usb=True)
+
+    assert mock_write.call_args.args[2] == 0x10000000
+    assert len(mock_write.call_args.args[3]) == 2 * 1024 * 1024
 
 
 def test_padding_firmware(firmware_binary):
