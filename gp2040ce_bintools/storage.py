@@ -226,14 +226,14 @@ def visualize():
                     "its contents.",
         parents=[core_parser],
     )
+    parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
+    parser.add_argument('--json', action='store_true', help="print the config out as a JSON document")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--usb', action='store_true', help="retrieve the config from a Pico board connected over USB "
                                                           "and in BOOTSEL mode")
     group.add_argument('--filename', help=".bin file of a GP2040-CE board's storage section, bytes "
                                           "101FE000-10200000, or of a GP2040-CE's whole board dump "
                                           "if --whole-board is specified")
-    parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
-    parser.add_argument('--json', action='store_true', help="print the config out as a JSON document")
     args, _ = parser.parse_known_args()
 
     if args.usb:

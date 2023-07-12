@@ -386,14 +386,14 @@ def edit_config():
         description="Utilize a GUI to view and alter the contents of a GP2040-CE configuration.",
         parents=[core_parser],
     )
+    parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
+    parser.add_argument('--new-if-not-found', action='store_true', default=True,
+                        help="if the file/USB device doesn't have a config section, start a new one (default: enabled)")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--usb', action='store_true', help="retrieve the config from a Pico board connected over USB "
                                                           "and in BOOTSEL mode")
     group.add_argument('--filename', help=".bin file of a GP2040-CE board's config + footer or entire storage section, "
                                           "or of a GP2040-CE's whole board dump if --whole-board is specified")
-    parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
-    parser.add_argument('--new-if-not-found', action='store_true', default=True,
-                        help="if the file/USB device doesn't have a config section, start a new one (default: enabled)")
     args, _ = parser.parse_known_args()
 
     if args.usb:
