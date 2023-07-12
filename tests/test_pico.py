@@ -205,14 +205,19 @@ def test_misaligned_write():
     with pytest.raises(pico.PicoAlignmentError):
         _ = pico.write(end_out, end_in, 0x101FE0FF, b'\x00\x01\x02\x03')
 
-    _ = pico.write(end_out, end_in, 0x101FE100, b'\x00\x01\x02\x03')
+    # 256 byte alignment is what is desired, but see comments around there for
+    # why only 4096 seems to work right...
+    with pytest.raises(pico.PicoAlignmentError):
+        _ = pico.write(end_out, end_in, 0x101FE100, b'\x00\x01\x02\x03')
+
+    _ = pico.write(end_out, end_in, 0x101FF000, b'\x00\x01\x02\x03')
 
     expected_writes = [
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 1)),
         mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
-        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FE100, 4)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FF000, 4)),
         mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
-        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x5, 8, 4, 0x101FE100, 4)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x5, 8, 4, 0x101FF000, 4)),
         mock.call(b'\x00\x01\x02\x03'),
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 0)),
     ]

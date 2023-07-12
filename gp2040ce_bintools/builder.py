@@ -152,11 +152,14 @@ def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: 
     # we don't write the whole area, just the minimum from the end of the storage section
     # nevertheless, the USB device needs writes to start at 256 byte boundaries
     logger.debug("serialized: %s", serialized)
-    padding = 256 - (len(serialized) % 256)
+    # not sure why this minimal padding isn't working but it leads to corruption
+    # maybe claims that erase need to be on 4096 byte sectors?
+    # padding = 256 - (len(serialized) % 256)
+    padding = 4096 - (len(serialized) % 4096)
     logger.debug("length: %s with %s bytes of padding", len(serialized), padding)
     binary = bytearray(b'\x00' * padding) + serialized
     logger.debug("binary for writing: %s", binary)
-    write(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS + (STORAGE_SIZE - len(binary)), binary)
+    write(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS + (STORAGE_SIZE - len(binary)), bytes(binary))
 
 
 ############

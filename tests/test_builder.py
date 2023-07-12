@@ -163,8 +163,9 @@ def test_write_new_config_to_usb(config_binary):
         write_new_config_to_usb(config, end_out, end_in)
 
     # check that it got padded
-    padded_serialized = bytearray(b'\x00' * 4) + serialized
-    assert mock_write.call_args.args[2] % 256 == 0
+    assert len(serialized) == 2044
+    padded_serialized = bytearray(b'\x00' * 2052) + serialized
+    assert mock_write.call_args.args[2] % 4096 == 0
     assert mock_write.call_args.args[3] == padded_serialized
 
 

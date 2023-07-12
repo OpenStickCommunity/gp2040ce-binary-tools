@@ -198,8 +198,10 @@ def write(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, 
         location: memory address of where to start reading from
         content: the data to write
     """
-    if (location % 256) != 0:
-        raise PicoAlignmentError("writes must start at 256 byte boundaries, please pad or align as appropriate!")
+    # not sure why 256 alignment isn't working but it leads to corruption
+    # maybe claims that erase need to be on 4096 byte sectors?
+    if (location % 4096) != 0:
+        raise PicoAlignmentError("writes must start at 4096 byte boundaries, please pad or align as appropriate!")
 
     # set up the data
     command_size = 8
@@ -209,13 +211,14 @@ def write(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, 
     erase(out_end, in_end, location, len(content))
     exit_xip(out_end, in_end)
     pico_token = 1
-    logger.debug("writing %s bytes to %s", len(content), location)
+    logger.debug("writing %s bytes to %s", len(content), hex(location))
     payload = struct.pack(PICOBOOT_CMD_STRUCT + PICOBOOT_CMD_READ_SUFFIX_STRUCT,
                           PICO_MAGIC, pico_token, PICO_COMMANDS['WRITE'], command_size, len(content),
                           location, len(content))
     logger.debug("WRITE: %s", payload)
     out_end.write(payload)
     logger.debug("actually writing bytes now...")
+    logger.debug("payload: %s", content)
     out_end.write(content)
     res = in_end.read(256)
     logger.debug("res: %s", res)
