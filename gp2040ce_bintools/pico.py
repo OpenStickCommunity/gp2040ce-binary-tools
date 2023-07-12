@@ -198,28 +198,38 @@ def write(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, 
         location: memory address of where to start reading from
         content: the data to write
     """
-    # not sure why 256 alignment isn't working but it leads to corruption
-    # maybe claims that erase need to be on 4096 byte sectors?
-    if (location % 4096) != 0:
-        raise PicoAlignmentError("writes must start at 4096 byte boundaries, please pad or align as appropriate!")
+    chunk_size = 4096
+    write_location = location
+    write_size = 0
+
+    if (location % chunk_size) != 0:
+        raise PicoAlignmentError(f"writes must start at {chunk_size} byte boundaries, "
+                                 f"please pad or align as appropriate!")
 
     # set up the data
     command_size = 8
+    size = len(content)
 
     exclusive_access(out_end, in_end, is_exclusive=True)
-    exit_xip(out_end, in_end)
-    erase(out_end, in_end, location, len(content))
-    exit_xip(out_end, in_end)
-    pico_token = 1
-    logger.debug("writing %s bytes to %s", len(content), hex(location))
-    payload = struct.pack(PICOBOOT_CMD_STRUCT + PICOBOOT_CMD_READ_SUFFIX_STRUCT,
-                          PICO_MAGIC, pico_token, PICO_COMMANDS['WRITE'], command_size, len(content),
-                          location, len(content))
-    logger.debug("WRITE: %s", payload)
-    out_end.write(payload)
-    logger.debug("actually writing bytes now...")
-    logger.debug("payload: %s", content)
-    out_end.write(content)
-    res = in_end.read(256)
-    logger.debug("res: %s", res)
+    while write_size < size:
+        pico_token = 1
+        to_write = content[write_size:(write_size + chunk_size)]
+
+        exit_xip(out_end, in_end)
+        logger.debug("erasing %s bytes at %s", len(to_write), hex(write_location))
+        erase(out_end, in_end, write_location, len(to_write))
+
+        logger.debug("writing %s bytes to %s", len(to_write), hex(write_location))
+        payload = struct.pack(PICOBOOT_CMD_STRUCT + PICOBOOT_CMD_READ_SUFFIX_STRUCT,
+                              PICO_MAGIC, pico_token, PICO_COMMANDS['WRITE'], command_size, len(to_write),
+                              write_location, len(to_write))
+        logger.debug("WRITE: %s", payload)
+        out_end.write(payload)
+        logger.debug("actually writing bytes now...")
+        logger.debug("payload: %s", to_write)
+        out_end.write(bytes(to_write))
+        res = in_end.read(chunk_size)
+        logger.debug("res: %s", res)
+        write_size += chunk_size
+        write_location += chunk_size
     exclusive_access(out_end, in_end, is_exclusive=False)
