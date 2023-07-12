@@ -24,15 +24,19 @@ FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
 #################
 
 
-class ConfigCrcError(ValueError):
+class ConfigReadError(ValueError):
+    """General exception for failing to read/verify the GP2040-CE config for some reason."""
+
+
+class ConfigCrcError(ConfigReadError):
     """Exception raised when the CRC checksum in the footer doesn't match the actual content's."""
 
 
-class ConfigLengthError(ValueError):
+class ConfigLengthError(ConfigReadError):
     """Exception raised when a length sanity check fails."""
 
 
-class ConfigMagicError(ValueError):
+class ConfigMagicError(ConfigReadError):
     """Exception raised when the config section does not have the magic value in its footer."""
 
 
@@ -156,6 +160,16 @@ def get_storage_section(content: bytes) -> bytes:
     logger.debug("returning bytes from %s to %s", hex(STORAGE_BINARY_LOCATION),
                  hex(STORAGE_BINARY_LOCATION + STORAGE_SIZE))
     return content[STORAGE_BINARY_LOCATION:(STORAGE_BINARY_LOCATION + STORAGE_SIZE)]
+
+
+def get_new_config() -> Message:
+    """Wrap the creation of a new Config message.
+
+    Returns:
+        the initialized Config
+    """
+    config_pb2 = get_config_pb2()
+    return config_pb2.Config()
 
 
 def pad_config_to_storage_size(config: bytes) -> bytearray:

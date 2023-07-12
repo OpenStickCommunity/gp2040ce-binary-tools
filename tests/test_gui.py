@@ -1,13 +1,15 @@
 """Test the Textual GUI."""
 import os
 import sys
+import unittest.mock as mock
 
 import pytest
 from decorator import decorator
 from textual.widgets import Tree
 
+from gp2040ce_bintools import get_config_pb2
 from gp2040ce_bintools.gui import ConfigEditor
-from gp2040ce_bintools.storage import get_config_from_file
+from gp2040ce_bintools.storage import ConfigReadError, get_config, get_config_from_file
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -22,6 +24,47 @@ async def with_pb2s(test, *args, **kwargs):
 
     sys.path.pop()
     del sys.modules['config_pb2']
+
+
+@pytest.mark.asyncio
+@with_pb2s
+async def test_load_configs():
+    """Test a variety of ways the editor may get initialized."""
+    test_config_filename = os.path.join(HERE, 'test-files/test-config.bin')
+    empty_config = get_config_pb2().Config()
+    with open(test_config_filename, 'rb') as file_:
+        test_config_binary = file_.read()
+    test_config = get_config(test_config_binary)
+
+    app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
+    assert app.config == test_config
+
+    app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.binooooooo'), create_new=True)
+    assert app.config == empty_config
+
+    with pytest.raises(FileNotFoundError):
+        app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.binooooooo'))
+
+    app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-firmware.bin'), create_new=True)
+    assert app.config == empty_config
+
+    with pytest.raises(ConfigReadError):
+        app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-firmware.bin'))
+
+    with mock.patch('gp2040ce_bintools.gui.get_bootsel_endpoints', return_value=(mock.MagicMock(), mock.MagicMock())):
+        with mock.patch('gp2040ce_bintools.gui.read', return_value=b'\x00'):
+            with pytest.raises(ConfigReadError):
+                app = ConfigEditor(usb=True)
+
+    with mock.patch('gp2040ce_bintools.gui.get_bootsel_endpoints', return_value=(mock.MagicMock(), mock.MagicMock())):
+        with mock.patch('gp2040ce_bintools.gui.read', return_value=b'\x00'):
+            app = ConfigEditor(usb=True, create_new=True)
+    assert app.config == empty_config
+
+    with mock.patch('gp2040ce_bintools.gui.get_bootsel_endpoints', return_value=(mock.MagicMock(), mock.MagicMock())):
+        with mock.patch('gp2040ce_bintools.gui.read', return_value=test_config_binary):
+            app = ConfigEditor(usb=True)
+    assert app.config == test_config
 
 
 @pytest.mark.asyncio

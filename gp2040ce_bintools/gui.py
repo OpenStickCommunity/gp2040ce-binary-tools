@@ -17,7 +17,9 @@ from textual.widgets.tree import TreeNode
 
 from gp2040ce_bintools import core_parser, handler
 from gp2040ce_bintools.builder import write_new_config_to_filename, write_new_config_to_usb
-from gp2040ce_bintools.storage import get_config_from_file, get_config_from_usb
+from gp2040ce_bintools.pico import get_bootsel_endpoints, read
+from gp2040ce_bintools.storage import (STORAGE_MEMORY_ADDRESS, STORAGE_SIZE, ConfigReadError, get_config,
+                                       get_config_from_file, get_new_config)
 
 logger = logging.getLogger(__name__)
 
@@ -130,26 +132,27 @@ class ConfigEditor(App):
 
     def __init__(self, *args, **kwargs):
         """Initialize config."""
-        self.config_filename = kwargs.pop('config_filename', None)
-        self.whole_board = kwargs.pop('whole_board', False)
-        self.usb = kwargs.pop('usb', False)
-        # load the config
-        if self.usb:
-            self.config, self.endpoint_out, self.endpoint_in = get_config_from_usb()
-            self.source_name = (f"DEVICE ID {hex(self.endpoint_out.device.idVendor)}:"
-                                f"{hex(self.endpoint_out.device.idProduct)} "
-                                f"on bus {self.endpoint_out.device.bus} address {self.endpoint_out.device.address}")
-        else:
-            self.config = get_config_from_file(self.config_filename, whole_board=self.whole_board)
-            self.source_name = self.config_filename
-        super().__init__(*args, **kwargs)
-
-        # disable normal logging and enable console logging if we're not headless
+        # disable normal logging and enable console logging
         logger.debug("reconfiguring logging...")
         root = logging.getLogger()
         root.setLevel(logging.DEBUG)
         root.removeHandler(handler)
         root.addHandler(TextualHandler())
+
+        self.config_filename = kwargs.pop('config_filename', None)
+        self.usb = kwargs.pop('usb', False)
+        self.whole_board = kwargs.pop('whole_board', False)
+        self.create_new = kwargs.pop('create_new', False)
+
+        super().__init__(*args, **kwargs)
+        self._load_config()
+
+        if self.usb:
+            self.source_name = (f"DEVICE ID {hex(self.endpoint_out.device.idVendor)}:"
+                                f"{hex(self.endpoint_out.device.idProduct)} "
+                                f"on bus {self.endpoint_out.device.bus} address {self.endpoint_out.device.address}")
+        else:
+            self.source_name = self.config_filename
 
     def compose(self) -> ComposeResult:
         """Compose the UI."""
@@ -312,6 +315,35 @@ class ConfigEditor(App):
             logger.debug("opening edit screen for %s", field_descriptor.name)
             self.push_screen(EditScreen(node, field_value))
 
+    def _load_config(self):
+        """Based on how this was initialized, get the config in a variety of ways."""
+        if self.usb:
+            try:
+                self.endpoint_out, self.endpoint_in = get_bootsel_endpoints()
+                config_binary = read(self.endpoint_out, self.endpoint_in, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE)
+                self.config = get_config(bytes(config_binary))
+            except ConfigReadError:
+                if self.create_new:
+                    logger.warning("creating new config as the read one was invalid!")
+                    self.config = get_new_config()
+                else:
+                    raise
+        else:
+            try:
+                self.config = get_config_from_file(self.config_filename, whole_board=self.whole_board)
+            except FileNotFoundError:
+                if self.create_new:
+                    logger.warning("creating new config as the read one was invalid!")
+                    self.config = get_new_config()
+                else:
+                    raise
+            except ConfigReadError:
+                if self.create_new:
+                    logger.warning("creating new config as the read one was invalid!")
+                    self.config = get_new_config()
+                else:
+                    raise
+
 
 def pb_field_to_node_label(field_descriptor, field_value):
     """Provide the pretty label for a tree node.
@@ -360,10 +392,13 @@ def edit_config():
     group.add_argument('--filename', help=".bin file of a GP2040-CE board's config + footer or entire storage section, "
                                           "or of a GP2040-CE's whole board dump if --whole-board is specified")
     parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
+    parser.add_argument('--new-if-not-found', action='store_true', default=True,
+                        help="if the file/USB device doesn't have a config section, start a new one (default: enabled)")
     args, _ = parser.parse_known_args()
 
     if args.usb:
-        app = ConfigEditor(usb=True)
+        app = ConfigEditor(usb=True, create_new=args.new_if_not_found)
     else:
-        app = ConfigEditor(config_filename=args.filename, whole_board=args.whole_board)
+        app = ConfigEditor(config_filename=args.filename, whole_board=args.whole_board,
+                           create_new=args.new_if_not_found)
     app.run()
