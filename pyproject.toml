@@ -23,6 +23,7 @@ classifiers = [
 
 [project.urls]
 "Homepage" = "https://github.com/OpenStickCommunity/gp2040ce-binary-tools"
+"Changelog" = "https://github.com/OpenStickCommunity/gp2040ce-binary-tools/blob/main/CHANGELOG.md"
 "Bug Tracker" = "https://github.com/OpenStickCommunity/gp2040ce-binary-tools/issues"
 
 
