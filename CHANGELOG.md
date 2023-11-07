@@ -3,6 +3,17 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.5.1
+
+### Added
+
+* A little description to the README of what gp2040ce-binary-tools version supports what GP2040-CE version, because...
+
+### Changed
+
+* The flash addresses/storage sizes account for the expanded size in GP2040-CE v0.7.5.
+* Renamed the "pico" module to "rp2040" for accuracy's sake.
+
 ## v0.5.0
 
 ### Added
