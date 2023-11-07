@@ -189,7 +189,7 @@ a huge effort to be backwards compatible, so instead, refer to this:
 ### Dumping the GP2040-CE board with picotool
 
 Some of these tools require a dump of your GP2040-CE board, either the storage section or the whole board, depending on
-the context. The storage section of a GP2040-CE board is a reserved 8 KB starting at `0x101FC000`. To dump your board's
+the context. The storage section of a GP2040-CE board is a reserved 16 KB starting at `0x101FC000`. To dump your board's
 storage with picotool:
 
 ```
