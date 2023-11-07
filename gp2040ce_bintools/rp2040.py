@@ -1,4 +1,4 @@
-"""Methods to interact with the Raspberry Pi Pico directly.
+"""Methods to interact with the Raspberry Pi RP2040 directly.
 
 Much of this code is a partial Python implementation of picotool.
 """
@@ -37,12 +37,12 @@ PICO_COMMANDS = {
 #################
 
 
-class PicoAlignmentError(ValueError):
+class RP2040AlignmentError(ValueError):
     """Exception raised when the address provided for an operation is invalid."""
 
 
 def get_bootsel_endpoints() -> tuple[usb.core.Endpoint, usb.core.Endpoint]:
-    """Retrieve the USB endpoint for purposes of interacting with a Pico in BOOTSEL mode.
+    """Retrieve the USB endpoint for purposes of interacting with a RP2040 in BOOTSEL mode.
 
     Returns:
         the out and in endpoints for the BOOTSEL interface
@@ -51,7 +51,7 @@ def get_bootsel_endpoints() -> tuple[usb.core.Endpoint, usb.core.Endpoint]:
     pico_device = usb.core.find(idVendor=PICO_VENDOR, idProduct=PICO_PRODUCT)
 
     if not pico_device:
-        raise ValueError("Pico board in BOOTSEL mode could not be found!")
+        raise ValueError("RP2040 board in BOOTSEL mode could not be found!")
 
     if pico_device.is_kernel_driver_active(0):
         pico_device.detach_kernel_driver(0)
@@ -71,7 +71,7 @@ def get_bootsel_endpoints() -> tuple[usb.core.Endpoint, usb.core.Endpoint]:
 
 
 def exclusive_access(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, is_exclusive: bool = True) -> None:
-    """Enable exclusive access mode on a Pico in BOOTSEL.
+    """Enable exclusive access mode on a RP2040 in BOOTSEL.
 
     Args:
         out_endpoint: the out direction USB endpoint to write to
@@ -91,7 +91,7 @@ def exclusive_access(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, is_e
 
 
 def erase(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, size: int) -> None:
-    """Erase a section of flash memory on a Pico in BOOTSEL mode.
+    """Erase a section of flash memory on a RP2040 in BOOTSEL mode.
 
     Args:
         out_endpoint: the out direction USB endpoint to write to
@@ -113,7 +113,7 @@ def erase(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, 
 
 
 def exit_xip(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint) -> None:
-    """Exit XIP on a Pico in BOOTSEL.
+    """Exit XIP on a RP2040 in BOOTSEL.
 
     Args:
         out_endpoint: the out direction USB endpoint to write to
@@ -131,7 +131,7 @@ def exit_xip(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint) -> None:
 
 
 def read(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, size: int) -> bytearray:
-    """Read a requested number of bytes from a Pico in BOOTSEL, starting from the specified location.
+    """Read a requested number of bytes from a RP2040 in BOOTSEL, starting from the specified location.
 
     This also prepares the USB device for reading, so it expects to be able to grab
     exclusive access.
@@ -172,7 +172,7 @@ def read(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, s
 
 
 def reboot(out_end: usb.core.Endpoint) -> None:
-    """Reboot a Pico in BOOTSEL mode."""
+    """Reboot a RP2040 in BOOTSEL mode."""
     # set up the data
     pico_token = 1
     command_size = 12
@@ -187,7 +187,7 @@ def reboot(out_end: usb.core.Endpoint) -> None:
 
 
 def write(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, content: bytes) -> None:
-    """Write content to a Pico in BOOTSEL, starting from the specified location.
+    """Write content to a RP2040 in BOOTSEL, starting from the specified location.
 
     This also prepares the USB device for writing, so it expects to be able to grab
     exclusive access.
@@ -203,8 +203,8 @@ def write(out_end: usb.core.Endpoint, in_end: usb.core.Endpoint, location: int, 
     write_size = 0
 
     if (location % chunk_size) != 0:
-        raise PicoAlignmentError(f"writes must start at {chunk_size} byte boundaries, "
-                                 f"please pad or align as appropriate!")
+        raise RP2040AlignmentError(f"writes must start at {chunk_size} byte boundaries, "
+                                   f"please pad or align as appropriate!")
 
     # set up the data
     command_size = 8

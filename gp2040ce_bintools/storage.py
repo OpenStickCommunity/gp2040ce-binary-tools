@@ -7,7 +7,7 @@ from google.protobuf.json_format import MessageToJson
 from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser, get_config_pb2
-from gp2040ce_bintools.pico import get_bootsel_endpoints, read
+from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +229,7 @@ def visualize():
     parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
     parser.add_argument('--json', action='store_true', help="print the config out as a JSON document")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--usb', action='store_true', help="retrieve the config from a Pico board connected over USB "
+    group.add_argument('--usb', action='store_true', help="retrieve the config from a RP2040 board connected over USB "
                                                           "and in BOOTSEL mode")
     group.add_argument('--filename', help=".bin file of a GP2040-CE board's storage section, bytes "
                                           "101FC000-10200000, or of a GP2040-CE's whole board dump "

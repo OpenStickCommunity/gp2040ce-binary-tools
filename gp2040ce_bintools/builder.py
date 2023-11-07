@@ -6,7 +6,7 @@ import logging
 from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser
-from gp2040ce_bintools.pico import get_bootsel_endpoints, read, write
+from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read, write
 from gp2040ce_bintools.storage import (STORAGE_BINARY_LOCATION, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE,
                                        pad_config_to_storage_size, serialize_config_with_footer)
 
@@ -149,7 +149,7 @@ def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: 
     """Serialize the provided config to a device over USB, in the proper location for a GP2040-CE board.
 
     Args:
-        config: the Protobuf configuration to write to a Pico board in BOOTSEL mode
+        config: the Protobuf configuration to write to a RP2040 board in BOOTSEL mode
         endpoint_out: the USB endpoint to write to
         endpoint_in: the USB endpoint to read from
     """

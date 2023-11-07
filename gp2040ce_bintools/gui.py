@@ -17,7 +17,7 @@ from textual.widgets.tree import TreeNode
 
 from gp2040ce_bintools import core_parser, handler
 from gp2040ce_bintools.builder import write_new_config_to_filename, write_new_config_to_usb
-from gp2040ce_bintools.pico import get_bootsel_endpoints, read
+from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
 from gp2040ce_bintools.storage import (STORAGE_MEMORY_ADDRESS, STORAGE_SIZE, ConfigReadError, get_config,
                                        get_config_from_file, get_new_config)
 
@@ -390,7 +390,7 @@ def edit_config():
     parser.add_argument('--new-if-not-found', action='store_true', default=True,
                         help="if the file/USB device doesn't have a config section, start a new one (default: enabled)")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--usb', action='store_true', help="retrieve the config from a Pico board connected over USB "
+    group.add_argument('--usb', action='store_true', help="retrieve the config from a RP2040 board connected over USB "
                                                           "and in BOOTSEL mode")
     group.add_argument('--filename', help=".bin file of a GP2040-CE board's config + footer or entire storage section, "
                                           "or of a GP2040-CE's whole board dump if --whole-board is specified")
