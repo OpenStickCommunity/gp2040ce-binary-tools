@@ -55,13 +55,13 @@ def test_concatenate_to_usb(tmp_path):
 def test_padding_firmware(firmware_binary):
     """Test that firmware is padded to the expected size."""
     padded = pad_firmware_up_to_storage(firmware_binary)
-    assert len(padded) == 2088960
+    assert len(padded) == 2080768
 
 
 def test_padding_firmware_can_truncate():
     """Test that firmware is padded to the expected size."""
     padded = pad_firmware_up_to_storage(bytearray(b'\x00' * 4 * 1024 * 1024), or_truncate=True)
-    assert len(padded) == 2088960
+    assert len(padded) == 2080768
 
 
 def test_firmware_plus_storage(firmware_binary, storage_dump):
@@ -70,7 +70,7 @@ def test_firmware_plus_storage(firmware_binary, storage_dump):
     # if this is valid, we should be able to find the storage and footer again
     storage = get_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
-    assert footer_size == 2032
+    assert footer_size == 3309
 
 
 def test_firmware_plus_config_binary(firmware_binary, config_binary):
@@ -79,7 +79,7 @@ def test_firmware_plus_config_binary(firmware_binary, config_binary):
     # if this is valid, we should be able to find the storage and footer again
     storage = get_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
-    assert footer_size == 2032
+    assert footer_size == 3309
 
 
 def test_chunky_firmware_plus_config_binary(config_binary):
@@ -88,7 +88,7 @@ def test_chunky_firmware_plus_config_binary(config_binary):
     # if this is valid, we should be able to find the storage and footer again
     storage = get_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
-    assert footer_size == 2032
+    assert footer_size == 3309
 
 
 def test_replace_config_in_binary(config_binary):
@@ -98,7 +98,7 @@ def test_replace_config_in_binary(config_binary):
     # if this is valid, we should be able to find the storage and footer again
     storage = get_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
-    assert footer_size == 2032
+    assert footer_size == 3309
 
 
 def test_replace_config_in_binary_not_big_enough(config_binary):
@@ -108,7 +108,7 @@ def test_replace_config_in_binary_not_big_enough(config_binary):
     # if this is valid, we should be able to find the storage and footer again
     storage = get_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
-    assert footer_size == 2032
+    assert footer_size == 3309
 
 
 def test_padding_firmware_too_big(firmware_binary):
@@ -128,15 +128,15 @@ def test_write_new_config_to_whole_board(whole_board_dump, tmp_path):
         board_dump = file.read()
 
     config = get_config(get_storage_section(board_dump))
-    assert config.boardVersion == 'v0.7.2'
-    config.boardVersion = 'v0.7.2-COOL'
+    assert config.boardVersion == 'v0.7.5'
+    config.boardVersion = 'v0.7.5-COOL'
     write_new_config_to_filename(config, tmp_file, inject=True)
 
     # read new file
     with open(tmp_file, 'rb') as file:
         new_board_dump = file.read()
     config = get_config(get_storage_section(new_board_dump))
-    assert config.boardVersion == 'v0.7.2-COOL'
+    assert config.boardVersion == 'v0.7.5-COOL'
     assert len(board_dump) == len(new_board_dump)
 
 
@@ -149,14 +149,14 @@ def test_write_new_config_to_firmware(firmware_binary, tmp_path):
 
     config_pb2 = get_config_pb2()
     config = config_pb2.Config()
-    config.boardVersion = 'v0.7.2-COOL'
+    config.boardVersion = 'v0.7.5-COOL'
     write_new_config_to_filename(config, tmp_file, inject=True)
 
     # read new file
     with open(tmp_file, 'rb') as file:
         new_board_dump = file.read()
     config = get_config(get_storage_section(new_board_dump))
-    assert config.boardVersion == 'v0.7.2-COOL'
+    assert config.boardVersion == 'v0.7.5-COOL'
     assert len(new_board_dump) == 2 * 1024 * 1024
 
 
@@ -166,7 +166,7 @@ def test_write_new_config_to_config_bin(firmware_binary, tmp_path):
     tmp_file = os.path.join(tmp_path, 'config.bin')
     config_pb2 = get_config_pb2()
     config = config_pb2.Config()
-    config.boardVersion = 'v0.7.2-COOL'
+    config.boardVersion = 'v0.7.5-COOL'
     write_new_config_to_filename(config, tmp_file)
 
     # read new file
@@ -174,7 +174,7 @@ def test_write_new_config_to_config_bin(firmware_binary, tmp_path):
         config_dump = file.read()
     config = get_config(config_dump)
     config_size, _, _ = get_config_footer(config_dump)
-    assert config.boardVersion == 'v0.7.2-COOL'
+    assert config.boardVersion == 'v0.7.5-COOL'
     assert len(config_dump) == config_size + 12
 
 
@@ -188,8 +188,8 @@ def test_write_new_config_to_usb(config_binary):
         write_new_config_to_usb(config, end_out, end_in)
 
     # check that it got padded
-    assert len(serialized) == 2044
-    padded_serialized = bytearray(b'\x00' * 2052) + serialized
+    assert len(serialized) == 3321
+    padded_serialized = bytearray(b'\x00' * 775) + serialized
     assert mock_write.call_args.args[2] % 4096 == 0
     assert mock_write.call_args.args[3] == padded_serialized
 

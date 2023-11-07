@@ -19,6 +19,7 @@ enum ButtonLayout
     BUTTON_LAYOUT_FIGHTBOARD_STICK = 10;
     BUTTON_LAYOUT_FIGHTBOARD_MIRRORED = 11;
     BUTTON_LAYOUT_CUSTOMA = 12;
+    BUTTON_LAYOUT_OPENCORE0WASDA = 13;
 }
 
 enum ButtonLayoutRight
@@ -42,6 +43,9 @@ enum ButtonLayoutRight
     BUTTON_LAYOUT_FIGHTBOARD = 14;
     BUTTON_LAYOUT_FIGHTBOARD_STICK_MIRRORED = 15;
     BUTTON_LAYOUT_CUSTOMB = 16;
+    BUTTON_LAYOUT_KEYBOARD8B = 17;
+    BUTTON_LAYOUT_OPENCORE0WASDB = 18;
+    BUTTON_LAYOUT_BSS = 99;
 }
 
 enum SplashMode
@@ -73,6 +77,7 @@ enum OnBoardLedMode
     ON_BOARD_LED_MODE_OFF = 0;
     ON_BOARD_LED_MODE_MODE_INDICATOR = 1;
     ON_BOARD_LED_MODE_INPUT_TEST = 2;
+    ON_BOARD_LED_MODE_PS_AUTH = 3;
 }
 
 enum InputMode
@@ -96,6 +101,16 @@ enum DpadMode
     DPAD_MODE_RIGHT_ANALOG = 2;
 }
 
+enum InvertMode
+{
+    option (nanopb_enumopt).long_names = false;
+
+    INVERT_NONE = 0;
+    INVERT_X = 1;
+    INVERT_Y = 2;
+    INVERT_XY = 3;
+}
+
 enum SOCDMode
 {
     option (nanopb_enumopt).long_names = false;
@@ -105,6 +120,48 @@ enum SOCDMode
     SOCD_MODE_SECOND_INPUT_PRIORITY = 2;	// U>D=D, L>R=R (Last Input Priority, aka Last Win)
     SOCD_MODE_FIRST_INPUT_PRIORITY = 3;		// U>D=U, L>R=L (First Input Priority, aka First Win)
     SOCD_MODE_BYPASS = 4;					// U+D=UD, L+R=LR (No cleaning applied)
+}
+
+enum GpioAction
+{
+    option (nanopb_enumopt).long_names = false;
+
+    // the lowest value is the default, which should be NONE;
+    // reserving some numbers in case we need more not-mapped type values
+    NONE                         = -10;
+    RESERVED                     = -5;
+    ASSIGNED_TO_ADDON            = 0;
+    BUTTON_PRESS_UP              = 1;
+    BUTTON_PRESS_DOWN            = 2;
+    BUTTON_PRESS_LEFT            = 3;
+    BUTTON_PRESS_RIGHT           = 4;
+    BUTTON_PRESS_B1              = 5;
+    BUTTON_PRESS_B2              = 6;
+    BUTTON_PRESS_B3              = 7;
+    BUTTON_PRESS_B4              = 8;
+    BUTTON_PRESS_L1              = 9;
+    BUTTON_PRESS_R1              = 10;
+    BUTTON_PRESS_L2              = 11;
+    BUTTON_PRESS_R2              = 12;
+    BUTTON_PRESS_S1              = 13;
+    BUTTON_PRESS_S2              = 14;
+    BUTTON_PRESS_A1              = 15;
+    BUTTON_PRESS_A2              = 16;
+    BUTTON_PRESS_L3              = 17;
+    BUTTON_PRESS_R3              = 18;
+    BUTTON_PRESS_FN              = 19;
+    BUTTON_PRESS_DDI_UP          = 20;
+    BUTTON_PRESS_DDI_DOWN        = 21;
+    BUTTON_PRESS_DDI_LEFT        = 22;
+    BUTTON_PRESS_DDI_RIGHT       = 23;
+    SUSTAIN_DP_MODE_DP           = 24;
+    SUSTAIN_DP_MODE_LS           = 25;
+    SUSTAIN_DP_MODE_RS           = 26;
+    SUSTAIN_SOCD_MODE_UP_PRIO    = 27;
+    SUSTAIN_SOCD_MODE_NEUTRAL    = 28;
+    SUSTAIN_SOCD_MODE_SECOND_WIN = 29;
+    SUSTAIN_SOCD_MODE_FIRST_WIN  = 30;
+    SUSTAIN_SOCD_MODE_BYPASS     = 31;
 }
 
 enum GamepadHotkey
@@ -130,6 +187,10 @@ enum GamepadHotkey
     HOTKEY_LOAD_PROFILE_2        = 16;
     HOTKEY_LOAD_PROFILE_3        = 17;
     HOTKEY_LOAD_PROFILE_4        = 18;
+    HOTKEY_L3_BUTTON             = 19;
+    HOTKEY_R3_BUTTON             = 20;
+    HOTKEY_TOUCHPAD_BUTTON       = 21;
+    HOTKEY_REBOOT_DEFAULT        = 22;
 }
 
 // This has to be kept in sync with LEDFormat in NeoPico.hpp
@@ -166,4 +227,21 @@ enum ForcedSetupMode
 	FORCED_SETUP_MODE_LOCK_MODE_SWITCH = 1;
 	FORCED_SETUP_MODE_LOCK_WEB_CONFIG = 2;
 	FORCED_SETUP_MODE_LOCK_BOTH = 3;
+};
+
+enum PS4ControllerType
+{
+    option (nanopb_enumopt).long_names = false;
+    
+    PS4_CONTROLLER = 0;
+    PS4_ARCADESTICK = 7;
+}
+
+enum MacroType
+{
+    option (nanopb_enumopt).long_names = false;
+
+    ON_PRESS = 1;
+    ON_HOLD_REPEAT = 2;
+    ON_TOGGLE = 3;
 };

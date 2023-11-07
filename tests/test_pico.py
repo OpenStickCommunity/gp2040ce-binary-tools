@@ -96,9 +96,9 @@ def test_exit_xip():
 def test_erase():
     """Test that we can send a command to erase a section of memory."""
     end_out, end_in = mock.MagicMock(), mock.MagicMock()
-    pico.erase(end_out, end_in, 0x101FE000, 8192)
+    pico.erase(end_out, end_in, 0x101FC000, 8192)
 
-    payload = struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FE000, 8192)
+    payload = struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FC000, 8192)
     end_out.write.assert_called_with(payload)
     end_in.read.assert_called_once()
 
@@ -107,12 +107,12 @@ def test_read():
     """Test that we can read a memory of a BOOTSEL board in a variety of conditions."""
     end_out, end_in = mock.MagicMock(), mock.MagicMock()
     end_in.read.return_value = array('B', b'\x11' * 256)
-    content = pico.read(end_out, end_in, 0x101FE000, 256)
+    content = pico.read(end_out, end_in, 0x101FC000, 256)
 
     expected_writes = [
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 1)),
         mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
-        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x84, 8, 256, 0x101FE000, 256)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x84, 8, 256, 0x101FC000, 256)),
         mock.call(b'\xc0'),
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 0)),
     ]
@@ -125,12 +125,12 @@ def test_read_shorter_than_chunk():
     """Test that we can read a memory of a BOOTSEL board in a variety of conditions."""
     end_out, end_in = mock.MagicMock(), mock.MagicMock()
     end_in.read.return_value = array('B', b'\x11' * 256)
-    content = pico.read(end_out, end_in, 0x101FE000, 128)
+    content = pico.read(end_out, end_in, 0x101FC000, 128)
 
     expected_writes = [
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 1)),
         mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
-        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x84, 8, 256, 0x101FE000, 256)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x84, 8, 256, 0x101FC000, 256)),
         mock.call(b'\xc0'),
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 0)),
     ]
@@ -143,15 +143,15 @@ def test_read_bigger_than_chunk():
     """Test that we can read a memory of a BOOTSEL board in a variety of conditions."""
     end_out, end_in = mock.MagicMock(), mock.MagicMock()
     end_in.read.return_value = array('B', b'\x11' * 256)
-    content = pico.read(end_out, end_in, 0x101FE000, 512)
+    content = pico.read(end_out, end_in, 0x101FC000, 512)
 
     expected_writes = [
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 1)),
         mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
-        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x84, 8, 256, 0x101FE000, 256)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x84, 8, 256, 0x101FC000, 256)),
         mock.call(b'\xc0'),
         mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
-        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x84, 8, 256, 0x101FE000+256, 256)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x84, 8, 256, 0x101FC000+256, 256)),
         mock.call(b'\xc0'),
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 0)),
     ]
@@ -172,13 +172,13 @@ def test_reboot():
 def test_write():
     """Test that we can write to a board in BOOTSEL mode."""
     end_out, end_in = mock.MagicMock(), mock.MagicMock()
-    _ = pico.write(end_out, end_in, 0x101FE000, b'\x00\x01\x02\x03')
+    _ = pico.write(end_out, end_in, 0x101FC000, b'\x00\x01\x02\x03')
 
     expected_writes = [
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 1)),
         mock.call(struct.pack('<LLBBxxL16x', 0x431fd10b, 1, 0x6, 0, 0)),
-        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FE000, 4)),
-        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x5, 8, 4, 0x101FE000, 4)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x3, 8, 0, 0x101FC000, 4)),
+        mock.call(struct.pack('<LLBBxxLLL8x', 0x431fd10b, 1, 0x5, 8, 4, 0x101FC000, 4)),
         mock.call(b'\x00\x01\x02\x03'),
         mock.call(struct.pack('<LLBBxxLL12x', 0x431fd10b, 1, 0x1, 1, 0, 0)),
     ]

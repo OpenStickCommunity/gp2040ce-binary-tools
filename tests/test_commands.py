@@ -44,7 +44,7 @@ def test_concatenate_invocation(tmpdir):
     with open(out_filename, 'rb') as out_file, open('tests/test-files/test-storage-area.bin', 'rb') as storage_file:
         out = out_file.read()
         storage = storage_file.read()
-    assert out[2088960:2097152] == storage
+    assert out[2080768:2097152] == storage
 
 
 def test_storage_dump_invocation():
@@ -52,7 +52,7 @@ def test_storage_dump_invocation():
     result = run(['visualize-storage', '-P', 'tests/test-files/proto-files',
                   '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
-    assert 'boardVersion: "v0.7.2"' in result.stdout
+    assert 'boardVersion: "v0.7.5"' in result.stdout
 
 
 def test_debug_storage_dump_invocation():
@@ -60,8 +60,8 @@ def test_debug_storage_dump_invocation():
     result = run(['visualize-storage', '-d', '-P', 'tests/test-files/proto-files',
                   '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
-    assert 'boardVersion: "v0.7.2"' in result.stdout
-    assert 'length of content to look for footer in: 8192' in result.stderr
+    assert 'boardVersion: "v0.7.5"' in result.stdout
+    assert 'length of content to look for footer in: 16384' in result.stderr
 
 
 def test_storage_dump_json_invocation():
@@ -70,4 +70,4 @@ def test_storage_dump_json_invocation():
                   '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
     to_dict = json.loads(result.stdout)
-    assert to_dict['boardVersion'] == 'v0.7.2'
+    assert to_dict['boardVersion'] == 'v0.7.5'

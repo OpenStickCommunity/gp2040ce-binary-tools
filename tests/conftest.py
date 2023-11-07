@@ -28,7 +28,7 @@ def firmware_binary():
 
 @pytest.fixture
 def storage_dump():
-    """Read in a test storage dump file (101FE000-10200000) of a GP2040-CE board."""
+    """Read in a test storage dump file (101FC000-10200000) of a GP2040-CE board."""
     filename = os.path.join(HERE, 'test-files', 'test-storage-area.bin')
     with open(filename, 'rb') as file:
         content = file.read()

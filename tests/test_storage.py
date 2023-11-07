@@ -26,8 +26,8 @@ def with_pb2s(test, *args, **kwargs):
 def test_config_footer(storage_dump):
     """Test that a config footer is identified as expected."""
     size, crc, magic = storage.get_config_footer(storage_dump)
-    assert size == 2032
-    assert crc == 3799109329
+    assert size == 3309
+    assert crc == 2661279683
     assert magic == '0x65e3f1d2'
 
 
@@ -76,7 +76,7 @@ def test_get_config_from_file_storage_dump():
     """Test that we can open a storage dump file and find its config."""
     filename = os.path.join(HERE, 'test-files', 'test-storage-area.bin')
     config = storage.get_config_from_file(filename)
-    assert config.boardVersion == 'v0.7.2'
+    assert config.boardVersion == 'v0.7.5'
     assert config.addonOptions.bootselButtonOptions.enabled is False
     assert config.addonOptions.ps4Options.enabled is False
 
@@ -86,7 +86,7 @@ def test_get_config_from_file_whole_board_dump():
     """Test that we can open a storage dump file and find its config."""
     filename = os.path.join(HERE, 'test-files', 'test-whole-board.bin')
     config = storage.get_config_from_file(filename, whole_board=True)
-    assert config.boardVersion == 'v0.7.2'
+    assert config.boardVersion == 'v0.7.5'
     assert config.addonOptions.bootselButtonOptions.enabled is False
 
 
@@ -109,24 +109,27 @@ def test_get_config_from_file_file_not_fonud_raise():
 def test_config_parses(storage_dump):
     """Test that we need the config_pb2 to exist/be compiled for reading the config to work."""
     config = storage.get_config(storage_dump)
-    assert config.boardVersion == 'v0.7.2'
-    assert config.hotkeyOptions.hotkey01.dpadMask == 1
+    assert config.boardVersion == 'v0.7.5'
+    assert config.hotkeyOptions.hotkey01.dpadMask == 0
+    assert config.hotkeyOptions.hotkey02.dpadMask == 1
 
 
 @with_pb2s
 def test_config_from_whole_board_parses(whole_board_dump):
     """Test that we can read in a whole board and still find the config section."""
     config = storage.get_config(storage.get_storage_section(whole_board_dump))
-    assert config.boardVersion == 'v0.7.2'
-    assert config.hotkeyOptions.hotkey01.dpadMask == 1
+    assert config.boardVersion == 'v0.7.5'
+    assert config.hotkeyOptions.hotkey01.dpadMask == 0
+    assert config.hotkeyOptions.hotkey02.dpadMask == 1
 
 
 @with_pb2s
-def test_serialize_config_with_footer(storage_dump):
+def test_serialize_config_with_footer(storage_dump, config_binary):
     """Test that reserializing a read in config matches the original."""
     config = storage.get_config(storage_dump)
-    assert config.boardVersion == 'v0.7.2'
+    assert config.boardVersion == 'v0.7.5'
     reserialized = storage.serialize_config_with_footer(config)
+    assert config_binary == reserialized
     assert storage_dump[-12:] == reserialized[-12:]
 
 
@@ -134,7 +137,7 @@ def test_serialize_config_with_footer(storage_dump):
 def test_serialize_modified_config_with_footer(storage_dump):
     """Test that we can serialize a modified config."""
     config = storage.get_config(storage_dump)
-    config.boardVersion == 'v0.7.2-cool'
+    config.boardVersion = 'v0.7.5-cool'
     serialized = storage.serialize_config_with_footer(config)
     config_size, _, _ = storage.get_config_footer(serialized)
     assert config_size == config.ByteSize()
@@ -144,7 +147,7 @@ def test_serialize_modified_config_with_footer(storage_dump):
 def test_pad_config_to_storage(config_binary):
     """Test that we can properly pad a config section to the correct storage section size."""
     storage_section = storage.pad_config_to_storage_size(config_binary)
-    assert len(storage_section) == 8192
+    assert len(storage_section) == 16384
 
 
 def test_pad_config_to_storage_raises(config_binary):
@@ -167,5 +170,5 @@ def test_get_config_from_usb(config_binary):
             config, _, _ = storage.get_config_from_usb()
 
     mock_get.assert_called_once()
-    mock_read.assert_called_with(mock_out, mock_in, 0x101FE000, 8192)
+    mock_read.assert_called_with(mock_out, mock_in, 0x101FC000, 16384)
     assert config == storage.get_config(config_binary)

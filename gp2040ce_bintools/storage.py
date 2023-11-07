@@ -11,9 +11,9 @@ from gp2040ce_bintools.pico import get_bootsel_endpoints, read
 
 logger = logging.getLogger(__name__)
 
-STORAGE_BINARY_LOCATION = 0x1FE000
-STORAGE_MEMORY_ADDRESS = 0x101FE000
-STORAGE_SIZE = 8192
+STORAGE_BINARY_LOCATION = 0x1FC000
+STORAGE_MEMORY_ADDRESS = 0x101FC000
+STORAGE_SIZE = 16384
 
 FOOTER_SIZE = 12
 FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
@@ -232,7 +232,7 @@ def visualize():
     group.add_argument('--usb', action='store_true', help="retrieve the config from a Pico board connected over USB "
                                                           "and in BOOTSEL mode")
     group.add_argument('--filename', help=".bin file of a GP2040-CE board's storage section, bytes "
-                                          "101FE000-10200000, or of a GP2040-CE's whole board dump "
+                                          "101FC000-10200000, or of a GP2040-CE's whole board dump "
                                           "if --whole-board is specified")
     args, _ = parser.parse_known_args()
 
