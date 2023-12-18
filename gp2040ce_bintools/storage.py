@@ -1,4 +1,7 @@
-"""Interact with the protobuf config from a picotool flash dump of a GP2040-CE board."""
+"""Interact with the protobuf config from a picotool flash dump of a GP2040-CE board.
+
+SPDX-License-Identifier: MIT
+"""
 import argparse
 import binascii
 import logging

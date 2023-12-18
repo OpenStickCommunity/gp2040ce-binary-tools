@@ -1,4 +1,7 @@
-"""Build binary files for a GP2040-CE board."""
+"""Build binary files for a GP2040-CE board.
+
+SPDX-License-Identifier: MIT
+"""
 import argparse
 import copy
 import logging

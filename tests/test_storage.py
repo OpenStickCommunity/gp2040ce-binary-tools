@@ -1,4 +1,7 @@
-"""Unit tests for the storage module."""
+"""Unit tests for the storage module.
+
+SPDX-License-Identifier: MIT
+"""
 import os
 import sys
 import unittest.mock as mock

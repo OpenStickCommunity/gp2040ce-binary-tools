@@ -1,6 +1,8 @@
 """Methods to interact with the Raspberry Pi RP2040 directly.
 
 Much of this code is a partial Python implementation of picotool.
+
+SPDX-License-Identifier: MIT
 """
 import logging
 import struct

@@ -1,4 +1,7 @@
-"""Test our tools themselves to make sure they adhere to certain flags."""
+"""Test our tools themselves to make sure they adhere to certain flags.
+
+SPDX-License-Identifier: MIT
+"""
 import json
 import os
 import sys

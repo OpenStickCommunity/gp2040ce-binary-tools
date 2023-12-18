@@ -1,4 +1,7 @@
-"""Initialize the package and get dependencies."""
+"""Initialize the package and get dependencies.
+
+SPDX-License-Identifier: MIT
+"""
 import argparse
 import importlib
 import logging

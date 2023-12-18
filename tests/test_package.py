@@ -1,4 +1,7 @@
-"""Test high level package capabilities."""
+"""Test high level package capabilities.
+
+SPDX-License-Identifier: MIT
+"""
 import os
 import sys
 

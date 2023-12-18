@@ -1,4 +1,7 @@
-"""Test operations for interfacing directly with a Pico."""
+"""Test operations for interfacing directly with a Pico.
+
+SPDX-License-Identifier: MIT
+"""
 import os
 import struct
 import sys

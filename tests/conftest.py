@@ -1,4 +1,7 @@
-"""Create the test fixtures and other data."""
+"""Create the test fixtures and other data.
+
+SPDX-License-Identifier: MIT
+"""
 import os
 
 import pytest

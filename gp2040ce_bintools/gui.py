@@ -1,4 +1,7 @@
-"""GUI applications for working with binary files."""
+"""GUI applications for working with binary files.
+
+SPDX-License-Identifier: MIT
+"""
 import argparse
 import logging
 

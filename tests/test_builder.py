@@ -1,4 +1,7 @@
-"""Tests for the image builder module."""
+"""Tests for the image builder module.
+
+SPDX-License-Identifier: MIT
+"""
 import os
 import sys
 import unittest.mock as mock
