@@ -2,6 +2,7 @@
 
 Much of this code is a partial Python implementation of picotool.
 
+SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
 SPDX-License-Identifier: MIT
 """
 import logging

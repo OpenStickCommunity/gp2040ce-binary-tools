@@ -1,5 +1,6 @@
 """Initialize the package and get dependencies.
 
+SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
 SPDX-License-Identifier: MIT
 """
 import argparse

@@ -1,5 +1,6 @@
 """Create the test fixtures and other data.
 
+SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
 SPDX-License-Identifier: MIT
 """
 import os

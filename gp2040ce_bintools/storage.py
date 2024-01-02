@@ -1,5 +1,6 @@
 """Interact with the protobuf config from a picotool flash dump of a GP2040-CE board.
 
+SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
 SPDX-License-Identifier: MIT
 """
 import argparse
