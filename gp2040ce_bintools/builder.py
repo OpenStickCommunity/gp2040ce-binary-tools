@@ -6,13 +6,14 @@ SPDX-License-Identifier: MIT
 import argparse
 import copy
 import logging
+from typing import Optional
 
 from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser
 from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read, write
 from gp2040ce_bintools.storage import (STORAGE_BINARY_LOCATION, STORAGE_BOOTSEL_ADDRESS, STORAGE_SIZE,
-                                       pad_config_to_storage_size, serialize_config_with_footer)
+                                       get_config_from_json, pad_config_to_storage_size, serialize_config_with_footer)
 
 logger = logging.getLogger(__name__)
 
@@ -44,20 +45,34 @@ def combine_firmware_and_config(firmware_binary: bytearray, config_binary: bytea
             pad_config_to_storage_size(config_binary))
 
 
-def concatenate_firmware_and_storage_files(firmware_filename: str, storage_filename: str,
+def concatenate_firmware_and_storage_files(firmware_filename: str, binary_user_config_filename: Optional[str] = None,
+                                           json_user_config_filename: Optional[str] = None,
                                            combined_filename: str = '', usb: bool = False,
                                            replace_extra: bool = False) -> None:
     """Open the provided binary files and combine them into one combined GP2040-CE with config file.
 
     Args:
         firmware_filename: filename of the firmware binary to read
-        storage_filename: filename of the storage section to read
+        binary_user_config_filename: filename of the user config section to read, in binary format
+        json_user_config_filename: filename of the user config section to read, in JSON format
         combined_filename: filename of where to write the combine binary
         replace_extra: if larger than normal firmware files should have their overage replaced
     """
-    with open(firmware_filename, 'rb') as firmware, open(storage_filename, 'rb') as storage:
-        new_binary = combine_firmware_and_config(bytearray(firmware.read()), bytearray(storage.read()),
-                                                 replace_extra=replace_extra)
+    new_binary = None
+    if binary_user_config_filename:
+        with open(firmware_filename, 'rb') as firmware, open(binary_user_config_filename, 'rb') as storage:
+            new_binary = combine_firmware_and_config(bytearray(firmware.read()), bytearray(storage.read()),
+                                                     replace_extra=replace_extra)
+    elif json_user_config_filename:
+        with open(firmware_filename, 'rb') as firmware, open(json_user_config_filename, 'r') as json_file:
+            config = get_config_from_json(json_file.read())
+            serialized_config = serialize_config_with_footer(config)
+            new_binary = combine_firmware_and_config(bytearray(firmware.read()), serialized_config,
+                                                     replace_extra=replace_extra)
+
+    if not new_binary:
+        raise ValueError("no means to create a binary was provided")
+
     if combined_filename:
         with open(combined_filename, 'wb') as combined:
             combined.write(new_binary)
@@ -187,13 +202,18 @@ def concatenate():
                         help="if the firmware file is larger than the location of storage, perhaps because it's "
                              "actually a full board dump, overwrite its config section with the config binary")
     parser.add_argument('firmware_filename', help=".bin file of a GP2040-CE firmware, probably from a build")
-    parser.add_argument('config_filename', help=".bin file of a GP2040-CE board's storage section or config w/footer")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--usb', action='store_true', help="write the resulting firmware + storage to USB")
-    group.add_argument('--new-binary-filename', help="output .bin file of the resulting firmware + storage")
+    user_config_group = parser.add_mutually_exclusive_group(required=True)
+    user_config_group.add_argument('--binary-user-config-filename',
+                                   help=".bin file of a GP2040-CE user config w/footer")
+    user_config_group.add_argument('--json-user-config-filename', help=".json file of a GP2040-CE user config")
+    output_group = parser.add_mutually_exclusive_group(required=True)
+    output_group.add_argument('--usb', action='store_true', help="write the resulting firmware + storage to USB")
+    output_group.add_argument('--new-binary-filename', help="output .bin file of the resulting firmware + storage")
 
     args, _ = parser.parse_known_args()
-    concatenate_firmware_and_storage_files(args.firmware_filename, args.config_filename,
+    concatenate_firmware_and_storage_files(args.firmware_filename,
+                                           binary_user_config_filename=args.binary_user_config_filename,
+                                           json_user_config_filename=args.json_user_config_filename,
                                            combined_filename=args.new_binary_filename, usb=args.usb,
                                            replace_extra=args.replace_extra)
 

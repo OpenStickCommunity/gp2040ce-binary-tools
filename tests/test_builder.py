@@ -43,6 +43,27 @@ def test_concatenate_to_file(tmp_path):
     assert len(content) == 2 * 1024 * 1024
 
 
+@with_pb2s
+def test_concatenate_user_json_to_file(tmp_path):
+    """Test that we write a file with firmware + JSON user config as expected."""
+    tmp_file = os.path.join(tmp_path, 'concat.bin')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.json')
+    concatenate_firmware_and_storage_files(firmware_file, json_user_config_filename=config_file,
+                                           combined_filename=tmp_file)
+    with open(tmp_file, 'rb') as file:
+        content = file.read()
+    assert len(content) == 2 * 1024 * 1024
+
+
+def test_concatenate_to_file_incomplete_args_is_error(tmp_path):
+    """Test that we bail properly if we weren't given all the necessary arguments to make a binary."""
+    tmp_file = os.path.join(tmp_path, 'concat.bin')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    with pytest.raises(ValueError):
+        concatenate_firmware_and_storage_files(firmware_file, combined_filename=tmp_file)
+
+
 def test_concatenate_to_usb(tmp_path):
     """Test that we write a file as expected."""
     firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
