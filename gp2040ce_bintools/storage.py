@@ -17,7 +17,7 @@ from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
 logger = logging.getLogger(__name__)
 
 STORAGE_BINARY_LOCATION = 0x1FC000
-STORAGE_MEMORY_ADDRESS = 0x101FC000
+STORAGE_BOOTSEL_ADDRESS = 0x10000000 + STORAGE_BINARY_LOCATION
 STORAGE_SIZE = 16384
 
 FOOTER_SIZE = 12
@@ -158,7 +158,7 @@ def get_config_from_usb() -> tuple[Message, object, object]:
     endpoint_out, endpoint_in = get_bootsel_endpoints()
     logger.debug("reading DEVICE ID %s:%s, bus %s, address %s", hex(endpoint_out.device.idVendor),
                  hex(endpoint_out.device.idProduct), endpoint_out.device.bus, endpoint_out.device.address)
-    storage = read(endpoint_out, endpoint_in, STORAGE_MEMORY_ADDRESS, STORAGE_SIZE)
+    storage = read(endpoint_out, endpoint_in, STORAGE_BOOTSEL_ADDRESS, STORAGE_SIZE)
     return get_config(bytes(storage)), endpoint_out, endpoint_in
 
 
