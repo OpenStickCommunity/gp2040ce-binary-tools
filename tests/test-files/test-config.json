@@ -1,0 +1,1151 @@
+{
+  "boardVersion": "v0.7.6-15-g71f4512",
+  "gamepadOptions": {
+    "inputMode": "INPUT_MODE_HID",
+    "dpadMode": "DPAD_MODE_DIGITAL",
+    "socdMode": "SOCD_MODE_SECOND_INPUT_PRIORITY",
+    "invertXAxis": false,
+    "invertYAxis": false,
+    "switchTpShareForDs4": false,
+    "lockHotkeys": false,
+    "fourWayMode": false,
+    "profileNumber": 1,
+    "ps4ControllerType": "PS4_ARCADESTICK",
+    "debounceDelay": 5,
+    "inputModeB1": 1,
+    "inputModeB2": 0,
+    "inputModeB3": 2,
+    "inputModeB4": 4,
+    "inputModeL1": -1,
+    "inputModeL2": -1,
+    "inputModeR1": -1,
+    "inputModeR2": 3,
+    "ps4ReportHack": false
+  },
+  "hotkeyOptions": {
+    "hotkey01": {
+      "dpadMask": 0,
+      "action": "HOTKEY_REBOOT_DEFAULT",
+      "buttonsMask": 15360,
+      "auxMask": 32768
+    },
+    "hotkey02": {
+      "dpadMask": 1,
+      "action": "HOTKEY_LOAD_PROFILE_1",
+      "buttonsMask": 3072,
+      "auxMask": 32768
+    },
+    "hotkey03": {
+      "dpadMask": 2,
+      "action": "HOTKEY_LOAD_PROFILE_2",
+      "buttonsMask": 3072,
+      "auxMask": 32768
+    },
+    "hotkey04": {
+      "dpadMask": 4,
+      "action": "HOTKEY_LOAD_PROFILE_3",
+      "buttonsMask": 3072,
+      "auxMask": 32768
+    },
+    "hotkey05": {
+      "dpadMask": 8,
+      "action": "HOTKEY_LOAD_PROFILE_4",
+      "buttonsMask": 3072,
+      "auxMask": 32768
+    },
+    "hotkey06": {
+      "dpadMask": 2,
+      "action": "HOTKEY_DPAD_DIGITAL",
+      "buttonsMask": 2048,
+      "auxMask": 32768
+    },
+    "hotkey07": {
+      "dpadMask": 4,
+      "action": "HOTKEY_DPAD_LEFT_ANALOG",
+      "buttonsMask": 2048,
+      "auxMask": 32768
+    },
+    "hotkey08": {
+      "dpadMask": 8,
+      "action": "HOTKEY_DPAD_RIGHT_ANALOG",
+      "buttonsMask": 2048,
+      "auxMask": 32768
+    },
+    "hotkey09": {
+      "dpadMask": 1,
+      "action": "HOTKEY_TOGGLE_DDI_4_WAY_MODE",
+      "buttonsMask": 9216,
+      "auxMask": 32768
+    },
+    "hotkey10": {
+      "dpadMask": 1,
+      "action": "HOTKEY_TOGGLE_4_WAY_MODE",
+      "buttonsMask": 1024,
+      "auxMask": 32768
+    },
+    "hotkey11": {
+      "dpadMask": 4,
+      "action": "HOTKEY_SOCD_LAST_INPUT",
+      "buttonsMask": 1024,
+      "auxMask": 32768
+    },
+    "hotkey12": {
+      "dpadMask": 2,
+      "action": "HOTKEY_SOCD_NEUTRAL",
+      "buttonsMask": 1024,
+      "auxMask": 32768
+    },
+    "hotkey13": {
+      "dpadMask": 0,
+      "action": "HOTKEY_NONE",
+      "buttonsMask": 0,
+      "auxMask": 0
+    },
+    "hotkey14": {
+      "dpadMask": 0,
+      "action": "HOTKEY_NONE",
+      "buttonsMask": 0,
+      "auxMask": 0
+    },
+    "hotkey15": {
+      "dpadMask": 0,
+      "action": "HOTKEY_NONE",
+      "buttonsMask": 0,
+      "auxMask": 0
+    },
+    "hotkey16": {
+      "dpadMask": 0,
+      "action": "HOTKEY_NONE",
+      "buttonsMask": 0,
+      "auxMask": 0
+    }
+  },
+  "deprecatedPinMappings": {
+    "pinDpadUp": 0,
+    "pinDpadDown": 0,
+    "pinDpadLeft": 0,
+    "pinDpadRight": 0,
+    "pinButtonB1": 0,
+    "pinButtonB2": 0,
+    "pinButtonB3": 0,
+    "pinButtonB4": 0,
+    "pinButtonL1": 0,
+    "pinButtonR1": 0,
+    "pinButtonL2": 0,
+    "pinButtonR2": 0,
+    "pinButtonS1": 0,
+    "pinButtonS2": 0,
+    "pinButtonL3": 0,
+    "pinButtonR3": 0,
+    "pinButtonA1": 0,
+    "pinButtonA2": 0,
+    "pinButtonFn": 0
+  },
+  "keyboardMapping": {
+    "keyDpadUp": 82,
+    "keyDpadDown": 81,
+    "keyDpadLeft": 80,
+    "keyDpadRight": 79,
+    "keyButtonB1": 225,
+    "keyButtonB2": 29,
+    "keyButtonB3": 224,
+    "keyButtonB4": 226,
+    "keyButtonL1": 6,
+    "keyButtonR1": 44,
+    "keyButtonL2": 25,
+    "keyButtonR2": 27,
+    "keyButtonS1": 34,
+    "keyButtonS2": 30,
+    "keyButtonL3": 46,
+    "keyButtonR3": 45,
+    "keyButtonA1": 38,
+    "keyButtonA2": 59
+  },
+  "displayOptions": {
+    "enabled": false,
+    "i2cBlock": 0,
+    "deprecatedI2cSDAPin": 0,
+    "deprecatedI2cSCLPin": 1,
+    "i2cAddress": 60,
+    "deprecatedI2cSpeed": 400000,
+    "buttonLayout": "BUTTON_LAYOUT_STICK",
+    "buttonLayoutRight": "BUTTON_LAYOUT_VEWLIX",
+    "buttonLayoutCustomOptions": {
+      "paramsLeft": {
+        "layout": "BUTTON_LAYOUT_STICK",
+        "common": {
+          "startX": 8,
+          "startY": 28,
+          "buttonRadius": 8,
+          "buttonPadding": 2
+        }
+      },
+      "paramsRight": {
+        "layout": "BUTTON_LAYOUT_VEWLIX",
+        "common": {
+          "startX": 8,
+          "startY": 28,
+          "buttonRadius": 8,
+          "buttonPadding": 2
+        }
+      }
+    },
+    "splashMode": "SPLASH_MODE_NONE",
+    "splashChoice": "SPLASH_CHOICE_MAIN",
+    "splashDuration": 7000,
+    "splashImage": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAQIAAAAAAAAAAAAAAAAAAAODfwAAAAAAAAAAAAAAAAALB/6AAAAAAAAAAAAAAAAAfz/6AAAAAAAAAAAAAAAAAP//gAAAAAAAAAAAAAAAAAH+rwAAAAAAAAAAAAAAsAAD7g/8AAAAAAAAAAAwB/wAB8wf8AAAAAAAAAAAcB/8AA+A/9AAAAAAAAAAsOArngAPAX4AAAAAAIAeB/znDxwHXgD8AAAAAAOAf5/95x4efp4BuPAAAAKDAP+rn8+8Hf8cBz/+AAAOP/H/Dx3/+D36Ph9/8AAAP//9zx4f/3g5QBx8f0AAAH1f/548H/xw+AA//fwAAAH4Lj4+OD/+efAAH/fwAAAB8N58fHg+HHvgAB/AwAAAA8ff+Hhw+Dh/wAAFAKAAAAe/n+Dw+fA8f4AAAAAAAAAP/j/B//vgOD4AAAAAAAAAD/8/A///wDAAAAAAAAAAAB4v/Af+PwAYAAAAAAAAAAAeH/gH+D4AEAAAAAAAAAAAHH94D8AAAAAAAAAAAAAAAB7+eAcAAAAQAAAAAAAAAAAf/nAAAAAAAAAAAAAAAAAAH+zgAAAAAAAAAAAAAAAAAA+cwAAAAAAAAAAAAAAAAAAFHKAAAAAAAAAAAAAAAAAAADiAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+    "size": 3,
+    "flip": 0,
+    "invert": false,
+    "displaySaverTimeout": 0,
+    "turnOffWhenSuspended": false
+  },
+  "ledOptions": {
+    "dataPin": 4,
+    "ledFormat": "LED_FORMAT_GRB",
+    "ledLayout": "BUTTON_LAYOUT_STICK",
+    "ledsPerButton": 1,
+    "brightnessMaximum": 50,
+    "brightnessSteps": 5,
+    "indexUp": 3,
+    "indexDown": 1,
+    "indexLeft": 0,
+    "indexRight": 2,
+    "indexB1": 8,
+    "indexB2": 9,
+    "indexB3": 4,
+    "indexB4": 5,
+    "indexL1": 7,
+    "indexR1": 6,
+    "indexL2": 11,
+    "indexR2": 10,
+    "indexS1": -1,
+    "indexS2": -1,
+    "indexL3": -1,
+    "indexR3": -1,
+    "indexA1": -1,
+    "indexA2": -1,
+    "pledType": "PLED_TYPE_NONE",
+    "pledPin1": -1,
+    "pledPin2": -1,
+    "pledPin3": -1,
+    "pledPin4": -1,
+    "pledColor": 16777215,
+    "turnOffWhenSuspended": false,
+    "pledIndex1": -1,
+    "pledIndex2": -1,
+    "pledIndex3": -1,
+    "pledIndex4": -1
+  },
+  "animationOptions": {
+    "baseAnimationIndex": 2,
+    "brightness": 5,
+    "staticColorIndex": 2,
+    "buttonColorIndex": 1,
+    "chaseCycleTime": 85,
+    "rainbowCycleTime": 40,
+    "themeIndex": 0,
+    "hasCustomTheme": false,
+    "customThemeUp": 0,
+    "customThemeDown": 0,
+    "customThemeLeft": 0,
+    "customThemeRight": 0,
+    "customThemeB1": 0,
+    "customThemeB2": 0,
+    "customThemeB3": 0,
+    "customThemeB4": 0,
+    "customThemeL1": 0,
+    "customThemeR1": 0,
+    "customThemeL2": 0,
+    "customThemeR2": 0,
+    "customThemeS1": 0,
+    "customThemeS2": 0,
+    "customThemeL3": 0,
+    "customThemeR3": 0,
+    "customThemeA1": 0,
+    "customThemeA2": 0,
+    "customThemeUpPressed": 0,
+    "customThemeDownPressed": 0,
+    "customThemeLeftPressed": 0,
+    "customThemeRightPressed": 0,
+    "customThemeB1Pressed": 0,
+    "customThemeB2Pressed": 0,
+    "customThemeB3Pressed": 0,
+    "customThemeB4Pressed": 0,
+    "customThemeL1Pressed": 0,
+    "customThemeR1Pressed": 0,
+    "customThemeL2Pressed": 0,
+    "customThemeR2Pressed": 0,
+    "customThemeS1Pressed": 0,
+    "customThemeS2Pressed": 0,
+    "customThemeL3Pressed": 0,
+    "customThemeR3Pressed": 0,
+    "customThemeA1Pressed": 0,
+    "customThemeA2Pressed": 0
+  },
+  "addonOptions": {
+    "bootselButtonOptions": {
+      "enabled": false,
+      "buttonMap": 0
+    },
+    "onBoardLedOptions": {
+      "mode": "ON_BOARD_LED_MODE_MODE_INDICATOR",
+      "enabled": false
+    },
+    "analogOptions": {
+      "enabled": false,
+      "analogAdc1PinX": -1,
+      "analogAdc1PinY": -1,
+      "forcedCircularity": false,
+      "analogDeadzone": 5,
+      "analogAdc2PinX": -1,
+      "analogAdc2PinY": -1,
+      "analogAdc1Mode": "DPAD_MODE_LEFT_ANALOG",
+      "analogAdc2Mode": "DPAD_MODE_RIGHT_ANALOG",
+      "analogAdc1Invert": "INVERT_NONE",
+      "analogAdc2Invert": "INVERT_NONE",
+      "autoCalibrate": false
+    },
+    "turboOptions": {
+      "enabled": false,
+      "buttonPin": -1,
+      "ledPin": -1,
+      "shotCount": 15,
+      "shmupDialPin": -1,
+      "shmupModeEnabled": false,
+      "shmupAlwaysOn1": 0,
+      "shmupAlwaysOn2": 0,
+      "shmupAlwaysOn3": 0,
+      "shmupAlwaysOn4": 0,
+      "shmupBtn1Pin": -1,
+      "shmupBtn2Pin": -1,
+      "shmupBtn3Pin": -1,
+      "shmupBtn4Pin": -1,
+      "shmupBtnMask1": 0,
+      "shmupBtnMask2": 0,
+      "shmupBtnMask3": 0,
+      "shmupBtnMask4": 0,
+      "shmupMixMode": "SHMUP_MIX_MODE_TURBO_PRIORITY"
+    },
+    "sliderOptions": {
+      "enabled": false,
+      "deprecatedPinSliderOne": 0,
+      "deprecatedPinSliderTwo": 0,
+      "deprecatedModeOne": "DPAD_MODE_DIGITAL",
+      "deprecatedModeTwo": "DPAD_MODE_DIGITAL",
+      "modeDefault": "DPAD_MODE_DIGITAL"
+    },
+    "reverseOptions": {
+      "enabled": false,
+      "buttonPin": -1,
+      "ledPin": -1,
+      "actionUp": 1,
+      "actionDown": 1,
+      "actionLeft": 1,
+      "actionRight": 1
+    },
+    "analogADS1219Options": {
+      "enabled": false,
+      "i2cBlock": 0,
+      "deprecatedI2cSDAPin": -1,
+      "deprecatedI2cSCLPin": -1,
+      "i2cAddress": 64,
+      "deprecatedI2cSpeed": 400000
+    },
+    "dualDirectionalOptions": {
+      "enabled": true,
+      "deprecatedUpPin": 0,
+      "deprecatedDownPin": 0,
+      "deprecatedLeftPin": 0,
+      "deprecatedRightPin": 0,
+      "dpadMode": "DPAD_MODE_DIGITAL",
+      "combineMode": 3,
+      "fourWayMode": false
+    },
+    "buzzerOptions": {
+      "enabled": false,
+      "pin": -1,
+      "volume": 100
+    },
+    "deprecatedExtraButtonOptions": {
+      "enabled": false,
+      "pin": 0,
+      "buttonMap": 0
+    },
+    "playerNumberOptions": {
+      "enabled": false,
+      "number": 1
+    },
+    "ps4Options": {
+      "enabled": false,
+      "serial": "",
+      "signature": "",
+      "rsaN": "",
+      "rsaE": "",
+      "rsaD": "",
+      "rsaP": "",
+      "rsaQ": "",
+      "rsaDP": "",
+      "rsaDQ": "",
+      "rsaQP": "",
+      "rsaRN": ""
+    },
+    "wiiOptions": {
+      "enabled": false,
+      "i2cBlock": 0,
+      "deprecatedI2cSDAPin": -1,
+      "deprecatedI2cSCLPin": -1,
+      "deprecatedI2cSpeed": 400000,
+      "controllers": {
+        "nunchuk": {
+          "buttonC": 0,
+          "buttonZ": 0,
+          "stick": {
+            "x": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            },
+            "y": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            }
+          }
+        },
+        "classic": {
+          "buttonA": 0,
+          "buttonB": 0,
+          "buttonX": 0,
+          "buttonY": 0,
+          "buttonL": 0,
+          "buttonZL": 0,
+          "buttonR": 0,
+          "buttonZR": 0,
+          "buttonMinus": 0,
+          "buttonPlus": 0,
+          "buttonHome": 0,
+          "buttonUp": 0,
+          "buttonDown": 0,
+          "buttonLeft": 0,
+          "buttonRight": 0,
+          "leftStick": {
+            "x": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            },
+            "y": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            }
+          },
+          "rightStick": {
+            "x": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            },
+            "y": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            }
+          },
+          "leftTrigger": {
+            "axisType": 0,
+            "minRange": 0,
+            "maxRange": 0
+          },
+          "rightTrigger": {
+            "axisType": 0,
+            "minRange": 0,
+            "maxRange": 0
+          }
+        },
+        "taiko": {
+          "buttonKatLeft": 0,
+          "buttonKatRight": 0,
+          "buttonDonLeft": 0,
+          "buttonDonRight": 0
+        },
+        "guitar": {
+          "buttonRed": 0,
+          "buttonGreen": 0,
+          "buttonYellow": 0,
+          "buttonBlue": 0,
+          "buttonOrange": 0,
+          "buttonPedal": 0,
+          "buttonMinus": 0,
+          "buttonPlus": 0,
+          "strumUp": 0,
+          "strumDown": 0,
+          "stick": {
+            "x": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            },
+            "y": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            }
+          },
+          "whammyBar": {
+            "axisType": 0,
+            "minRange": 0,
+            "maxRange": 0
+          }
+        },
+        "drum": {
+          "buttonRed": 0,
+          "buttonGreen": 0,
+          "buttonYellow": 0,
+          "buttonBlue": 0,
+          "buttonOrange": 0,
+          "buttonPedal": 0,
+          "buttonMinus": 0,
+          "buttonPlus": 0,
+          "stick": {
+            "x": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            },
+            "y": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            }
+          }
+        },
+        "turntable": {
+          "buttonLeftRed": 0,
+          "buttonLeftGreen": 0,
+          "buttonLeftBlue": 0,
+          "buttonRightRed": 0,
+          "buttonRightGreen": 0,
+          "buttonRightBlue": 0,
+          "buttonMinus": 0,
+          "buttonPlus": 0,
+          "buttonEuphoria": 0,
+          "stick": {
+            "x": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            },
+            "y": {
+              "axisType": 0,
+              "minRange": 0,
+              "maxRange": 0
+            }
+          },
+          "leftTurntable": {
+            "axisType": 0,
+            "minRange": 0,
+            "maxRange": 0
+          },
+          "rightTurntable": {
+            "axisType": 0,
+            "minRange": 0,
+            "maxRange": 0
+          },
+          "effects": {
+            "axisType": 0,
+            "minRange": 0,
+            "maxRange": 0
+          },
+          "fader": {
+            "axisType": 0,
+            "minRange": 0,
+            "maxRange": 0
+          }
+        }
+      }
+    },
+    "socdSliderOptions": {
+      "enabled": false,
+      "deprecatedPinOne": 0,
+      "deprecatedPinTwo": 0,
+      "modeDefault": "SOCD_MODE_NEUTRAL",
+      "deprecatedModeOne": "SOCD_MODE_UP_PRIORITY",
+      "deprecatedModeTwo": "SOCD_MODE_UP_PRIORITY"
+    },
+    "snesOptions": {
+      "enabled": false,
+      "clockPin": -1,
+      "latchPin": -1,
+      "dataPin": -1
+    },
+    "focusModeOptions": {
+      "enabled": false,
+      "pin": -1,
+      "buttonLockMask": 0,
+      "oledLockEnabled": false,
+      "rgbLockEnabled": false,
+      "buttonLockEnabled": false,
+      "macroLockEnabled": true
+    },
+    "keyboardHostOptions": {
+      "enabled": false,
+      "deprecatedPinDplus": -1,
+      "mapping": {
+        "keyDpadUp": 82,
+        "keyDpadDown": 81,
+        "keyDpadLeft": 80,
+        "keyDpadRight": 79,
+        "keyButtonB1": 225,
+        "keyButtonB2": 29,
+        "keyButtonB3": 224,
+        "keyButtonB4": 226,
+        "keyButtonL1": 6,
+        "keyButtonR1": 44,
+        "keyButtonL2": 25,
+        "keyButtonR2": 27,
+        "keyButtonS1": 34,
+        "keyButtonS2": 30,
+        "keyButtonL3": 46,
+        "keyButtonR3": 45,
+        "keyButtonA1": 38,
+        "keyButtonA2": 59
+      },
+      "deprecatedPin5V": -1
+    },
+    "tiltOptions": {
+      "enabled": false,
+      "tilt1Pin": -1,
+      "tilt2Pin": -1,
+      "deprecatedTiltFunctionPin": 0,
+      "tiltLeftAnalogUpPin": -1,
+      "tiltLeftAnalogDownPin": -1,
+      "tiltLeftAnalogLeftPin": -1,
+      "tiltLeftAnalogRightPin": -1,
+      "tiltRightAnalogUpPin": -1,
+      "tiltRightAnalogDownPin": -1,
+      "tiltRightAnalogLeftPin": -1,
+      "tiltRightAnalogRightPin": -1,
+      "tiltSOCDMode": "SOCD_MODE_NEUTRAL",
+      "factorTilt1LeftX": 35,
+      "factorTilt1LeftY": 35,
+      "factorTilt1RightX": 35,
+      "factorTilt1RightY": 35,
+      "factorTilt2LeftX": 65,
+      "factorTilt2LeftY": 65,
+      "factorTilt2RightX": 65,
+      "factorTilt2RightY": 65
+    },
+    "psPassthroughOptions": {
+      "enabled": true,
+      "deprecatedPinDplus": -1,
+      "deprecatedPin5V": -1
+    },
+    "macroOptions": {
+      "enabled": false,
+      "pin": -1,
+      "macroList": [
+        {
+          "macroType": "ON_PRESS",
+          "macroLabel": "",
+          "enabled": false,
+          "useMacroTriggerButton": false,
+          "macroTriggerPin": -1,
+          "macroTriggerButton": 0,
+          "exclusive": true,
+          "interruptible": true,
+          "showFrames": false
+        },
+        {
+          "macroType": "ON_PRESS",
+          "macroLabel": "",
+          "enabled": false,
+          "useMacroTriggerButton": false,
+          "macroTriggerPin": -1,
+          "macroTriggerButton": 0,
+          "exclusive": true,
+          "interruptible": true,
+          "showFrames": false
+        },
+        {
+          "macroType": "ON_PRESS",
+          "macroLabel": "",
+          "enabled": false,
+          "useMacroTriggerButton": false,
+          "macroTriggerPin": -1,
+          "macroTriggerButton": 0,
+          "exclusive": true,
+          "interruptible": true,
+          "showFrames": false
+        },
+        {
+          "macroType": "ON_PRESS",
+          "macroLabel": "",
+          "enabled": false,
+          "useMacroTriggerButton": false,
+          "macroTriggerPin": -1,
+          "macroTriggerButton": 0,
+          "exclusive": true,
+          "interruptible": true,
+          "showFrames": false
+        },
+        {
+          "macroType": "ON_PRESS",
+          "macroLabel": "",
+          "enabled": false,
+          "useMacroTriggerButton": false,
+          "macroTriggerPin": -1,
+          "macroTriggerButton": 0,
+          "exclusive": true,
+          "interruptible": true,
+          "showFrames": false
+        },
+        {
+          "macroType": "ON_PRESS",
+          "macroLabel": "",
+          "enabled": false,
+          "useMacroTriggerButton": false,
+          "macroTriggerPin": -1,
+          "macroTriggerButton": 0,
+          "exclusive": true,
+          "interruptible": true,
+          "showFrames": false
+        }
+      ],
+      "macroBoardLedEnabled": true
+    },
+    "inputHistoryOptions": {
+      "enabled": false,
+      "length": 21,
+      "col": 0,
+      "row": 7
+    },
+    "xbonePassthroughOptions": {
+      "enabled": false
+    }
+  },
+  "forcedSetupOptions": {
+    "mode": "FORCED_SETUP_MODE_OFF"
+  },
+  "profileOptions": {
+    "gpioMappingsSets": [
+      {
+        "pins": [
+          {
+            "action": "BUTTON_PRESS_S2"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "BUTTON_PRESS_R1"
+          },
+          {
+            "action": "BUTTON_PRESS_R2"
+          },
+          {
+            "action": "BUTTON_PRESS_L2"
+          },
+          {
+            "action": "BUTTON_PRESS_B2"
+          },
+          {
+            "action": "BUTTON_PRESS_L1"
+          },
+          {
+            "action": "BUTTON_PRESS_B4"
+          },
+          {
+            "action": "BUTTON_PRESS_B3"
+          },
+          {
+            "action": "BUTTON_PRESS_B1"
+          },
+          {
+            "action": "BUTTON_PRESS_S2"
+          },
+          {
+            "action": "BUTTON_PRESS_A1"
+          },
+          {
+            "action": "BUTTON_PRESS_S1"
+          },
+          {
+            "action": "BUTTON_PRESS_RIGHT"
+          },
+          {
+            "action": "BUTTON_PRESS_LEFT"
+          },
+          {
+            "action": "BUTTON_PRESS_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_DOWN"
+          },
+          {
+            "action": "BUTTON_PRESS_A2"
+          },
+          {
+            "action": "BUTTON_PRESS_L3"
+          },
+          {
+            "action": "BUTTON_PRESS_R3"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_DOWN"
+          },
+          {
+            "action": "RESERVED"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_LEFT"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_RIGHT"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_FN"
+          }
+        ]
+      },
+      {
+        "pins": [
+          {
+            "action": "BUTTON_PRESS_S2"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "BUTTON_PRESS_R2"
+          },
+          {
+            "action": "BUTTON_PRESS_R1"
+          },
+          {
+            "action": "BUTTON_PRESS_B2"
+          },
+          {
+            "action": "BUTTON_PRESS_B1"
+          },
+          {
+            "action": "BUTTON_PRESS_L2"
+          },
+          {
+            "action": "BUTTON_PRESS_L1"
+          },
+          {
+            "action": "BUTTON_PRESS_B4"
+          },
+          {
+            "action": "BUTTON_PRESS_B3"
+          },
+          {
+            "action": "BUTTON_PRESS_S2"
+          },
+          {
+            "action": "BUTTON_PRESS_A1"
+          },
+          {
+            "action": "BUTTON_PRESS_S1"
+          },
+          {
+            "action": "BUTTON_PRESS_RIGHT"
+          },
+          {
+            "action": "BUTTON_PRESS_LEFT"
+          },
+          {
+            "action": "BUTTON_PRESS_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_DOWN"
+          },
+          {
+            "action": "BUTTON_PRESS_A2"
+          },
+          {
+            "action": "BUTTON_PRESS_L3"
+          },
+          {
+            "action": "BUTTON_PRESS_R3"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_DOWN"
+          },
+          {
+            "action": "RESERVED"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_LEFT"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_RIGHT"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_FN"
+          }
+        ]
+      },
+      {
+        "pins": [
+          {
+            "action": "BUTTON_PRESS_S2"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "ASSIGNED_TO_ADDON"
+          },
+          {
+            "action": "BUTTON_PRESS_L2"
+          },
+          {
+            "action": "BUTTON_PRESS_R2"
+          },
+          {
+            "action": "BUTTON_PRESS_B2"
+          },
+          {
+            "action": "BUTTON_PRESS_B1"
+          },
+          {
+            "action": "BUTTON_PRESS_L1"
+          },
+          {
+            "action": "BUTTON_PRESS_R1"
+          },
+          {
+            "action": "BUTTON_PRESS_B4"
+          },
+          {
+            "action": "BUTTON_PRESS_B3"
+          },
+          {
+            "action": "BUTTON_PRESS_S2"
+          },
+          {
+            "action": "BUTTON_PRESS_A1"
+          },
+          {
+            "action": "BUTTON_PRESS_S1"
+          },
+          {
+            "action": "BUTTON_PRESS_RIGHT"
+          },
+          {
+            "action": "BUTTON_PRESS_LEFT"
+          },
+          {
+            "action": "BUTTON_PRESS_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_DOWN"
+          },
+          {
+            "action": "BUTTON_PRESS_A2"
+          },
+          {
+            "action": "BUTTON_PRESS_L3"
+          },
+          {
+            "action": "BUTTON_PRESS_R3"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_DOWN"
+          },
+          {
+            "action": "RESERVED"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_LEFT"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_RIGHT"
+          },
+          {
+            "action": "BUTTON_PRESS_DDI_UP"
+          },
+          {
+            "action": "BUTTON_PRESS_FN"
+          }
+        ]
+      }
+    ]
+  },
+  "boardConfig": "RP2040AdvancedBreakoutBoard",
+  "gpioMappings": {
+    "pins": [
+      {
+        "action": "BUTTON_PRESS_S2"
+      },
+      {
+        "action": "BUTTON_PRESS_DDI_UP"
+      },
+      {
+        "action": "ASSIGNED_TO_ADDON"
+      },
+      {
+        "action": "ASSIGNED_TO_ADDON"
+      },
+      {
+        "action": "ASSIGNED_TO_ADDON"
+      },
+      {
+        "action": "BUTTON_PRESS_R2"
+      },
+      {
+        "action": "BUTTON_PRESS_L2"
+      },
+      {
+        "action": "BUTTON_PRESS_B2"
+      },
+      {
+        "action": "BUTTON_PRESS_B1"
+      },
+      {
+        "action": "BUTTON_PRESS_R1"
+      },
+      {
+        "action": "BUTTON_PRESS_L1"
+      },
+      {
+        "action": "BUTTON_PRESS_B4"
+      },
+      {
+        "action": "BUTTON_PRESS_B3"
+      },
+      {
+        "action": "BUTTON_PRESS_S2"
+      },
+      {
+        "action": "BUTTON_PRESS_A1"
+      },
+      {
+        "action": "BUTTON_PRESS_S1"
+      },
+      {
+        "action": "BUTTON_PRESS_RIGHT"
+      },
+      {
+        "action": "BUTTON_PRESS_LEFT"
+      },
+      {
+        "action": "BUTTON_PRESS_UP"
+      },
+      {
+        "action": "BUTTON_PRESS_DOWN"
+      },
+      {
+        "action": "BUTTON_PRESS_A2"
+      },
+      {
+        "action": "BUTTON_PRESS_L3"
+      },
+      {
+        "action": "BUTTON_PRESS_R3"
+      },
+      {
+        "action": "BUTTON_PRESS_DDI_UP"
+      },
+      {
+        "action": "BUTTON_PRESS_DDI_DOWN"
+      },
+      {
+        "action": "RESERVED"
+      },
+      {
+        "action": "BUTTON_PRESS_DDI_LEFT"
+      },
+      {
+        "action": "BUTTON_PRESS_DDI_RIGHT"
+      },
+      {
+        "action": "BUTTON_PRESS_DDI_UP"
+      },
+      {
+        "action": "BUTTON_PRESS_FN"
+      }
+    ]
+  },
+  "migrations": {
+    "hotkeysMigrated": true,
+    "gpioMappingsMigrated": true,
+    "buttonProfilesMigrated": true
+  },
+  "peripheralOptions": {
+    "blockI2C0": {
+      "enabled": false,
+      "sda": -1,
+      "scl": -1,
+      "speed": 400000
+    },
+    "blockI2C1": {
+      "enabled": false,
+      "sda": -1,
+      "scl": -1,
+      "speed": 400000
+    },
+    "blockSPI0": {
+      "enabled": false,
+      "rx": -1,
+      "cs": -1,
+      "sck": -1,
+      "tx": -1
+    },
+    "blockSPI1": {
+      "enabled": false,
+      "rx": -1,
+      "cs": -1,
+      "sck": -1,
+      "tx": -1
+    },
+    "blockUSB0": {
+      "enabled": true,
+      "dp": 2,
+      "enable5v": -1,
+      "order": 0
+    }
+  }
+}

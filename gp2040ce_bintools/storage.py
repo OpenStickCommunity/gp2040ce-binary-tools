@@ -8,6 +8,7 @@ import binascii
 import logging
 
 from google.protobuf.json_format import MessageToJson
+from google.protobuf.json_format import Parse as JsonParse
 from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser, get_config_pb2
@@ -57,6 +58,21 @@ def get_config(content: bytes) -> Message:
     config_pb2 = get_config_pb2()
     config = config_pb2.Config()
     config.ParseFromString(content[-(size + FOOTER_SIZE):-FOOTER_SIZE])
+    logger.debug("parsed: %s", config)
+    return config
+
+
+def get_config_from_json(content: str) -> Message:
+    """Read the config represented by a JSON string.
+
+    Args:
+        content: JSON string representing a board config
+    Returns:
+        the parsed configuration
+    """
+    config_pb2 = get_config_pb2()
+    config = config_pb2.Config()
+    JsonParse(content, config)
     logger.debug("parsed: %s", config)
     return config
 

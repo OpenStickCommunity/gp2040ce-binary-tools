@@ -15,6 +15,16 @@ message GamepadOptions
 	optional bool fourWayMode = 8;
 	optional uint32 profileNumber = 9;
 	optional PS4ControllerType ps4ControllerType = 10;
+	optional uint32 debounceDelay = 11;
+    optional int32 inputModeB1 = 12;
+    optional int32 inputModeB2 = 13;
+    optional int32 inputModeB3 = 14;
+    optional int32 inputModeB4 = 15;
+    optional int32 inputModeL1 = 16;
+    optional int32 inputModeL2 = 17;
+    optional int32 inputModeR1 = 18;
+    optional int32 inputModeR2 = 19;
+	optional bool ps4ReportHack = 20;
 }
 
 message KeyboardMapping
@@ -61,6 +71,41 @@ message HotkeyOptions
 	optional HotkeyEntry hotkey10 = 10;
 	optional HotkeyEntry hotkey11 = 11;
 	optional HotkeyEntry hotkey12 = 12;
+	optional HotkeyEntry hotkey13 = 13;
+	optional HotkeyEntry hotkey14 = 14;
+	optional HotkeyEntry hotkey15 = 15;
+	optional HotkeyEntry hotkey16 = 16;
+}
+
+message PeripheralOptions
+{
+	message I2COptions {
+        optional bool enabled = 1;
+        optional int32 sda = 2;
+        optional int32 scl = 3;
+        optional uint32 speed = 4;
+    }
+
+    message SPIOptions {
+        optional bool enabled = 1;
+        optional int32 rx = 2;
+        optional int32 cs = 3;
+        optional int32 sck = 4;
+        optional int32 tx = 5;
+    }
+
+	message USBOptions {
+        optional bool enabled = 1;
+        optional int32 dp = 2;
+        optional int32 enable5v = 3;
+        optional uint32 order = 4;
+    }
+
+    optional I2COptions blockI2C0 = 1;
+    optional I2COptions blockI2C1 = 2;
+    optional SPIOptions blockSPI0 = 3;
+    optional SPIOptions blockSPI1 = 4;
+    optional USBOptions blockUSB0 = 5;
 }
 
 message ForcedSetupOptions
@@ -117,38 +162,14 @@ message PinMappings
 	optional int32 pinButtonFn = 19;
 }
 
+message GpioMappingInfo
+{
+	optional GpioAction action = 1;
+}
+
 message GpioMappings
 {
-	optional GpioAction pin00 = 1;
-	optional GpioAction pin01 = 2;
-	optional GpioAction pin02 = 3;
-	optional GpioAction pin03 = 4;
-	optional GpioAction pin04 = 5;
-	optional GpioAction pin05 = 6;
-	optional GpioAction pin06 = 7;
-	optional GpioAction pin07 = 8;
-	optional GpioAction pin08 = 9;
-	optional GpioAction pin09 = 10;
-	optional GpioAction pin10 = 11;
-	optional GpioAction pin11 = 12;
-	optional GpioAction pin12 = 13;
-	optional GpioAction pin13 = 14;
-	optional GpioAction pin14 = 15;
-	optional GpioAction pin15 = 16;
-	optional GpioAction pin16 = 17;
-	optional GpioAction pin17 = 18;
-	optional GpioAction pin18 = 19;
-	optional GpioAction pin19 = 20;
-	optional GpioAction pin20 = 21;
-	optional GpioAction pin21 = 22;
-	optional GpioAction pin22 = 23;
-	optional GpioAction pin23 = 24;
-	optional GpioAction pin24 = 25;
-	optional GpioAction pin25 = 26;
-	optional GpioAction pin26 = 27;
-	optional GpioAction pin27 = 28;
-	optional GpioAction pin28 = 29;
-	optional GpioAction pin29 = 30;
+	repeated GpioMappingInfo pins = 1 [(nanopb).max_count = 30];
 }
 
 
@@ -171,7 +192,8 @@ message AlternativePinMappings
 
 message ProfileOptions
 {
-	repeated AlternativePinMappings alternativePinMappings = 1 [(nanopb).max_count = 3];
+	repeated AlternativePinMappings deprecatedAlternativePinMappings = 1 [(nanopb).max_count = 3, deprecated = true];
+	repeated GpioMappings gpioMappingsSets = 2 [(nanopb).max_count = 3];
 }
 
 message DisplayOptions
@@ -179,10 +201,10 @@ message DisplayOptions
 	optional bool enabled = 1;
 	
 	optional int32 i2cBlock = 2;
-	optional int32 i2cSDAPin = 3;
-	optional int32 i2cSCLPin = 4;
+	optional int32 deprecatedI2cSDAPin = 3 [deprecated = true];
+	optional int32 deprecatedI2cSCLPin = 4 [deprecated = true];
 	optional int32 i2cAddress = 5;
-	optional int32 i2cSpeed = 6;
+	optional int32 deprecatedI2cSpeed = 6 [deprecated = true];
 	
 	optional ButtonLayout buttonLayout = 7;
 	optional ButtonLayoutRight buttonLayoutRight = 8;
@@ -237,6 +259,11 @@ message LEDOptions
 	optional uint32 pledColor = 30;
 
 	optional bool turnOffWhenSuspended = 31;
+
+	optional int32 pledIndex1 = 32;
+	optional int32 pledIndex2 = 33;
+	optional int32 pledIndex3 = 34;
+	optional int32 pledIndex4 = 35;
 };
 
 // This has to be kept in sync with AnimationOptions in AnimationStation.hpp
@@ -347,10 +374,10 @@ message SliderOptions
 {
 	optional bool enabled = 1;
 	
-	optional int32 deprecatedPinSliderOne = 2;
-	optional int32 deprecatedPinSliderTwo = 3;
-	optional DpadMode deprecatedModeOne = 4;
-	optional DpadMode deprecatedModeTwo = 5;
+	optional int32 deprecatedPinSliderOne = 2 [deprecated = true];
+	optional int32 deprecatedPinSliderTwo = 3 [deprecated = true];
+	optional DpadMode deprecatedModeOne = 4 [deprecated = true];
+	optional DpadMode deprecatedModeTwo = 5 [deprecated = true];
 	optional DpadMode modeDefault = 6;
 }
 
@@ -358,12 +385,12 @@ message SOCDSliderOptions
 {
 	optional bool enabled = 1;
 	
-	optional int32 deprecatedPinOne = 2;
-	optional int32 deprecatedPinTwo = 3;
+	optional int32 deprecatedPinOne = 2 [deprecated = true];
+	optional int32 deprecatedPinTwo = 3 [deprecated = true];
 	
 	optional SOCDMode modeDefault = 4;
-	optional SOCDMode deprecatedModeOne = 5;
-	optional SOCDMode deprecatedModeTwo = 6;
+	optional SOCDMode deprecatedModeOne = 5 [deprecated = true];
+	optional SOCDMode deprecatedModeTwo = 6 [deprecated = true];
 }
 
 message ReverseOptions
@@ -384,20 +411,20 @@ message AnalogADS1219Options
 	optional bool enabled = 1;
 	
 	optional int32 i2cBlock = 2;
-	optional int32 i2cSDAPin = 3;
-	optional int32 i2cSCLPin = 4;
+	optional int32 deprecatedI2cSDAPin = 3 [deprecated = true];
+	optional int32 deprecatedI2cSCLPin = 4 [deprecated = true];
 	optional int32 i2cAddress = 5;
-	optional int32 i2cSpeed = 6;
+	optional int32 deprecatedI2cSpeed = 6 [deprecated = true];
 }
 
 message DualDirectionalOptions
 {
 	optional bool enabled = 1;
 	
-	optional int32 deprecatedUpPin = 2;
-	optional int32 deprecatedDownPin = 3;
-	optional int32 deprecatedLeftPin = 4;
-	optional int32 deprecatedRightPin = 5;
+	optional int32 deprecatedUpPin = 2 [deprecated = true];
+	optional int32 deprecatedDownPin = 3 [deprecated = true];
+	optional int32 deprecatedLeftPin = 4 [deprecated = true];
+	optional int32 deprecatedRightPin = 5 [deprecated = true];
 	
 	optional DpadMode dpadMode = 6;
 	optional uint32 combineMode = 7;
@@ -410,7 +437,7 @@ message TiltOptions
 
 	optional int32 tilt1Pin = 2;
 	optional int32 tilt2Pin = 3;
-	optional int32 deprecatedTiltFunctionPin = 4;
+	optional int32 deprecatedTiltFunctionPin = 4 [deprecated = true];
 	optional int32 tiltLeftAnalogUpPin = 5;
 	optional int32 tiltLeftAnalogDownPin = 6;
 	optional int32 tiltLeftAnalogLeftPin = 7;
@@ -473,8 +500,13 @@ message PS4Options
 message PSPassthroughOptions
 {
 	optional bool enabled = 1;
-	optional int32 pinDplus = 2;
-	optional int32 pin5V = 3;
+	optional int32 deprecatedPinDplus = 2 [deprecated = true];
+	optional int32 deprecatedPin5V = 3 [deprecated = true];
+}
+
+message XBOnePassthroughOptions
+{
+	optional bool enabled = 1;
 }
 
 message WiiOptions
@@ -589,9 +621,9 @@ message WiiOptions
 
 	optional bool enabled = 1;
 	optional int32 i2cBlock = 2;
-	optional int32 i2cSDAPin = 3;
-	optional int32 i2cSCLPin = 4;
-	optional int32 i2cSpeed = 5;
+	optional int32 deprecatedI2cSDAPin = 3 [deprecated = true];
+	optional int32 deprecatedI2cSCLPin = 4 [deprecated = true];
+	optional int32 deprecatedI2cSpeed = 5 [deprecated = true];
 
     optional ControllerOptions controllers = 6;
 }
@@ -607,9 +639,9 @@ message SNESOptions
 message KeyboardHostOptions
 {
 	optional bool enabled = 1;
-	optional int32 pinDplus = 2;
+	optional int32 deprecatedPinDplus = 2 [deprecated = true];
 	optional KeyboardMapping mapping = 3;
-	optional int32 pin5V = 4;
+	optional int32 deprecatedPin5V = 4 [deprecated = true];
 }
 
 message FocusModeOptions
@@ -652,6 +684,14 @@ message MacroOptions
 	repeated Macro macroList = 3 [(nanopb).max_count = 6];
 }
 
+message InputHistoryOptions
+{
+	optional bool enabled = 1;
+	optional uint32 length = 2;
+	optional uint32 col = 3;
+	optional uint32 row = 4;
+}
+
 message AddonOptions
 {
 	optional BootselButtonOptions bootselButtonOptions = 1;
@@ -663,7 +703,7 @@ message AddonOptions
 	optional AnalogADS1219Options analogADS1219Options = 7;
 	optional DualDirectionalOptions dualDirectionalOptions = 8;
 	optional BuzzerOptions buzzerOptions = 9;
-	optional ExtraButtonOptions deprecatedExtraButtonOptions = 10;
+	optional ExtraButtonOptions deprecatedExtraButtonOptions = 10 [deprecated = true];
 	optional PlayerNumberOptions playerNumberOptions = 11;
 	optional PS4Options ps4Options = 12 [(nanopb).disallow_export = true];
 	optional WiiOptions wiiOptions = 13;
@@ -674,12 +714,15 @@ message AddonOptions
 	optional TiltOptions tiltOptions = 18;
 	optional PSPassthroughOptions psPassthroughOptions = 19;
 	optional MacroOptions macroOptions = 20;
+	optional InputHistoryOptions inputHistoryOptions = 21;
+	optional XBOnePassthroughOptions xbonePassthroughOptions = 22;
 }
 
 message MigrationHistory
 {
 	optional bool hotkeysMigrated = 1 [default = false];
 	optional bool gpioMappingsMigrated = 2 [default = false];
+	optional bool buttonProfilesMigrated = 3 [default = false];
 }
 
 message Config
@@ -688,7 +731,7 @@ message Config
 	
 	optional GamepadOptions gamepadOptions = 2;
 	optional HotkeyOptions hotkeyOptions = 3;
-	optional PinMappings deprecatedPinMappings = 4;
+	optional PinMappings deprecatedPinMappings = 4 [deprecated = true];
 	optional KeyboardMapping keyboardMapping = 5;
 	optional DisplayOptions displayOptions = 6;
 	optional LEDOptions ledOptions = 7;
@@ -700,4 +743,5 @@ message Config
 	optional string boardConfig = 12 [(nanopb).max_length = 63];
 	optional GpioMappings gpioMappings = 13;
 	optional MigrationHistory migrations = 14;
+	optional PeripheralOptions peripheralOptions = 15;
 }

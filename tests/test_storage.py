@@ -129,12 +129,16 @@ def test_config_from_whole_board_parses(whole_board_dump):
 
 @with_pb2s
 def test_serialize_config_with_footer(storage_dump, config_binary):
-    """Test that reserializing a read in config matches the original."""
+    """Test that reserializing a read in config matches the original.
+
+    Note that this isn't going to produce an *identical* result, because new message fields
+    may have default values that get saved in the reserialized binary, so we can still only test
+    some particular parts. But it should work.
+    """
     config = storage.get_config(storage_dump)
     assert config.boardVersion == 'v0.7.5'
     reserialized = storage.serialize_config_with_footer(config)
-    assert config_binary == reserialized
-    assert storage_dump[-12:] == reserialized[-12:]
+    assert storage_dump[-4:] == reserialized[-4:]
 
 
 @with_pb2s
@@ -176,3 +180,10 @@ def test_get_config_from_usb(config_binary):
     mock_get.assert_called_once()
     mock_read.assert_called_with(mock_out, mock_in, 0x101FC000, 16384)
     assert config == storage.get_config(config_binary)
+
+
+@with_pb2s
+def test_json_config_parses(config_json):
+    """Test that we can import a JSON config into a message."""
+    config = storage.get_config_from_json(config_json)
+    assert config.boardVersion == 'v0.7.6-15-g71f4512'

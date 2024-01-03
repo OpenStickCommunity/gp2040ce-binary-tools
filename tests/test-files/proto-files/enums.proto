@@ -45,7 +45,6 @@ enum ButtonLayoutRight
     BUTTON_LAYOUT_CUSTOMB = 16;
     BUTTON_LAYOUT_KEYBOARD8B = 17;
     BUTTON_LAYOUT_OPENCORE0WASDB = 18;
-    BUTTON_LAYOUT_BSS = 99;
 }
 
 enum SplashMode
@@ -89,6 +88,14 @@ enum InputMode
     INPUT_MODE_HID = 2;
     INPUT_MODE_KEYBOARD = 3;
     INPUT_MODE_PS4 = 4;
+    INPUT_MODE_XBONE = 5;
+    INPUT_MODE_MDMINI = 6;
+    INPUT_MODE_NEOGEO = 7;
+    INPUT_MODE_PCEMINI = 8;
+    INPUT_MODE_EGRET = 9;
+    INPUT_MODE_ASTRO = 10;
+    INPUT_MODE_PSCLASSIC = 11;
+    INPUT_MODE_XBOXORIGINAL = 12;
     INPUT_MODE_CONFIG = 255;
 }
 
@@ -191,6 +198,18 @@ enum GamepadHotkey
     HOTKEY_R3_BUTTON             = 20;
     HOTKEY_TOUCHPAD_BUTTON       = 21;
     HOTKEY_REBOOT_DEFAULT        = 22;
+    HOTKEY_B1_BUTTON             = 23;
+    HOTKEY_B2_BUTTON             = 24;
+    HOTKEY_B3_BUTTON             = 25;
+    HOTKEY_B4_BUTTON             = 26;
+    HOTKEY_L1_BUTTON             = 27;
+    HOTKEY_R1_BUTTON             = 28;
+    HOTKEY_L2_BUTTON             = 29;
+    HOTKEY_R2_BUTTON             = 30;
+    HOTKEY_S1_BUTTON             = 31;
+    HOTKEY_S2_BUTTON             = 32;
+    HOTKEY_A1_BUTTON             = 33;
+    HOTKEY_A2_BUTTON             = 34;
 }
 
 // This has to be kept in sync with LEDFormat in NeoPico.hpp

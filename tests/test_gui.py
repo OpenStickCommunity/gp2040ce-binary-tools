@@ -94,7 +94,7 @@ async def test_simple_toggle():
     async with app.run_test() as pilot:
         tree = pilot.app.query_one(Tree)
         display_node = tree.root.children[5]
-        invert_node = display_node.children[11]
+        invert_node = display_node.children[10]
 
         assert 'False' in invert_node.label
         app._modify_node(invert_node)
@@ -109,8 +109,8 @@ async def test_simple_edit_via_input_field():
     async with app.run_test() as pilot:
         tree = pilot.app.query_one(Tree)
         display_node = tree.root.children[5]
-        i2cspeed_node = display_node.children[10]
-        assert pilot.app.config.displayOptions.i2cSpeed == 400000
+        i2cspeed_node = display_node.children[4]
+        assert pilot.app.config.displayOptions.deprecatedI2cSpeed == 400000
 
         tree.root.expand_all()
         await pilot.wait_for_scheduled_animations()
@@ -122,7 +122,7 @@ async def test_simple_edit_via_input_field():
         await pilot.press('backspace', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', '5')
         await pilot.wait_for_scheduled_animations()
         await pilot.click('Button#save-button')
-        assert pilot.app.config.displayOptions.i2cSpeed == 5
+        assert pilot.app.config.displayOptions.deprecatedI2cSpeed == 5
 
 
 @pytest.mark.asyncio
@@ -198,7 +198,7 @@ async def test_add_node_to_repeated():
         await pilot.wait_for_scheduled_animations()
         await pilot.click('Button#save-button')
 
-        assert pilot.app.config.profileOptions.alternativePinMappings[0].pinButtonB4 == 5
+        assert pilot.app.config.profileOptions.deprecatedAlternativePinMappings[0].pinButtonB4 == 5
 
 
 @pytest.mark.asyncio

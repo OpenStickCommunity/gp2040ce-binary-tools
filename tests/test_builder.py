@@ -33,7 +33,7 @@ def with_pb2s(test, *args, **kwargs):
 
 
 def test_concatenate_to_file(tmp_path):
-    """Test that we write a file as expected."""
+    """Test that we write a file with firmware + binary user config as expected."""
     tmp_file = os.path.join(tmp_path, 'concat.bin')
     firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
     config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
