@@ -165,7 +165,7 @@ def test_pad_config_to_storage_raises(config_binary):
 
 
 @with_pb2s
-def test_get_config_from_usb(config_binary):
+def test_get_user_config_from_usb(config_binary):
     """Test we attempt to read from the proper location over USB."""
     mock_out = mock.MagicMock()
     mock_out.device.idVendor = 0xbeef
@@ -175,7 +175,7 @@ def test_get_config_from_usb(config_binary):
     mock_in = mock.MagicMock()
     with mock.patch('gp2040ce_bintools.storage.get_bootsel_endpoints', return_value=(mock_out, mock_in)) as mock_get:
         with mock.patch('gp2040ce_bintools.storage.read', return_value=config_binary) as mock_read:
-            config, _, _ = storage.get_config_from_usb()
+            config, _, _ = storage.get_user_config_from_usb()
 
     mock_get.assert_called_once()
     mock_read.assert_called_with(mock_out, mock_in, 0x101FC000, 16384)

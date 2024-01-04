@@ -16,9 +16,9 @@ from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
 
 logger = logging.getLogger(__name__)
 
+STORAGE_SIZE = 16384
 USER_CONFIG_BINARY_LOCATION = 0x1FC000
 USER_CONFIG_BOOTSEL_ADDRESS = 0x10000000 + USER_CONFIG_BINARY_LOCATION
-STORAGE_SIZE = 16384
 
 FOOTER_SIZE = 12
 FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
@@ -148,9 +148,11 @@ def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file
         return get_config(content)
 
 
-def get_config_from_usb() -> tuple[Message, object, object]:
-    """Read the config section from a USB device and get back its config section.
+def get_config_from_usb(address: int) -> tuple[Message, object, object]:
+    """Read a config section from a USB device and provide the protobuf Message.
 
+    Args:
+        address: location of the flash to start reading from
     Returns:
         the parsed configuration, along with the USB out and in endpoints for reference
     """
@@ -158,8 +160,17 @@ def get_config_from_usb() -> tuple[Message, object, object]:
     endpoint_out, endpoint_in = get_bootsel_endpoints()
     logger.debug("reading DEVICE ID %s:%s, bus %s, address %s", hex(endpoint_out.device.idVendor),
                  hex(endpoint_out.device.idProduct), endpoint_out.device.bus, endpoint_out.device.address)
-    storage = read(endpoint_out, endpoint_in, USER_CONFIG_BOOTSEL_ADDRESS, STORAGE_SIZE)
+    storage = read(endpoint_out, endpoint_in, address, STORAGE_SIZE)
     return get_config(bytes(storage)), endpoint_out, endpoint_in
+
+
+def get_user_config_from_usb() -> tuple[Message, object, object]:
+    """Read the user configuration from the detected USB device.
+
+    Returns:
+        the parsed configuration, along with the USB out and in endpoints for reference
+    """
+    return get_config_from_usb(USER_CONFIG_BOOTSEL_ADDRESS)
 
 
 def get_storage_section(content: bytes) -> bytes:
@@ -234,7 +245,7 @@ def dump_config():
     )
     parser.add_argument('binary_filename', help=".bin file to save the GP2040-CE board's config section to")
     args, _ = parser.parse_known_args()
-    config, _, _ = get_config_from_usb()
+    config, _, _ = get_user_config_from_usb()
     with open(args.binary_filename, 'wb') as out_file:
         out_file.write(serialize_config_with_footer(config))
 
@@ -257,7 +268,7 @@ def visualize():
     args, _ = parser.parse_known_args()
 
     if args.usb:
-        config, _, _ = get_config_from_usb()
+        config, _, _ = get_user_config_from_usb()
     else:
         config = get_config_from_file(args.filename, whole_board=args.whole_board)
 
