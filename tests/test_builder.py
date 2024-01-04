@@ -15,7 +15,8 @@ from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and
                                        concatenate_firmware_and_storage_files, get_gp2040ce_from_usb,
                                        pad_binary_up_to_user_config, replace_config_in_binary,
                                        write_new_config_to_filename, write_new_config_to_usb)
-from gp2040ce_bintools.storage import get_config, get_config_footer, get_storage_section, serialize_config_with_footer
+from gp2040ce_bintools.storage import (get_config, get_config_footer, get_user_storage_section,
+                                       serialize_config_with_footer)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -93,7 +94,7 @@ def test_firmware_plus_storage(firmware_binary, storage_dump):
     """Test that combining firmware and storage produces a valid combined binary."""
     whole_board = combine_firmware_and_config(firmware_binary, storage_dump)
     # if this is valid, we should be able to find the storage and footer again
-    storage = get_storage_section(whole_board)
+    storage = get_user_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
 
@@ -102,7 +103,7 @@ def test_firmware_plus_config_binary(firmware_binary, config_binary):
     """Test that combining firmware and storage produces a valid combined binary."""
     whole_board = combine_firmware_and_config(firmware_binary, config_binary)
     # if this is valid, we should be able to find the storage and footer again
-    storage = get_storage_section(whole_board)
+    storage = get_user_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
 
@@ -111,7 +112,7 @@ def test_chunky_firmware_plus_config_binary(config_binary):
     """Test that combining giant firmware and storage produces a valid combined binary."""
     whole_board = combine_firmware_and_config(bytearray(b'\x00' * 4 * 1024 * 1024), config_binary, replace_extra=True)
     # if this is valid, we should be able to find the storage and footer again
-    storage = get_storage_section(whole_board)
+    storage = get_user_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
 
@@ -121,7 +122,7 @@ def test_replace_config_in_binary(config_binary):
     whole_board = replace_config_in_binary(bytearray(b'\x00' * 3 * 1024 * 1024), config_binary)
     assert len(whole_board) == 3 * 1024 * 1024
     # if this is valid, we should be able to find the storage and footer again
-    storage = get_storage_section(whole_board)
+    storage = get_user_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
 
@@ -131,7 +132,7 @@ def test_replace_config_in_binary_not_big_enough(config_binary):
     whole_board = replace_config_in_binary(bytearray(b'\x00' * 1 * 1024 * 1024), config_binary)
     assert len(whole_board) == 2 * 1024 * 1024
     # if this is valid, we should be able to find the storage and footer again
-    storage = get_storage_section(whole_board)
+    storage = get_user_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
 
@@ -152,7 +153,7 @@ def test_write_new_config_to_whole_board(whole_board_dump, tmp_path):
     with open(tmp_file, 'rb') as file:
         board_dump = file.read()
 
-    config = get_config(get_storage_section(board_dump))
+    config = get_config(get_user_storage_section(board_dump))
     assert config.boardVersion == 'v0.7.5'
     config.boardVersion = 'v0.7.5-COOL'
     write_new_config_to_filename(config, tmp_file, inject=True)
@@ -160,7 +161,7 @@ def test_write_new_config_to_whole_board(whole_board_dump, tmp_path):
     # read new file
     with open(tmp_file, 'rb') as file:
         new_board_dump = file.read()
-    config = get_config(get_storage_section(new_board_dump))
+    config = get_config(get_user_storage_section(new_board_dump))
     assert config.boardVersion == 'v0.7.5-COOL'
     assert len(board_dump) == len(new_board_dump)
 
@@ -180,7 +181,7 @@ def test_write_new_config_to_firmware(firmware_binary, tmp_path):
     # read new file
     with open(tmp_file, 'rb') as file:
         new_board_dump = file.read()
-    config = get_config(get_storage_section(new_board_dump))
+    config = get_config(get_user_storage_section(new_board_dump))
     assert config.boardVersion == 'v0.7.5-COOL'
     assert len(new_board_dump) == 2 * 1024 * 1024
 

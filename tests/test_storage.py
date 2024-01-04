@@ -50,7 +50,7 @@ def test_config_footer_too_small(storage_dump):
 def test_whole_board_too_small(whole_board_dump):
     """Test that a storage section isn't detected if the size is too small to contain where it should be."""
     with pytest.raises(storage.ConfigLengthError):
-        _, _, _ = storage.get_storage_section(whole_board_dump[-100000:])
+        _, _, _ = storage.get_user_storage_section(whole_board_dump[-100000:])
 
 
 def test_config_footer_bad_magic(storage_dump):
@@ -121,7 +121,7 @@ def test_config_parses(storage_dump):
 @with_pb2s
 def test_config_from_whole_board_parses(whole_board_dump):
     """Test that we can read in a whole board and still find the config section."""
-    config = storage.get_config(storage.get_storage_section(whole_board_dump))
+    config = storage.get_config(storage.get_user_storage_section(whole_board_dump))
     assert config.boardVersion == 'v0.7.5'
     assert config.hotkeyOptions.hotkey01.dpadMask == 0
     assert config.hotkeyOptions.hotkey02.dpadMask == 1

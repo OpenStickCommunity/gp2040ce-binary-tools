@@ -143,7 +143,7 @@ def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file
         return config_pb2.Config()
 
     if whole_board:
-        return get_config(get_storage_section(content))
+        return get_config(get_user_storage_section(content))
     else:
         return get_config(content)
 
@@ -173,8 +173,28 @@ def get_user_config_from_usb() -> tuple[Message, object, object]:
     return get_config_from_usb(USER_CONFIG_BOOTSEL_ADDRESS)
 
 
-def get_storage_section(content: bytes) -> bytes:
+def get_storage_section(content: bytes, address: int) -> bytes:
     """Pull out what should be the GP2040-CE storage section from a whole board dump.
+
+    Args:
+        content: bytes of a GP2040-CE whole board dump
+        address: location of the binary file to start reading from
+    Returns:
+        the presumed storage section from the binary
+    Raises:
+        ConfigLengthError: if the provided bytes don't appear to have a storage section
+    """
+    # a whole board must be at least as big as the known fences
+    logger.debug("length of content to look for storage in: %s", len(content))
+    if len(content) < address + STORAGE_SIZE:
+        raise ConfigLengthError("provided content is not large enough to have a storage section!")
+
+    logger.debug("returning bytes from %s to %s", hex(address), hex(address + STORAGE_SIZE))
+    return content[address:(address + STORAGE_SIZE)]
+
+
+def get_user_storage_section(content: bytes) -> bytes:
+    """Get the user storage area from what should be a whole board GP2040-CE dump.
 
     Args:
         content: bytes of a GP2040-CE whole board dump
@@ -183,14 +203,7 @@ def get_storage_section(content: bytes) -> bytes:
     Raises:
         ConfigLengthError: if the provided bytes don't appear to have a storage section
     """
-    # a whole board must be at least as big as the known fences
-    logger.debug("length of content to look for storage in: %s", len(content))
-    if len(content) < USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE:
-        raise ConfigLengthError("provided content is not large enough to have a storage section!")
-
-    logger.debug("returning bytes from %s to %s", hex(USER_CONFIG_BINARY_LOCATION),
-                 hex(USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE))
-    return content[USER_CONFIG_BINARY_LOCATION:(USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE)]
+    return get_storage_section(content, USER_CONFIG_BINARY_LOCATION)
 
 
 def get_new_config() -> Message:
