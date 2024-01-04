@@ -22,7 +22,7 @@ from textual.widgets.tree import TreeNode
 from gp2040ce_bintools import core_parser, handler
 from gp2040ce_bintools.builder import write_new_config_to_filename, write_new_config_to_usb
 from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
-from gp2040ce_bintools.storage import (STORAGE_BOOTSEL_ADDRESS, STORAGE_SIZE, ConfigReadError, get_config,
+from gp2040ce_bintools.storage import (STORAGE_SIZE, USER_CONFIG_BOOTSEL_ADDRESS, ConfigReadError, get_config,
                                        get_config_from_file, get_new_config)
 
 logger = logging.getLogger(__name__)
@@ -324,7 +324,7 @@ class ConfigEditor(App):
         if self.usb:
             try:
                 self.endpoint_out, self.endpoint_in = get_bootsel_endpoints()
-                config_binary = read(self.endpoint_out, self.endpoint_in, STORAGE_BOOTSEL_ADDRESS, STORAGE_SIZE)
+                config_binary = read(self.endpoint_out, self.endpoint_in, USER_CONFIG_BOOTSEL_ADDRESS, STORAGE_SIZE)
                 self.config = get_config(bytes(config_binary))
             except ConfigReadError:
                 if self.create_new:

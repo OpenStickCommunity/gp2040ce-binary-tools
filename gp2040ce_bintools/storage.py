@@ -16,8 +16,8 @@ from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
 
 logger = logging.getLogger(__name__)
 
-STORAGE_BINARY_LOCATION = 0x1FC000
-STORAGE_BOOTSEL_ADDRESS = 0x10000000 + STORAGE_BINARY_LOCATION
+USER_CONFIG_BINARY_LOCATION = 0x1FC000
+USER_CONFIG_BOOTSEL_ADDRESS = 0x10000000 + USER_CONFIG_BINARY_LOCATION
 STORAGE_SIZE = 16384
 
 FOOTER_SIZE = 12
@@ -158,7 +158,7 @@ def get_config_from_usb() -> tuple[Message, object, object]:
     endpoint_out, endpoint_in = get_bootsel_endpoints()
     logger.debug("reading DEVICE ID %s:%s, bus %s, address %s", hex(endpoint_out.device.idVendor),
                  hex(endpoint_out.device.idProduct), endpoint_out.device.bus, endpoint_out.device.address)
-    storage = read(endpoint_out, endpoint_in, STORAGE_BOOTSEL_ADDRESS, STORAGE_SIZE)
+    storage = read(endpoint_out, endpoint_in, USER_CONFIG_BOOTSEL_ADDRESS, STORAGE_SIZE)
     return get_config(bytes(storage)), endpoint_out, endpoint_in
 
 
@@ -174,12 +174,12 @@ def get_storage_section(content: bytes) -> bytes:
     """
     # a whole board must be at least as big as the known fences
     logger.debug("length of content to look for storage in: %s", len(content))
-    if len(content) < STORAGE_BINARY_LOCATION + STORAGE_SIZE:
+    if len(content) < USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE:
         raise ConfigLengthError("provided content is not large enough to have a storage section!")
 
-    logger.debug("returning bytes from %s to %s", hex(STORAGE_BINARY_LOCATION),
-                 hex(STORAGE_BINARY_LOCATION + STORAGE_SIZE))
-    return content[STORAGE_BINARY_LOCATION:(STORAGE_BINARY_LOCATION + STORAGE_SIZE)]
+    logger.debug("returning bytes from %s to %s", hex(USER_CONFIG_BINARY_LOCATION),
+                 hex(USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE))
+    return content[USER_CONFIG_BINARY_LOCATION:(USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE)]
 
 
 def get_new_config() -> Message:

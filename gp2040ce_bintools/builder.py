@@ -12,7 +12,7 @@ from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser
 from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read, write
-from gp2040ce_bintools.storage import (STORAGE_BINARY_LOCATION, STORAGE_BOOTSEL_ADDRESS, STORAGE_SIZE,
+from gp2040ce_bintools.storage import (STORAGE_SIZE, USER_CONFIG_BINARY_LOCATION, USER_CONFIG_BOOTSEL_ADDRESS,
                                        get_config_from_json, pad_config_to_storage_size, serialize_config_with_footer)
 
 logger = logging.getLogger(__name__)
@@ -106,13 +106,13 @@ def pad_binary_up_to_user_config(firmware: bytes, or_truncate: bool = False) -> 
     Raises:
         FirmwareLengthError: if the firmware is larger than the storage location
     """
-    bytes_to_pad = STORAGE_BINARY_LOCATION - len(firmware)
+    bytes_to_pad = USER_CONFIG_BINARY_LOCATION - len(firmware)
     logger.debug("firmware is length %s, padding %s bytes", len(firmware), bytes_to_pad)
     if bytes_to_pad < 0:
         if or_truncate:
-            return bytearray(firmware[0:STORAGE_BINARY_LOCATION])
+            return bytearray(firmware[0:USER_CONFIG_BINARY_LOCATION])
         raise FirmwareLengthError(f"provided firmware binary is larger than the start of "
-                                  f"storage at {STORAGE_BINARY_LOCATION}!")
+                                  f"storage at {USER_CONFIG_BINARY_LOCATION}!")
 
     return bytearray(firmware) + bytearray(b'\x00' * bytes_to_pad)
 
@@ -130,13 +130,13 @@ def replace_config_in_binary(board_binary: bytearray, config_binary: bytearray) 
     Returns:
         the resulting correctly-offset binary suitable for a GP2040-CE board
     """
-    if len(board_binary) < STORAGE_BINARY_LOCATION + STORAGE_SIZE:
+    if len(board_binary) < USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE:
         # this is functionally the same, since this doesn't sanity check the firmware
         return combine_firmware_and_config(board_binary, config_binary)
     else:
         new_binary = bytearray(copy.copy(board_binary))
         new_config = pad_config_to_storage_size(config_binary)
-        new_binary[STORAGE_BINARY_LOCATION:(STORAGE_BINARY_LOCATION + STORAGE_SIZE)] = new_config
+        new_binary[USER_CONFIG_BINARY_LOCATION:(USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE)] = new_config
         return new_binary
 
 
@@ -183,7 +183,7 @@ def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: 
     logger.debug("length: %s with %s bytes of padding", len(serialized), padding)
     binary = bytearray(b'\x00' * padding) + serialized
     logger.debug("binary for writing: %s", binary)
-    write(endpoint_out, endpoint_in, STORAGE_BOOTSEL_ADDRESS + (STORAGE_SIZE - len(binary)), bytes(binary))
+    write(endpoint_out, endpoint_in, USER_CONFIG_BOOTSEL_ADDRESS + (STORAGE_SIZE - len(binary)), bytes(binary))
 
 
 ############
