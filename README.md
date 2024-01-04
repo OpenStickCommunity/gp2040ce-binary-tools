@@ -53,11 +53,16 @@ A quick demonstration of the editor is available [on asciinema.org](https://asci
 
 ### concatenate
 
-`concatenate` combines a GP2040-CE firmware .bin file (such as from a fresh build) and a GP2040-CE board's storage
-section .bin or config (with footer) .bin, and produces a properly-offset .bin file suitable for flashing to a board.
-This may be useful to ensure the board is flashed with a particular configuration, for instances such as producing a
-binary to flash many boards with a particular configuration (specific customizations, etc.), or keeping documented
-backups of what you're testing with during development.
+`concatenate` combines a GP2040-CE firmware .bin file (such as from a fresh build) with:
+
+* a GP2040-CE user config, in the form of
+    * a config section .bin (with footer) (optionally padded) (`--binary-user-config-filename`) or
+    * a JSON file representing the config (`--json-user-config-filename`)
+
+...and produces a properly-offset .bin file suitable for flashing to a board.  This may be useful to ensure the board is
+flashed with a particular configuration, for instances such as producing a binary to flash many boards with a particular
+configuration (specific customizations, etc.), or keeping documented backups of what you're testing with during
+development.
 
 The produced binary can be written to a file with `--new-binary-filename FILENAME` or straight to a RP2040 in BOOTSEL
  mode with `--usb`.
@@ -65,7 +70,8 @@ The produced binary can be written to a file with `--new-binary-filename FILENAM
 Sample usage:
 
 ```
-% concatenate build/GP2040-CE_foo_bar.bin storage-dump.bin --new-binary-filename new-firmware-with-config.bin
+% concatenate build/GP2040-CE_foo_bar.bin --binary-user-config-filename storage-dump.bin \
+    --new-binary-filename new-firmware-with-config.bin
 ```
 
 ### dump-config
