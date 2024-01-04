@@ -13,7 +13,7 @@ from decorator import decorator
 from gp2040ce_bintools import get_config_pb2
 from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and_config,
                                        concatenate_firmware_and_storage_files, get_gp2040ce_from_usb,
-                                       pad_firmware_up_to_storage, replace_config_in_binary,
+                                       pad_binary_up_to_user_config, replace_config_in_binary,
                                        write_new_config_to_filename, write_new_config_to_usb)
 from gp2040ce_bintools.storage import get_config, get_config_footer, get_storage_section, serialize_config_with_footer
 
@@ -79,13 +79,13 @@ def test_concatenate_to_usb(tmp_path):
 
 def test_padding_firmware(firmware_binary):
     """Test that firmware is padded to the expected size."""
-    padded = pad_firmware_up_to_storage(firmware_binary)
+    padded = pad_binary_up_to_user_config(firmware_binary)
     assert len(padded) == 2080768
 
 
 def test_padding_firmware_can_truncate():
     """Test that firmware is padded to the expected size."""
-    padded = pad_firmware_up_to_storage(bytearray(b'\x00' * 4 * 1024 * 1024), or_truncate=True)
+    padded = pad_binary_up_to_user_config(bytearray(b'\x00' * 4 * 1024 * 1024), or_truncate=True)
     assert len(padded) == 2080768
 
 
@@ -139,7 +139,7 @@ def test_replace_config_in_binary_not_big_enough(config_binary):
 def test_padding_firmware_too_big(firmware_binary):
     """Test that firmware is padded to the expected size."""
     with pytest.raises(FirmwareLengthError):
-        _ = pad_firmware_up_to_storage(firmware_binary + firmware_binary + firmware_binary)
+        _ = pad_binary_up_to_user_config(firmware_binary + firmware_binary + firmware_binary)
 
 
 @with_pb2s

@@ -41,7 +41,7 @@ def combine_firmware_and_config(firmware_binary: bytearray, config_binary: bytea
     Returns:
         the resulting correctly-offset binary suitable for a GP2040-CE board
     """
-    return (pad_firmware_up_to_storage(firmware_binary, or_truncate=replace_extra) +
+    return (pad_binary_up_to_user_config(firmware_binary, or_truncate=replace_extra) +
             pad_config_to_storage_size(config_binary))
 
 
@@ -95,7 +95,7 @@ def get_gp2040ce_from_usb() -> tuple[bytes, object, object]:
     return content, endpoint_out, endpoint_in
 
 
-def pad_firmware_up_to_storage(firmware: bytes, or_truncate: bool = False) -> bytearray:
+def pad_binary_up_to_user_config(firmware: bytes, or_truncate: bool = False) -> bytearray:
     """Provide a copy of the firmware padded with zero bytes up to the provided position.
 
     Args:
