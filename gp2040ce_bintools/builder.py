@@ -31,19 +31,29 @@ class FirmwareLengthError(ValueError):
     """Exception raised when the firmware is too large to fit the known storage location."""
 
 
-def combine_firmware_and_config(firmware_binary: bytearray, config_binary: bytearray,
-                                replace_extra: bool = False) -> bytearray:
-    """Given firmware and config binaries, combine the two to one, with proper offsets for GP2040-CE.
+def combine_firmware_and_config(firmware_binary: bytearray, board_config_binary: bytearray,
+                                user_config_binary: bytearray, replace_extra: bool = False) -> bytearray:
+    """Given firmware and board and/or user config binaries, combine to one binary with proper offsets for GP2040-CE.
 
     Args:
         firmware_binary: binary data of the raw GP2040-CE firmware, probably but not necessarily unpadded
-        config_binary: binary data of board config + footer, possibly padded to be a full storage section
+        board_config_binary: binary data of board config + footer, possibly padded to be a full storage section
+        user_config_binary: binary data of user config + footer, possibly padded to be a full storage section
         replace_extra: if larger than normal firmware files should have their overage replaced
     Returns:
         the resulting correctly-offset binary suitable for a GP2040-CE board
     """
-    return (pad_binary_up_to_user_config(firmware_binary, or_truncate=replace_extra) +
-            pad_config_to_storage_size(config_binary))
+    if not board_config_binary and not user_config_binary:
+        raise ValueError("at least one config binary must be provided!")
+
+    combined = copy.copy(firmware_binary)
+    if board_config_binary:
+        combined = (pad_binary_up_to_board_config(combined, or_truncate=replace_extra) +
+                    pad_config_to_storage_size(board_config_binary))
+    if user_config_binary:
+        combined = (pad_binary_up_to_user_config(combined, or_truncate=replace_extra) +
+                    pad_config_to_storage_size(user_config_binary))
+    return combined
 
 
 def concatenate_firmware_and_storage_files(firmware_filename: str, binary_user_config_filename: Optional[str] = None,
@@ -62,13 +72,13 @@ def concatenate_firmware_and_storage_files(firmware_filename: str, binary_user_c
     new_binary = None
     if binary_user_config_filename:
         with open(firmware_filename, 'rb') as firmware, open(binary_user_config_filename, 'rb') as storage:
-            new_binary = combine_firmware_and_config(bytearray(firmware.read()), bytearray(storage.read()),
+            new_binary = combine_firmware_and_config(bytearray(firmware.read()), None, bytearray(storage.read()),
                                                      replace_extra=replace_extra)
     elif json_user_config_filename:
         with open(firmware_filename, 'rb') as firmware, open(json_user_config_filename, 'r') as json_file:
             config = get_config_from_json(json_file.read())
             serialized_config = serialize_config_with_footer(config)
-            new_binary = combine_firmware_and_config(bytearray(firmware.read()), serialized_config,
+            new_binary = combine_firmware_and_config(bytearray(firmware.read()), None, serialized_config,
                                                      replace_extra=replace_extra)
 
     if not new_binary:
@@ -162,7 +172,7 @@ def replace_config_in_binary(board_binary: bytearray, config_binary: bytearray) 
     """
     if len(board_binary) < USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE:
         # this is functionally the same, since this doesn't sanity check the firmware
-        return combine_firmware_and_config(board_binary, config_binary)
+        return combine_firmware_and_config(board_binary, None, config_binary)
     else:
         new_binary = bytearray(copy.copy(board_binary))
         new_config = pad_config_to_storage_size(config_binary)

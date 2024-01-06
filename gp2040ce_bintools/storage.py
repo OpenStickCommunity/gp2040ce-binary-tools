@@ -194,6 +194,19 @@ def get_storage_section(content: bytes, address: int) -> bytes:
     return content[address:(address + STORAGE_SIZE)]
 
 
+def get_board_storage_section(content: bytes) -> bytes:
+    """Get the board storage area from what should be a whole board GP2040-CE dump.
+
+    Args:
+        content: bytes of a GP2040-CE whole board dump
+    Returns:
+        the presumed storage section from the binary
+    Raises:
+        ConfigLengthError: if the provided bytes don't appear to have a storage section
+    """
+    return get_storage_section(content, BOARD_CONFIG_BINARY_LOCATION)
+
+
 def get_user_storage_section(content: bytes) -> bytes:
     """Get the user storage area from what should be a whole board GP2040-CE dump.
 

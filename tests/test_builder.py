@@ -15,8 +15,8 @@ from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and
                                        concatenate_firmware_and_storage_files, get_gp2040ce_from_usb,
                                        pad_binary_up_to_board_config, pad_binary_up_to_user_config,
                                        replace_config_in_binary, write_new_config_to_filename, write_new_config_to_usb)
-from gp2040ce_bintools.storage import (get_config, get_config_footer, get_user_storage_section,
-                                       serialize_config_with_footer)
+from gp2040ce_bintools.storage import (get_board_storage_section, get_config, get_config_footer,
+                                       get_user_storage_section, serialize_config_with_footer)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -96,31 +96,61 @@ def test_padding_firmware_to_board(firmware_binary):
     assert len(padded) == 2080768 - (16 * 1024)
 
 
-def test_firmware_plus_storage(firmware_binary, storage_dump):
+def test_firmware_plus_storage_section(firmware_binary, storage_dump):
     """Test that combining firmware and storage produces a valid combined binary."""
-    whole_board = combine_firmware_and_config(firmware_binary, storage_dump)
+    whole_board = combine_firmware_and_config(firmware_binary, None, storage_dump)
     # if this is valid, we should be able to find the storage and footer again
     storage = get_user_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
 
 
-def test_firmware_plus_config_binary(firmware_binary, config_binary):
-    """Test that combining firmware and storage produces a valid combined binary."""
-    whole_board = combine_firmware_and_config(firmware_binary, config_binary)
+def test_firmware_plus_user_config_binary(firmware_binary, config_binary):
+    """Test that combining firmware and user config produces a valid combined binary."""
+    whole_board = combine_firmware_and_config(firmware_binary, None, config_binary)
     # if this is valid, we should be able to find the storage and footer again
     storage = get_user_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
 
 
-def test_chunky_firmware_plus_config_binary(config_binary):
+def test_chunky_firmware_plus_user_config_binary(config_binary):
     """Test that combining giant firmware and storage produces a valid combined binary."""
-    whole_board = combine_firmware_and_config(bytearray(b'\x00' * 4 * 1024 * 1024), config_binary, replace_extra=True)
+    whole_board = combine_firmware_and_config(bytearray(b'\x00' * 4 * 1024 * 1024), None, config_binary,
+                                              replace_extra=True)
     # if this is valid, we should be able to find the storage and footer again
     storage = get_user_storage_section(whole_board)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
+
+
+def test_firmware_plus_board_config_binary(firmware_binary, config_binary):
+    """Test that combining firmware and board config produces a valid combined binary."""
+    almost_whole_board = combine_firmware_and_config(firmware_binary, config_binary, None)
+    assert len(almost_whole_board) == (2 * 1024 * 1024) - (16 * 1024)
+    # if this is valid, we should be able to find the storage and footer again
+    storage = get_board_storage_section(almost_whole_board)
+    footer_size, _, _ = get_config_footer(storage)
+    assert footer_size == 3309
+
+
+def test_firmware_plus_board_and_user_config_binary(firmware_binary, config_binary):
+    """Test that combining firmware and both board and user configs produces a valid combined binary."""
+    whole_board = combine_firmware_and_config(firmware_binary, config_binary, config_binary)
+    assert len(whole_board) == 2 * 1024 * 1024
+    # if this is valid, we should be able to find the storage and footer again
+    storage = get_board_storage_section(whole_board)
+    footer_size, _, _ = get_config_footer(storage)
+    assert footer_size == 3309
+    storage = get_user_storage_section(whole_board)
+    footer_size, _, _ = get_config_footer(storage)
+    assert footer_size == 3309
+
+
+def test_combine_must_get_at_least_one_config(firmware_binary):
+    """Test that we error if we are asked to combine with nothing to combine."""
+    with pytest.raises(ValueError):
+        combine_firmware_and_config(firmware_binary, None, None)
 
 
 def test_replace_config_in_binary(config_binary):
