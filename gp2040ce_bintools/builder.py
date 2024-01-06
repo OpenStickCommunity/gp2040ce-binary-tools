@@ -74,13 +74,13 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
         combined_filename: filename of where to write the combine binary
         replace_extra: if larger than normal firmware files should have their overage replaced
     """
-    new_binary = None
-    board_config_binary = None
-    user_config_binary = None
+    new_binary = bytearray([])
+    board_config_binary = bytearray([])
+    user_config_binary = bytearray([])
 
     if binary_board_config_filename:
         with open(binary_board_config_filename, 'rb') as storage:
-            board_config_binary = storage.read()
+            board_config_binary = bytearray(storage.read())
     elif json_board_config_filename:
         with open(json_board_config_filename, 'r') as json_file:
             config = get_config_from_json(json_file.read())
@@ -88,7 +88,7 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
 
     if binary_user_config_filename:
         with open(binary_user_config_filename, 'rb') as storage:
-            user_config_binary = storage.read()
+            user_config_binary = bytearray(storage.read())
     elif json_user_config_filename:
         with open(json_user_config_filename, 'r') as json_file:
             config = get_config_from_json(json_file.read())
@@ -186,7 +186,7 @@ def replace_config_in_binary(board_binary: bytearray, config_binary: bytearray) 
     """
     if len(board_binary) < USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE:
         # this is functionally the same, since this doesn't sanity check the firmware
-        return combine_firmware_and_config(board_binary, None, config_binary)
+        return combine_firmware_and_config(board_binary, bytearray([]), config_binary)
     else:
         new_binary = bytearray(copy.copy(board_binary))
         new_config = pad_config_to_storage_size(config_binary)
