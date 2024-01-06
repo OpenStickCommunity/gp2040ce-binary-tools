@@ -95,6 +95,29 @@ def get_gp2040ce_from_usb() -> tuple[bytes, object, object]:
     return content, endpoint_out, endpoint_in
 
 
+def pad_binary_up_to_address(binary: bytes, position: int, or_truncate: bool = False) -> bytearray:
+    """Provide a copy of the firmware padded with zero bytes up to the provided position.
+
+    Args:
+        binary: the binary to process
+        position: the byte to pad to
+        or_truncate: if the firmware is longer than expected, just return the max size
+    Returns:
+        the resulting padded binary as a bytearray
+    Raises:
+        FirmwareLengthError: if the firmware is larger than the storage location
+    """
+    bytes_to_pad = position - len(binary)
+    logger.debug("firmware is length %s, padding %s bytes", len(binary), bytes_to_pad)
+    if bytes_to_pad < 0:
+        if or_truncate:
+            return bytearray(binary[0:position])
+        raise FirmwareLengthError(f"provided firmware binary is larger than the start of "
+                                  f"storage at {position}!")
+
+    return bytearray(binary) + bytearray(b'\x00' * bytes_to_pad)
+
+
 def pad_binary_up_to_user_config(firmware: bytes, or_truncate: bool = False) -> bytearray:
     """Provide a copy of the firmware padded with zero bytes up to the provided position.
 
@@ -106,15 +129,7 @@ def pad_binary_up_to_user_config(firmware: bytes, or_truncate: bool = False) -> 
     Raises:
         FirmwareLengthError: if the firmware is larger than the storage location
     """
-    bytes_to_pad = USER_CONFIG_BINARY_LOCATION - len(firmware)
-    logger.debug("firmware is length %s, padding %s bytes", len(firmware), bytes_to_pad)
-    if bytes_to_pad < 0:
-        if or_truncate:
-            return bytearray(firmware[0:USER_CONFIG_BINARY_LOCATION])
-        raise FirmwareLengthError(f"provided firmware binary is larger than the start of "
-                                  f"storage at {USER_CONFIG_BINARY_LOCATION}!")
-
-    return bytearray(firmware) + bytearray(b'\x00' * bytes_to_pad)
+    return pad_binary_up_to_address(firmware, USER_CONFIG_BINARY_LOCATION, or_truncate)
 
 
 def replace_config_in_binary(board_binary: bytearray, config_binary: bytearray) -> bytearray:
