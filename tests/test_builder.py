@@ -38,10 +38,41 @@ def test_concatenate_to_file(tmp_path):
     tmp_file = os.path.join(tmp_path, 'concat.bin')
     firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
     config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
-    concatenate_firmware_and_storage_files(firmware_file, config_file, combined_filename=tmp_file)
+    concatenate_firmware_and_storage_files(firmware_file, binary_user_config_filename=config_file,
+                                           combined_filename=tmp_file)
     with open(tmp_file, 'rb') as file:
         content = file.read()
     assert len(content) == 2 * 1024 * 1024
+
+
+def test_concatenate_board_config_to_file(tmp_path):
+    """Test that we write a file with firmware + binary board config as expected."""
+    tmp_file = os.path.join(tmp_path, 'concat.bin')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
+    concatenate_firmware_and_storage_files(firmware_file, binary_board_config_filename=config_file,
+                                           combined_filename=tmp_file)
+    with open(tmp_file, 'rb') as file:
+        content = file.read()
+    assert len(content) == (2 * 1024 * 1024) - (16 * 1024)
+
+
+def test_concatenate_both_configs_to_file(tmp_path):
+    """Test that we write a file with firmware + binary board + binary user config as expected."""
+    tmp_file = os.path.join(tmp_path, 'concat.bin')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
+    concatenate_firmware_and_storage_files(firmware_file, binary_board_config_filename=config_file,
+                                           binary_user_config_filename=config_file, combined_filename=tmp_file)
+    with open(tmp_file, 'rb') as file:
+        content = file.read()
+    assert len(content) == 2 * 1024 * 1024
+    storage = get_board_storage_section(content)
+    footer_size, _, _ = get_config_footer(storage)
+    assert footer_size == 3309
+    storage = get_user_storage_section(content)
+    footer_size, _, _ = get_config_footer(storage)
+    assert footer_size == 3309
 
 
 @with_pb2s
@@ -72,7 +103,8 @@ def test_concatenate_to_usb(tmp_path):
     end_out, end_in = mock.MagicMock(), mock.MagicMock()
     with mock.patch('gp2040ce_bintools.builder.get_bootsel_endpoints', return_value=(end_out, end_in)):
         with mock.patch('gp2040ce_bintools.builder.write') as mock_write:
-            concatenate_firmware_and_storage_files(firmware_file, config_file, usb=True)
+            concatenate_firmware_and_storage_files(firmware_file, binary_user_config_filename=config_file,
+                                                   usb=True)
 
     assert mock_write.call_args.args[2] == 0x10000000
     assert len(mock_write.call_args.args[3]) == 2 * 1024 * 1024

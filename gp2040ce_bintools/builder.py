@@ -56,7 +56,10 @@ def combine_firmware_and_config(firmware_binary: bytearray, board_config_binary:
     return combined
 
 
-def concatenate_firmware_and_storage_files(firmware_filename: str, binary_user_config_filename: Optional[str] = None,
+def concatenate_firmware_and_storage_files(firmware_filename: str,
+                                           binary_board_config_filename: Optional[str] = None,
+                                           json_board_config_filename: Optional[str] = None,
+                                           binary_user_config_filename: Optional[str] = None,
                                            json_user_config_filename: Optional[str] = None,
                                            combined_filename: str = '', usb: bool = False,
                                            replace_extra: bool = False) -> None:
@@ -64,25 +67,36 @@ def concatenate_firmware_and_storage_files(firmware_filename: str, binary_user_c
 
     Args:
         firmware_filename: filename of the firmware binary to read
+        binary_board_config_filename: filename of the board config section to read, in binary format
+        json_board_config_filename: filename of the board config section to read, in JSON format
         binary_user_config_filename: filename of the user config section to read, in binary format
         json_user_config_filename: filename of the user config section to read, in JSON format
         combined_filename: filename of where to write the combine binary
         replace_extra: if larger than normal firmware files should have their overage replaced
     """
     new_binary = None
-    if binary_user_config_filename:
-        with open(firmware_filename, 'rb') as firmware, open(binary_user_config_filename, 'rb') as storage:
-            new_binary = combine_firmware_and_config(bytearray(firmware.read()), None, bytearray(storage.read()),
-                                                     replace_extra=replace_extra)
-    elif json_user_config_filename:
-        with open(firmware_filename, 'rb') as firmware, open(json_user_config_filename, 'r') as json_file:
-            config = get_config_from_json(json_file.read())
-            serialized_config = serialize_config_with_footer(config)
-            new_binary = combine_firmware_and_config(bytearray(firmware.read()), None, serialized_config,
-                                                     replace_extra=replace_extra)
+    board_config_binary = None
+    user_config_binary = None
 
-    if not new_binary:
-        raise ValueError("no means to create a binary was provided")
+    if binary_board_config_filename:
+        with open(binary_board_config_filename, 'rb') as storage:
+            board_config_binary = storage.read()
+    elif json_board_config_filename:
+        with open(json_board_config_filename, 'r') as json_file:
+            config = get_config_from_json(json_file.read())
+            board_config_binary = serialize_config_with_footer(config)
+
+    if binary_user_config_filename:
+        with open(binary_user_config_filename, 'rb') as storage:
+            user_config_binary = storage.read()
+    elif json_user_config_filename:
+        with open(json_user_config_filename, 'r') as json_file:
+            config = get_config_from_json(json_file.read())
+            user_config_binary = serialize_config_with_footer(config)
+
+    with open(firmware_filename, 'rb') as firmware:
+        new_binary = combine_firmware_and_config(bytearray(firmware.read()), board_config_binary, user_config_binary,
+                                                 replace_extra=replace_extra)
 
     if combined_filename:
         with open(combined_filename, 'wb') as combined:
@@ -234,15 +248,19 @@ def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: 
 def concatenate():
     """Combine a built firmware .bin and a storage .bin."""
     parser = argparse.ArgumentParser(
-        description="Combine a compiled GP2040-CE firmware-only .bin and an existing storage area or config .bin "
-                    "into one file suitable for flashing onto a board.",
+        description="Combine a compiled GP2040-CE firmware-only .bin and existing user and/or board storage area(s) "
+                    "or config .bin(s) into one file suitable for flashing onto a board.",
         parents=[core_parser],
     )
     parser.add_argument('--replace-extra', action='store_true',
                         help="if the firmware file is larger than the location of storage, perhaps because it's "
                              "actually a full board dump, overwrite its config section with the config binary")
     parser.add_argument('firmware_filename', help=".bin file of a GP2040-CE firmware, probably from a build")
-    user_config_group = parser.add_mutually_exclusive_group(required=True)
+    board_config_group = parser.add_mutually_exclusive_group(required=False)
+    board_config_group.add_argument('--binary-board-config-filename',
+                                    help=".bin file of a GP2040-CE board config w/footer")
+    board_config_group.add_argument('--json-board-config-filename', help=".json file of a GP2040-CE board config")
+    user_config_group = parser.add_mutually_exclusive_group(required=False)
     user_config_group.add_argument('--binary-user-config-filename',
                                    help=".bin file of a GP2040-CE user config w/footer")
     user_config_group.add_argument('--json-user-config-filename', help=".json file of a GP2040-CE user config")
@@ -252,6 +270,8 @@ def concatenate():
 
     args, _ = parser.parse_known_args()
     concatenate_firmware_and_storage_files(args.firmware_filename,
+                                           binary_board_config_filename=args.binary_board_config_filename,
+                                           json_board_config_filename=args.json_board_config_filename,
                                            binary_user_config_filename=args.binary_user_config_filename,
                                            json_user_config_filename=args.json_user_config_filename,
                                            combined_filename=args.new_binary_filename, usb=args.usb,

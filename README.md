@@ -55,7 +55,10 @@ A quick demonstration of the editor is available [on asciinema.org](https://asci
 
 `concatenate` combines a GP2040-CE firmware .bin file (such as from a fresh build) with:
 
-* a GP2040-CE user config, in the form of
+* a GP2040-CE board config, in the form of
+    * a config section .bin (with footer) (optionally padded) (`--binary-board-config-filename`) or
+    * a JSON file representing the config (`--json-board-config-filename`)
+* and/or a GP2040-CE user config, in the form of
     * a config section .bin (with footer) (optionally padded) (`--binary-user-config-filename`) or
     * a JSON file representing the config (`--json-user-config-filename`)
 
@@ -63,6 +66,10 @@ A quick demonstration of the editor is available [on asciinema.org](https://asci
 flashed with a particular configuration, for instances such as producing a binary to flash many boards with a particular
 configuration (specific customizations, etc.), or keeping documented backups of what you're testing with during
 development.
+
+The `--...-board-config-filename` flags allow for shipping a default configuration as part of the binary, replacing
+the need for generating these board configurations at compile time. This allows for more custom builds and less
+dependency on the build jobs, and is a feature in progress in the core firmware.
 
 The produced binary can be written to a file with `--new-binary-filename FILENAME` or straight to a RP2040 in BOOTSEL
  mode with `--usb`.
