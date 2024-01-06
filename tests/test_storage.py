@@ -95,6 +95,15 @@ def test_get_config_from_file_whole_board_dump():
 
 
 @with_pb2s
+def test_get_board_config_from_file_whole_board_dump():
+    """Test that we can open a storage dump file and find its config."""
+    filename = os.path.join(HERE, 'test-files', 'test-whole-board-with-board-config.bin')
+    config = storage.get_config_from_file(filename, whole_board=True, board_config=True)
+    assert config.boardVersion == 'v0.7.6-15-g71f4512'
+    assert config.addonOptions.bootselButtonOptions.enabled is False
+
+
+@with_pb2s
 def test_get_config_from_file_file_not_fonud_ok():
     """If we allow opening a file that doesn't exist (e.g. for the editor), check we get an empty config."""
     filename = os.path.join(HERE, 'test-files', 'nope.bin')
@@ -162,6 +171,24 @@ def test_pad_config_to_storage_raises(config_binary):
     """Test that we raise an exception if the config is bigger than the storage section."""
     with pytest.raises(storage.ConfigLengthError):
         _ = storage.pad_config_to_storage_size(config_binary * 5)
+
+
+@with_pb2s
+def test_get_board_config_from_usb(config_binary):
+    """Test we attempt to read from the proper location over USB."""
+    mock_out = mock.MagicMock()
+    mock_out.device.idVendor = 0xbeef
+    mock_out.device.idProduct = 0xcafe
+    mock_out.device.bus = 1
+    mock_out.device.address = 2
+    mock_in = mock.MagicMock()
+    with mock.patch('gp2040ce_bintools.storage.get_bootsel_endpoints', return_value=(mock_out, mock_in)) as mock_get:
+        with mock.patch('gp2040ce_bintools.storage.read', return_value=config_binary) as mock_read:
+            config, _, _ = storage.get_board_config_from_usb()
+
+    mock_get.assert_called_once()
+    mock_read.assert_called_with(mock_out, mock_in, 0x101F8000, 16384)
+    assert config == storage.get_config(config_binary)
 
 
 @with_pb2s

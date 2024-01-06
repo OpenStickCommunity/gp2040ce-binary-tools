@@ -17,6 +17,7 @@ from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
 logger = logging.getLogger(__name__)
 
 BOARD_CONFIG_BINARY_LOCATION = 0x1F8000
+BOARD_CONFIG_BOOTSEL_ADDRESS = 0x10000000 + BOARD_CONFIG_BINARY_LOCATION
 STORAGE_SIZE = 16384
 USER_CONFIG_BINARY_LOCATION = 0x1FC000
 USER_CONFIG_BOOTSEL_ADDRESS = 0x10000000 + USER_CONFIG_BINARY_LOCATION
@@ -124,13 +125,15 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     return config_size, config_crc, config_magic
 
 
-def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file: bool = False) -> Message:
+def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file: bool = False,
+                         board_config: bool = False) -> Message:
     """Read the specified file (memory dump or whole board dump) and get back its config section.
 
     Args:
         filename: the filename of the file to open and read
         whole_board: optional, if true, attempt to find the storage section from its normal location on a board
         allow_no_file: if true, attempting to open a nonexistent file returns an empty config, else it errors
+        board_config: if true, the board config is provided instead of the user config
     Returns:
         the parsed configuration
     """
@@ -144,7 +147,10 @@ def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file
         return config_pb2.Config()
 
     if whole_board:
-        return get_config(get_user_storage_section(content))
+        if board_config:
+            return get_config(get_board_storage_section(content))
+        else:
+            return get_config(get_user_storage_section(content))
     else:
         return get_config(content)
 
@@ -163,6 +169,15 @@ def get_config_from_usb(address: int) -> tuple[Message, object, object]:
                  hex(endpoint_out.device.idProduct), endpoint_out.device.bus, endpoint_out.device.address)
     storage = read(endpoint_out, endpoint_in, address, STORAGE_SIZE)
     return get_config(bytes(storage)), endpoint_out, endpoint_in
+
+
+def get_board_config_from_usb() -> tuple[Message, object, object]:
+    """Read the board configuration from the detected USB device.
+
+    Returns:
+        the parsed configuration, along with the USB out and in endpoints for reference
+    """
+    return get_config_from_usb(BOARD_CONFIG_BOOTSEL_ADDRESS)
 
 
 def get_user_config_from_usb() -> tuple[Message, object, object]:
@@ -286,6 +301,8 @@ def visualize():
     )
     parser.add_argument('--whole-board', action='store_true', help="indicate the binary file is a whole board dump")
     parser.add_argument('--json', action='store_true', help="print the config out as a JSON document")
+    parser.add_argument('--board-config', action='store_true', default=False,
+                        help="display the board config rather than the user config")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--usb', action='store_true', help="retrieve the config from a RP2040 board connected over USB "
                                                           "and in BOOTSEL mode")
@@ -295,9 +312,12 @@ def visualize():
     args, _ = parser.parse_known_args()
 
     if args.usb:
-        config, _, _ = get_user_config_from_usb()
+        if args.board_config:
+            config, _, _ = get_board_config_from_usb()
+        else:
+            config, _, _ = get_user_config_from_usb()
     else:
-        config = get_config_from_file(args.filename, whole_board=args.whole_board)
+        config = get_config_from_file(args.filename, whole_board=args.whole_board, board_config=args.board_config)
 
     if args.json:
         print(MessageToJson(config))
