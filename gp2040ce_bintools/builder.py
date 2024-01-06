@@ -12,8 +12,9 @@ from google.protobuf.message import Message
 
 from gp2040ce_bintools import core_parser
 from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read, write
-from gp2040ce_bintools.storage import (STORAGE_SIZE, USER_CONFIG_BINARY_LOCATION, USER_CONFIG_BOOTSEL_ADDRESS,
-                                       get_config_from_json, pad_config_to_storage_size, serialize_config_with_footer)
+from gp2040ce_bintools.storage import (BOARD_CONFIG_BINARY_LOCATION, STORAGE_SIZE, USER_CONFIG_BINARY_LOCATION,
+                                       USER_CONFIG_BOOTSEL_ADDRESS, get_config_from_json, pad_config_to_storage_size,
+                                       serialize_config_with_footer)
 
 logger = logging.getLogger(__name__)
 
@@ -118,8 +119,22 @@ def pad_binary_up_to_address(binary: bytes, position: int, or_truncate: bool = F
     return bytearray(binary) + bytearray(b'\x00' * bytes_to_pad)
 
 
+def pad_binary_up_to_board_config(firmware: bytes, or_truncate: bool = False) -> bytearray:
+    """Provide a copy of the firmware padded with zero bytes up to the board config position.
+
+    Args:
+        firmware: the firmware binary to process
+        or_truncate: if the firmware is longer than expected, just return the max size
+    Returns:
+        the resulting padded binary as a bytearray
+    Raises:
+        FirmwareLengthError: if the firmware is larger than the storage location
+    """
+    return pad_binary_up_to_address(firmware, BOARD_CONFIG_BINARY_LOCATION, or_truncate)
+
+
 def pad_binary_up_to_user_config(firmware: bytes, or_truncate: bool = False) -> bytearray:
-    """Provide a copy of the firmware padded with zero bytes up to the provided position.
+    """Provide a copy of the firmware padded with zero bytes up to the user config position.
 
     Args:
         firmware: the firmware binary to process

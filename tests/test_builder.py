@@ -13,8 +13,8 @@ from decorator import decorator
 from gp2040ce_bintools import get_config_pb2
 from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and_config,
                                        concatenate_firmware_and_storage_files, get_gp2040ce_from_usb,
-                                       pad_binary_up_to_user_config, replace_config_in_binary,
-                                       write_new_config_to_filename, write_new_config_to_usb)
+                                       pad_binary_up_to_board_config, pad_binary_up_to_user_config,
+                                       replace_config_in_binary, write_new_config_to_filename, write_new_config_to_usb)
 from gp2040ce_bintools.storage import (get_config, get_config_footer, get_user_storage_section,
                                        serialize_config_with_footer)
 
@@ -88,6 +88,12 @@ def test_padding_firmware_can_truncate():
     """Test that firmware is padded to the expected size."""
     padded = pad_binary_up_to_user_config(bytearray(b'\x00' * 4 * 1024 * 1024), or_truncate=True)
     assert len(padded) == 2080768
+
+
+def test_padding_firmware_to_board(firmware_binary):
+    """Test that firmware is padded to the expected size."""
+    padded = pad_binary_up_to_board_config(firmware_binary)
+    assert len(padded) == 2080768 - (16 * 1024)
 
 
 def test_firmware_plus_storage(firmware_binary, storage_dump):
