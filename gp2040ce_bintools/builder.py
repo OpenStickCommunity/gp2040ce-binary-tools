@@ -106,7 +106,10 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
 
     if combined_filename:
         with open(combined_filename, 'wb') as combined:
-            combined.write(new_binary)
+            if combined_filename[-4:] == '.uf2':
+                combined.write(convert_binary_to_uf2(new_binary))
+            else:
+                combined.write(new_binary)
     if usb:
         endpoint_out, endpoint_in = get_bootsel_endpoints()
         write(endpoint_out, endpoint_in, GP2040CE_START_ADDRESS, bytes(new_binary))
