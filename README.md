@@ -62,17 +62,19 @@ A quick demonstration of the editor is available [on asciinema.org](https://asci
     * a config section .bin (with footer) (optionally padded) (`--binary-user-config-filename`) or
     * a JSON file representing the config (`--json-user-config-filename`)
 
-...and produces a properly-offset .bin file suitable for flashing to a board.  This may be useful to ensure the board is
-flashed with a particular configuration, for instances such as producing a binary to flash many boards with a particular
-configuration (specific customizations, etc.), or keeping documented backups of what you're testing with during
+...and produces a properly-offset firmware file suitable for flashing to a board with the provided config(s). This may
+be useful to ensure the board is flashed with a particular configuration, for instances such as producing a binary to
+flash many boards with a particular configuration (specific customizations, etc.), creating a file suitable for the
+initial install of a fresh board (a "board config"), or keeping documented backups of what you're testing with during
 development.
 
 The `--...-board-config-filename` flags allow for shipping a default configuration as part of the binary, replacing
 the need for generating these board configurations at compile time. This allows for more custom builds and less
 dependency on the build jobs, and is a feature in progress in the core firmware.
 
-The produced binary can be written to a file with `--new-binary-filename FILENAME` or straight to a RP2040 in BOOTSEL
- mode with `--usb`.
+The produced firmware + config(s) can be written to a file with `--new-binary-filename FILENAME` or straight to a RP2040
+in BOOTSEL mode with `--usb`. The output file is a direct binary representation by default, but if `FILENAME` ends in
+".uf2", it will be written in the UF2 format, which is generally more convenient to the end user.
 
 Sample usage:
 
