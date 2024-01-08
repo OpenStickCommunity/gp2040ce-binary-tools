@@ -56,8 +56,12 @@ def get_bootsel_endpoints() -> tuple[usb.core.Endpoint, usb.core.Endpoint]:
     if not pico_device:
         raise ValueError("RP2040 board in BOOTSEL mode could not be found!")
 
-    if pico_device.is_kernel_driver_active(0):
-        pico_device.detach_kernel_driver(0)
+    try:
+        if pico_device.is_kernel_driver_active(0):
+            pico_device.detach_kernel_driver(0)
+    except NotImplementedError:
+        # detaching the driver is for *nix, not possible/relevant on Windows
+        pass
 
     pico_configuration = pico_device.get_active_configuration()
     # two interfaces are present, we want the direct rather than mass storage
