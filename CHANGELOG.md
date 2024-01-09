@@ -3,6 +3,26 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.6.0
+
+### Added
+
+* Preliminary support for reading and writing "board config"s in the GP2040-CE binary. This will replace the precompiled
+  configuration for a particular board by way of `BoardConfig.h` with a second protobuf section of the flash that is
+  read from when a user config is not corrupt. `dump-config` can read that section, and `concatenate` can now write it;
+  the latter especially is expected to eventually be used by the core project's build tools.
+* `concatenate` can write out to UF2 format, which is a more convenient file for end users, directly relevant to the
+  above goals.
+* Precompiled protobuf files are now included in the Python package, so users don't need a clone of the GP2040-CE
+  repository in order to use the tools. This also works around a bug with the protobuf tool on Windows, where it can't
+  currently dynamically compile .proto files.
+* Licensing/attribution errata has been added, and a DCO has been added to the repo.
+
+### Improved
+
+* `libusb` usage now ignores a `NotImplementedError` on Windows for something that doesn't make sense on that platform,
+  making operations over USB more likely to work properly on Windows.
+
 ## v0.5.1
 
 ### Added
