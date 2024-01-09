@@ -4,8 +4,22 @@ Tools for working with GP2040-CE binary dumps.
 
 ## Dependencies
 
-Interacting with your board (e.g. getting dumps, etc.) requires [picotool](https://github.com/raspberrypi/picotool), and
-currently the expectation is that you can run it yourself before invoking these tools. That may change one day.
+While not necessary for most tools, you may want [picotool](https://github.com/raspberrypi/picotool) as an alternative
+way to dump binary data from the board. These dumps can be created with `gp2040ce-binary-tools` natively, but having an
+alternative way to create a binary dump can be helpful, as these tools work as well (or better) with a binary dump as
+over USB.
+
+### Protobuf Files
+
+All tools take `-P PATH` flag(s) in order to import Protobuf files (either precompiled Python files or raw .proto files)
+if you have them locally, in order to work with the latest (or development) version of the configuration. That said,
+this tool also includes a precompiled fallback version of the config structure if you cannot supply these files. Be
+aware, however, that they are a point in time snapshot, and may lag the real format in undesirable ways. Supply the
+latest Protobuf files if you can.
+
+An example of this invocation is:
+
+`visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --filename memory.bin`
 
 ## Installation
 
@@ -91,7 +105,7 @@ This could be used with the other tools, or just to keep a backup.
 Sample usage:
 
 ```
-% dump-config -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto `date +%Y%m%d`-config-backup.bin
+% dump-config `date +%Y%m%d`-config-backup.bin
 ```
 
 ### dump-gp2040ce
@@ -112,21 +126,10 @@ storage section, and prints it out for visual inspection or diffing with other t
 section from a GP2040-CE whole board dump, if you have that instead. Usage is simple; just connect your board in BOOTSEL
 mode or pass the tool your binary file to analyze along with the path to the Protobuf files.
 
-Because Protobuf relies on .proto files to convey the serialized structure, you must supply them from the main GP2040-CE
-project, e.g. pointing this tool at your clone of the core project. Something like this would suffice for a working
-invocation (note: you do not need to compile the files yourself):
-
-```
-% visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --filename memory.bin
-```
-
-(In the future we will look into publishing complete packages that include the compiled `_pb2.py` files, so that you
-don't need to provide them yourself.)
-
 Sample output:
 
 ```
-% visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --usb
+% visualize-storage --usb
 boardVersion: "v0.7.2"
 gamepadOptions {
   inputMode: INPUT_MODE_HID
