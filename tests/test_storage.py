@@ -69,12 +69,6 @@ def test_config_footer_bad_crc(storage_dump):
         _, _, _ = storage.get_config_footer(corrupt)
 
 
-def test_config_fails_without_pb2s(storage_dump):
-    """Test that we need the config_pb2 to exist/be compiled for reading the config to work."""
-    with pytest.raises(ModuleNotFoundError):
-        _ = storage.get_config(storage_dump)
-
-
 @with_pb2s
 def test_get_config_from_file_storage_dump():
     """Test that we can open a storage dump file and find its config."""

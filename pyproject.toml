@@ -42,7 +42,7 @@ visualize-storage = "gp2040ce_bintools.storage:visualize"
 
 [tool.flake8]
 enable-extensions = "G,M"
-exclude = [".tox/", "venv/", "_version.py", "tests/test-files/"]
+exclude = [".tox/", "venv/", "_version.py", "tests/test-files/", "config_pb2.py", "enums_pb2.py", "nanopb_pb2.py"]
 extend-ignore = "T101"
 max-complexity = 10
 max-line-length = 120
@@ -51,6 +51,11 @@ max-line-length = 120
 line_length = 120
 
 [tool.mypy]
+exclude = [
+    "config_pb2.py",
+    "enums_pb2.py",
+    "nanopb_pb2.py",
+]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
