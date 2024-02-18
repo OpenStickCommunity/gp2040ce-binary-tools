@@ -60,7 +60,7 @@ class EditScreen(ModalScreen):
             Label(self.field_descriptor.full_name, id="field-name"),
             self.input_field,
             Pretty('', id='input-errors', classes='hidden'),
-            Button("Save", id='save-button'),
+            Button("Confirm", id='confirm-button'),
             Button("Cancel", id='cancel-button'),
             id='edit-dialog',
         )
@@ -70,7 +70,7 @@ class EditScreen(ModalScreen):
         """Update the UI to show why validation failed."""
         if event.validation_result:
             error_field = self.query_one(Pretty)
-            save_button = self.query_one('#save-button', Button)
+            save_button = self.query_one('#confirm-button', Button)
             if not event.validation_result.is_valid:
                 error_field.update(event.validation_result.failure_descriptions)
                 error_field.classes = ''
@@ -82,7 +82,7 @@ class EditScreen(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Process the button actions."""
-        if event.button.id == 'save-button':
+        if event.button.id == 'confirm-button':
             logger.debug("calling _save")
             self._save()
         self.app.pop_screen()
