@@ -102,27 +102,6 @@ class EditScreen(ModalScreen):
             self.node.set_label(pb_field_to_node_label(self.field_descriptor, field_value))
 
 
-class MessageScreen(ModalScreen):
-    """Simple screen for displaying messages."""
-
-    def __init__(self, text: str, *args, **kwargs):
-        """Store the message for later display."""
-        self.text = text
-        super().__init__(*args, **kwargs)
-
-    def compose(self) -> ComposeResult:
-        """Build the pop-up window with the desired message displayed."""
-        yield Grid(
-            Label(self.text, id="message-text"),
-            Button("OK", id='ok-button'),
-            id='message-dialog',
-        )
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Process the button action (close the window)."""
-        self.app.pop_screen()
-
-
 class ConfigEditor(App):
     """Display the GP2040-CE configuration as a tree."""
 
@@ -218,12 +197,13 @@ class ConfigEditor(App):
         """Save the configuration."""
         if self.usb:
             write_new_config_to_usb(self.config, self.endpoint_out, self.endpoint_in)
-            self.push_screen(MessageScreen(f"Configuration saved to "
-                                           f"{hex(self.endpoint_out.device.idVendor)}:"
-                                           f"{hex(self.endpoint_out.device.idProduct)}."))
+            self.notify(f"Saved to {hex(self.endpoint_out.device.idVendor)}:"
+                        f"{hex(self.endpoint_out.device.idProduct)}.",
+                        title="Configuration Saved")
         elif self.config_filename:
             write_new_config_to_filename(self.config, self.config_filename, inject=self.whole_board)
-            self.push_screen(MessageScreen(f"Configuration saved to {self.config_filename}."))
+            self.notify(f"Saved to {self.config_filename}.",
+                        title="Configuration Saved")
 
     def action_quit(self) -> None:
         """Quit the application."""
