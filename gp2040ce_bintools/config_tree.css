@@ -20,6 +20,12 @@ EditScreen Label {
     content-align: center middle;
 }
 
+#config_tree {
+    border: heavy gray;
+    padding: 1;
+    margin: 1;
+}
+
 .hidden {
     visibility: hidden;
 }

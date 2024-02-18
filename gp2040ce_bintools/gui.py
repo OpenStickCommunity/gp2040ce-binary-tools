@@ -141,7 +141,7 @@ class ConfigEditor(App):
         """Compose the UI."""
         yield Header()
         yield Footer()
-        yield Tree("Root")
+        yield Tree("Root", id='config_tree')
 
     def on_mount(self) -> None:
         """Load the configuration object into the tree view."""
