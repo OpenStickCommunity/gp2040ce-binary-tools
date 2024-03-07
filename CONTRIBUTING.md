@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-gp2040ce-binary-tools is made available under the MIT (Expat) license. Contributions are welcome via pull requests. This
+gp2040ce-binary-tools is made available under the GPLv3 (or later). Contributions are welcome via pull requests.  This
 document outlines the process to get your contribution accepted.
 
 ## Sign Offs/Custody of Contributions

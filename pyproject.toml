@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "gp2040ce-binary-tools"
 description = "Tools for working with GP2040-CE firmware and storage binaries."
 readme = "README.md"
-license = {text = "MIT"}
+license = {file = "LICENSE"}
 authors = [
     {name = "Brian S. Stephan", email = "bss@incorporeal.org"},
 ]
@@ -16,7 +16,7 @@ dynamic = ["version"]
 classifiers = [
     "Environment :: Console",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Operating System :: OS Independent",
     "Topic :: Utilities",
 ]

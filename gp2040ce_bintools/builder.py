@@ -1,7 +1,7 @@
 """Build binary files for a GP2040-CE board.
 
 SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: GPL-3.0-or-later
 """
 import argparse
 import copy

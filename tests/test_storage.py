@@ -1,7 +1,7 @@
 """Unit tests for the storage module.
 
 SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: GPL-3.0-or-later
 """
 import os
 import sys

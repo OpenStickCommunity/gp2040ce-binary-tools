@@ -1,7 +1,7 @@
 """Test our tools themselves to make sure they adhere to certain flags.
 
 SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: GPL-3.0-or-later
 """
 import json
 import os

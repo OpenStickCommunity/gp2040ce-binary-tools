@@ -3,7 +3,7 @@
 Much of this code is a partial Python implementation of picotool.
 
 SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: GPL-3.0-or-later
 """
 import logging
 import struct
