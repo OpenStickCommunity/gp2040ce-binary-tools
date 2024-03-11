@@ -19,7 +19,7 @@ from textual.validation import Number
 from textual.widgets import Button, Footer, Header, Input, Label, Pretty, Select, Tree
 from textual.widgets.tree import TreeNode
 
-from gp2040ce_bintools import core_parser, handler, _version
+from gp2040ce_bintools import _version, core_parser, handler
 from gp2040ce_bintools.builder import write_new_config_to_filename, write_new_config_to_usb
 from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
 from gp2040ce_bintools.storage import (STORAGE_SIZE, USER_CONFIG_BOOTSEL_ADDRESS, ConfigReadError, get_config,
