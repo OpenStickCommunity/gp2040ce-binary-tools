@@ -12,7 +12,7 @@ from rich.highlighter import ReprHighlighter
 from rich.text import Text
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import Grid
+from textual.containers import Container, Grid, Horizontal
 from textual.logging import TextualHandler
 from textual.screen import ModalScreen
 from textual.validation import Number
@@ -57,11 +57,12 @@ class EditScreen(ModalScreen):
             # we don't handle whatever these are yet
             self.input_field = Label(repr(self.field_value), id='field-input')
         yield Grid(
-            Label(self.field_descriptor.full_name, id="field-name"),
-            self.input_field,
-            Pretty('', id='input-errors', classes='hidden'),
-            Button("Confirm", id='confirm-button'),
-            Button("Cancel", id='cancel-button'),
+            Container(Label(self.field_descriptor.full_name, id="field-name"), id="field-name-container"),
+            Container(self.input_field, id="input-field-container"),
+            Container(Pretty('', id='input-errors', classes='hidden'), id="error-container"),
+            Horizontal(Button("Confirm", id='confirm-button'),
+                       Button("Cancel", id='cancel-button'),
+                       id="button-container"),
             id='edit-dialog',
         )
 
@@ -100,6 +101,27 @@ class EditScreen(ModalScreen):
             setattr(self.parent_config, self.field_descriptor.name, field_value)
             logger.debug("parent config post-change: %s", self.parent_config)
             self.node.set_label(pb_field_to_node_label(self.field_descriptor, field_value))
+
+
+class MessageScreen(ModalScreen):
+    """Simple screen for displaying messages."""
+
+    def __init__(self, text: str, *args, **kwargs):
+        """Store the message for later display."""
+        self.text = text
+        super().__init__(*args, **kwargs)
+
+    def compose(self) -> ComposeResult:
+        """Build the pop-up window with the desired message displayed."""
+        yield Grid(
+            Container(Label(self.text, id="message-text"), id="text-container"),
+            Container(Button("OK", id='ok-button'), id="button-container"),
+            id='message-dialog',
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Process the button action (close the window)."""
+        self.app.pop_screen()
 
 
 class ConfigEditor(App):
