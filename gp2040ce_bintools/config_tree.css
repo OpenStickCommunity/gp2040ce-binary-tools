@@ -47,6 +47,14 @@ EditScreen Label {
 }
 
 #button-container {
+    align: center middle;
+}
+
+#cancel-button-container {
+    align: left middle;
+}
+
+#confirm-button-container {
     align: right middle;
 }
 

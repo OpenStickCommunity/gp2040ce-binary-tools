@@ -57,12 +57,12 @@ class EditScreen(ModalScreen):
             # we don't handle whatever these are yet
             self.input_field = Label(repr(self.field_value), id='field-input')
         yield Grid(
-            Container(Label(self.field_descriptor.full_name, id="field-name"), id="field-name-container"),
-            Container(self.input_field, id="input-field-container"),
-            Container(Pretty('', id='input-errors', classes='hidden'), id="error-container"),
-            Horizontal(Button("Confirm", id='confirm-button'),
-                       Button("Cancel", id='cancel-button'),
-                       id="button-container"),
+            Container(Label(self.field_descriptor.full_name, id='field-name'), id='field-name-container'),
+            Container(self.input_field, id='input-field-container'),
+            Container(Pretty('', id='input-errors', classes='hidden'), id='error-container'),
+            Horizontal(Container(Button("Cancel", id='cancel-button'), id='cancel-button-container'),
+                       Container(Button("Confirm", id='confirm-button'), id='confirm-button-container'),
+                       id='button-container'),
             id='edit-dialog',
         )
 
