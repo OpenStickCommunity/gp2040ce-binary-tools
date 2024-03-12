@@ -5,6 +5,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 """
 import argparse
 import logging
+from textwrap import dedent
 
 from google.protobuf import descriptor
 from google.protobuf.message import Message
@@ -16,7 +17,7 @@ from textual.containers import Container, Grid, Horizontal
 from textual.logging import TextualHandler
 from textual.screen import ModalScreen
 from textual.validation import Number
-from textual.widgets import Button, Footer, Header, Input, Label, Pretty, Select, Tree
+from textual.widgets import Button, Footer, Header, Input, Label, Pretty, Select, TextArea, Tree
 from textual.widgets.tree import TreeNode
 
 from gp2040ce_bintools import _version, core_parser, handler
@@ -114,8 +115,8 @@ class MessageScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         """Build the pop-up window with the desired message displayed."""
         yield Grid(
-            Container(Label(self.text, id="message-text"), id="text-container"),
-            Container(Button("OK", id='ok-button'), id="button-container"),
+            Container(TextArea(self.text, id='message-text', read_only=True), id='text-container'),
+            Container(Button("OK", id='ok-button'), id='button-container'),
             id='message-dialog',
         )
 
@@ -131,6 +132,7 @@ class ConfigEditor(App):
         ('a', 'add_node', "Add Node"),
         ('s', 'save', "Save Config"),
         ('q', 'quit', "Quit"),
+        ('?', 'about', "About"),
     ]
     CSS_PATH = "config_tree.css"
     TITLE = F"GP2040-CE Configuration Editor - {_version.version}"
@@ -187,6 +189,15 @@ class ConfigEditor(App):
     def on_tree_node_selected(self, node_event: Tree.NodeSelected) -> None:
         """Take the appropriate action for this type of node."""
         self._modify_node(node_event.node)
+
+    def action_about(self) -> None:
+        """Display a help/about popup."""
+        self.push_screen(MessageScreen(dedent("""
+            gp2040ce-binary-tools - Tools for working with GP2040-CE firmware and storage binaries
+
+            Copyright © 2023 Brian S. Stephan <bss@incorporeal.org>
+            Made available WITHOUT ANY WARRANTY under the GNU General Public License, version 3 or later.
+        """)))
 
     def action_add_node(self) -> None:
         """Add a node to the tree item, if allowed by the tree and config section."""
