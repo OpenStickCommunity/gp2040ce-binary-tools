@@ -409,8 +409,9 @@ def edit_config():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--usb', action='store_true', help="retrieve the config from a RP2040 board connected over USB "
                                                           "and in BOOTSEL mode")
-    group.add_argument('--filename', help=".bin file of a GP2040-CE board's config + footer or entire storage section, "
-                                          "or of a GP2040-CE's whole board dump if --whole-board is specified")
+    group.add_argument('--filename', help=".bin of a GP2040-CE's whole board dump if --whole-board is specified, or a"
+                                          ".bin file of a GP2040-CE board's config + footer or entire storage section; "
+                                          "if creating a new config, it can also be written in .uf2 format")
     args, _ = parser.parse_known_args()
 
     if args.usb:

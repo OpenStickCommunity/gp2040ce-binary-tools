@@ -15,7 +15,7 @@ from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and
                                        concatenate_firmware_and_storage_files, get_gp2040ce_from_usb,
                                        pad_binary_up_to_board_config, pad_binary_up_to_user_config,
                                        replace_config_in_binary, write_new_config_to_filename, write_new_config_to_usb)
-from gp2040ce_bintools.storage import (get_board_storage_section, get_config, get_config_footer,
+from gp2040ce_bintools.storage import (STORAGE_SIZE, get_board_storage_section, get_config, get_config_footer,
                                        get_user_storage_section, serialize_config_with_footer)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -270,6 +270,23 @@ def test_write_new_config_to_config_bin(firmware_binary, tmp_path):
     config_size, _, _ = get_config_footer(config_dump)
     assert config.boardVersion == 'v0.7.5-COOL'
     assert len(config_dump) == config_size + 12
+
+
+@with_pb2s
+def test_write_new_config_to_config_uf2(firmware_binary, tmp_path):
+    """Test that the config can be written to a file."""
+    tmp_file = os.path.join(tmp_path, 'config.uf2')
+    config_pb2 = get_config_pb2()
+    config = config_pb2.Config()
+    config.boardVersion = 'v0.7.5-COOL'
+    write_new_config_to_filename(config, tmp_file)
+
+    # read new file
+    with open(tmp_file, 'rb') as file:
+        config_dump = file.read()
+    # the current implementation of UF2 writing does it in 256 blocks, so each 256 byte block of
+    # binary is 512 bytes in the UF2
+    assert len(config_dump) == STORAGE_SIZE * 2
 
 
 @with_pb2s

@@ -214,11 +214,16 @@ def write_new_config_to_filename(config: Message, filename: str, inject: bool = 
         with open(filename, 'rb') as file:
             existing_binary = file.read()
         binary = replace_config_in_binary(bytearray(existing_binary), config_binary)
+        with open(filename, 'wb') as file:
+            file.write(binary)
     else:
         binary = serialize_config_with_footer(config)
-
-    with open(filename, 'wb') as file:
-        file.write(binary)
+        with open(filename, 'wb') as file:
+            if filename[-4:] == '.uf2':
+                file.write(convert_binary_to_uf2(pad_config_to_storage_size(binary),
+                                                 start=USER_CONFIG_BINARY_LOCATION))
+            else:
+                file.write(binary)
 
 
 def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: object):
