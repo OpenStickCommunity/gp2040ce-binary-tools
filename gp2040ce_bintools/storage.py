@@ -6,6 +6,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 import argparse
 import binascii
 import logging
+import struct
 
 from google.protobuf.json_format import MessageToJson
 from google.protobuf.json_format import Parse as JsonParse
@@ -24,6 +25,11 @@ USER_CONFIG_BOOTSEL_ADDRESS = 0x10000000 + USER_CONFIG_BINARY_LOCATION
 
 FOOTER_SIZE = 12
 FOOTER_MAGIC = b'\x65\xe3\xf1\xd2'
+
+UF2_FAMILY_ID = 0xE48BFF56
+UF2_MAGIC_FIRST = 0x0A324655
+UF2_MAGIC_SECOND = 0x9E5D5157
+UF2_MAGIC_FINAL = 0x0AB16F30
 
 
 #################
@@ -45,6 +51,39 @@ class ConfigLengthError(ConfigReadError):
 
 class ConfigMagicError(ConfigReadError):
     """Exception raised when the config section does not have the magic value in its footer."""
+
+
+def convert_binary_to_uf2(binary: bytearray, start: int = 0) -> bytearray:
+    """Convert a GP2040-CE binary payload to Microsoft's UF2 format.
+
+    https://github.com/microsoft/uf2/tree/master#overview
+
+    Args:
+        binary: bytearray content to convert to a UF2 payload
+        start: position offset to start at rather than flash start (for creating e.g. user config UF2s)
+    Returns:
+        the content in UF2 format
+    """
+    size = len(binary)
+    blocks = (len(binary) // 256) + 1 if len(binary) % 256 else len(binary) // 256
+    uf2 = bytearray()
+
+    index = 0
+    while index < size:
+        pad_count = 476 - len(binary[index:index+256])
+        uf2 += struct.pack('<LLLLLLLL',
+                           UF2_MAGIC_FIRST,                                 # first magic number
+                           UF2_MAGIC_SECOND,                                # second magic number
+                           0x00002000,                                      # familyID present
+                           0x10000000 + start + index,                      # address to write to
+                           256,                                             # bytes to write in this block
+                           index // 256,                                    # sequential block number
+                           blocks,                                          # total number of blocks
+                           UF2_FAMILY_ID)                                   # family ID
+        uf2 += binary[index:index+256] + bytearray(b'\x00' * pad_count)     # content
+        uf2 += struct.pack('<L', UF2_MAGIC_FINAL)                           # final magic number
+        index += 256
+    return uf2
 
 
 def get_config(content: bytes) -> Message:

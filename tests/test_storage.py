@@ -130,6 +130,24 @@ def test_config_from_whole_board_parses(whole_board_dump):
     assert config.hotkeyOptions.hotkey02.dpadMask == 1
 
 
+def test_convert_binary_to_uf2(whole_board_with_board_config_dump):
+    """Do some sanity checks in the attempt to convert a binary to a UF2."""
+    uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump)
+    assert len(uf2) == 4194304                              # binary is 8192 256 byte chunks, UF2 is 512 b per chunk
+    assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
+    assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
+    assert uf2[524:528] == bytearray(b'\x00\x01\x00\x10')   # address to write the second chunk
+
+
+def test_convert_binary_to_uf2_with_offsets(whole_board_with_board_config_dump):
+    """Do some sanity checks in the attempt to convert a binary to a UF2."""
+    uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump, start=storage.USER_CONFIG_BINARY_LOCATION)
+    assert len(uf2) == 4194304                              # binary is 8192 256 byte chunks, UF2 is 512 b per chunk
+    assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
+    assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
+    assert uf2[524:528] == bytearray(b'\x00\xc1\x1f\x10')   # address to write the second chunk
+
+
 @with_pb2s
 def test_serialize_config_with_footer(storage_dump, config_binary):
     """Test that reserializing a read in config matches the original.

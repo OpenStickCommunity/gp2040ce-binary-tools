@@ -12,10 +12,9 @@ from decorator import decorator
 
 from gp2040ce_bintools import get_config_pb2
 from gp2040ce_bintools.builder import (FirmwareLengthError, combine_firmware_and_config,
-                                       concatenate_firmware_and_storage_files, convert_binary_to_uf2,
-                                       get_gp2040ce_from_usb, pad_binary_up_to_board_config,
-                                       pad_binary_up_to_user_config, replace_config_in_binary,
-                                       write_new_config_to_filename, write_new_config_to_usb)
+                                       concatenate_firmware_and_storage_files, get_gp2040ce_from_usb,
+                                       pad_binary_up_to_board_config, pad_binary_up_to_user_config,
+                                       replace_config_in_binary, write_new_config_to_filename, write_new_config_to_usb)
 from gp2040ce_bintools.storage import (get_board_storage_section, get_config, get_config_footer,
                                        get_user_storage_section, serialize_config_with_footer)
 
@@ -74,15 +73,6 @@ def test_concatenate_both_configs_to_file(tmp_path):
     storage = get_user_storage_section(content)
     footer_size, _, _ = get_config_footer(storage)
     assert footer_size == 3309
-
-
-def test_convert_binary_to_uf2(whole_board_with_board_config_dump):
-    """Do some sanity checks in the attempt to convert a binary to a UF2."""
-    uf2 = convert_binary_to_uf2(whole_board_with_board_config_dump)
-    assert len(uf2) == 4194304                              # binary is 8192 256 byte chunks, UF2 is 512 b per chunk
-    assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
-    assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
-    assert uf2[524:528] == bytearray(b'\x00\x01\x00\x10')   # address to write the second chunk
 
 
 @with_pb2s
