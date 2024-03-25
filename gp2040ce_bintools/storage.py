@@ -319,16 +319,23 @@ def serialize_config_with_footer(config: Message) -> bytearray:
 
 
 def dump_config():
-    """Save the GP2040-CE's configuration to a binary file."""
+    """Save the GP2040-CE's user configuration to a binary or UF2 file."""
     parser = argparse.ArgumentParser(
         description="Read the configuration section from a USB device and save it to a binary file.",
         parents=[core_parser],
     )
-    parser.add_argument('binary_filename', help=".bin file to save the GP2040-CE board's config section to")
+    parser.add_argument('filename', help="file to save the GP2040-CE board's config section to --- if the "
+                                         "suffix is .uf2, it is saved in UF2 format, else it is a raw binary")
     args, _ = parser.parse_known_args()
     config, _, _ = get_user_config_from_usb()
-    with open(args.binary_filename, 'wb') as out_file:
-        out_file.write(serialize_config_with_footer(config))
+    binary_config = serialize_config_with_footer(config)
+    with open(args.filename, 'wb') as out_file:
+        if args.filename[-4:] == '.uf2':
+            # we must pad to storage start in order for the UF2 write addresses to make sense
+            out_file.write(convert_binary_to_uf2(pad_config_to_storage_size(binary_config),
+                                                 start=USER_CONFIG_BINARY_LOCATION))
+        else:
+            out_file.write(binary_config)
 
 
 def visualize():
