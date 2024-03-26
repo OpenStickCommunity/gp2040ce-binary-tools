@@ -16,7 +16,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, Grid, Horizontal
 from textual.logging import TextualHandler
 from textual.screen import ModalScreen
-from textual.validation import Number
+from textual.validation import Length, Number
 from textual.widgets import Button, Footer, Header, Input, Label, Pretty, Select, TextArea, Tree
 from textual.widgets.tree import TreeNode
 
@@ -125,11 +125,61 @@ class MessageScreen(ModalScreen):
         self.app.pop_screen()
 
 
+class SaveAsScreen(ModalScreen):
+    """Present the option of saving the configuration as a new file."""
+
+    def __init__(self, config, *args, **kwargs):
+        """Initialize a filename argument to be populated."""
+        self.config = config
+        super().__init__(*args, **kwargs)
+
+    def compose(self) -> ComposeResult:
+        """Build the pop-up window prompting for the new filename to save the configuration as."""
+        self.filename_field = Input(value=None, id='field-input', validators=[Length(minimum=1)])
+        yield Grid(
+            Container(Label("Filename (.uf2 or .bin) to write to:", id='field-name'), id='field-name-container'),
+            Container(self.filename_field, id='input-field-container'),
+            Container(Pretty('', id='input-errors', classes='hidden'), id='error-container'),
+            Horizontal(Container(Button("Cancel", id='cancel-button'), id='cancel-button-container'),
+                       Container(Button("Confirm", id='confirm-button'), id='confirm-button-container'),
+                       id='button-container'),
+            id='save-as-dialog',
+        )
+
+    @on(Input.Changed)
+    def show_invalid_reasons(self, event: Input.Changed) -> None:
+        """Update the UI to show why validation failed."""
+        if event.validation_result:
+            error_field = self.query_one(Pretty)
+            save_button = self.query_one('#confirm-button', Button)
+            if not event.validation_result.is_valid:
+                error_field.update(event.validation_result.failure_descriptions)
+                error_field.classes = ''
+                save_button.disabled = True
+            else:
+                error_field.update('')
+                error_field.classes = 'hidden'
+                save_button.disabled = False
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Process the button actions."""
+        if event.button.id == 'confirm-button':
+            logger.debug("calling _save")
+            self._save()
+        self.app.pop_screen()
+
+    def _save(self):
+        """Save the configuration to the specified file."""
+        write_new_config_to_filename(self.config, self.filename_field.value, inject=False)
+        self.notify(f"Saved to {self.filename_field.value}.", title="Configuration Saved")
+
+
 class ConfigEditor(App):
     """Display the GP2040-CE configuration as a tree."""
 
     BINDINGS = [
-        ('a', 'add_node', "Add Node"),
+        ('a', 'save_as', "Save As..."),
+        ('n', 'add_node', "Add Node"),
         ('s', 'save', "Save Config"),
         ('q', 'quit', "Quit"),
         ('?', 'about', "About"),
@@ -237,6 +287,10 @@ class ConfigEditor(App):
             write_new_config_to_filename(self.config, self.config_filename, inject=self.whole_board)
             self.notify(f"Saved to {self.config_filename}.",
                         title="Configuration Saved")
+
+    def action_save_as(self) -> None:
+        """Present a new dialog to save the configuration as a new standalone file."""
+        self.push_screen(SaveAsScreen(self.config))
 
     def action_quit(self) -> None:
         """Quit the application."""

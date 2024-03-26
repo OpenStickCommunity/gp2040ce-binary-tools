@@ -10,7 +10,7 @@ Button {
     margin: 0 1;
 }
 
-EditScreen, MessageScreen {
+EditScreen, MessageScreen, SaveAsScreen {
     align: center middle;
 }
 
@@ -30,7 +30,7 @@ EditScreen Label {
     visibility: hidden;
 }
 
-#edit-dialog {
+#edit-dialog, #save-as-dialog {
     padding: 0 1;
     grid-rows: 1fr 1fr 1fr 1fr;
     width: 50%;

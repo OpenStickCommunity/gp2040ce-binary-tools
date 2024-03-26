@@ -183,7 +183,7 @@ async def test_add_node_to_repeated():
         tree.root.expand_all()
         await pilot.wait_for_scheduled_animations()
         tree.select_node(altpinmappings_node)
-        await pilot.press('a')
+        await pilot.press('n')
         newpinmappings_node = altpinmappings_node.children[0]
         newpinmappings_node.expand()
         await pilot.wait_for_scheduled_animations()
@@ -216,3 +216,28 @@ async def test_save(config_binary, tmp_path):
 
     config = get_config_from_file(new_filename)
     assert config.boardVersion == 'v0.7.5-bss-wuz-here'
+
+
+@pytest.mark.asyncio
+@with_pb2s
+async def test_save_as(config_binary, tmp_path):
+    """Test that we can save to a new file."""
+    filename = os.path.join(tmp_path, 'config-original.bin')
+    with open(filename, 'wb') as file:
+        file.write(config_binary)
+    original_config = get_config(config_binary)
+
+    app = ConfigEditor(config_filename=filename)
+    async with app.run_test() as pilot:
+        await pilot.press('a')
+        await pilot.wait_for_scheduled_animations()
+        await pilot.click('Input#field-input')
+        await pilot.wait_for_scheduled_animations()
+        await pilot.press('/', 't', 'm', 'p', '/', 'g', 'p', 't', 'e', 's', 't')
+        await pilot.wait_for_scheduled_animations()
+        await pilot.click('Button#confirm-button')
+
+    with open('/tmp/gptest', 'rb') as new_file:
+        test_config_binary = new_file.read()
+    test_config = get_config(test_config_binary)
+    assert original_config == test_config
