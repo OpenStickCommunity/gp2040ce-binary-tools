@@ -20,6 +20,20 @@ enum ButtonLayout
     BUTTON_LAYOUT_FIGHTBOARD_MIRRORED = 11;
     BUTTON_LAYOUT_CUSTOMA = 12;
     BUTTON_LAYOUT_OPENCORE0WASDA = 13;
+    BUTTON_LAYOUT_STICKLESS_13 = 14;
+    BUTTON_LAYOUT_STICKLESS_16 = 15;
+    BUTTON_LAYOUT_STICKLESS_14 = 16;
+    BUTTON_LAYOUT_DANCEPAD_DDR_LEFT = 17;
+    BUTTON_LAYOUT_DANCEPAD_DDR_SOLO = 18;
+    BUTTON_LAYOUT_DANCEPAD_PIU_LEFT = 19;
+    BUTTON_LAYOUT_POPN_A = 20;
+    BUTTON_LAYOUT_TAIKO_A = 21;
+    BUTTON_LAYOUT_BM_TURNTABLE_A = 22;
+    BUTTON_LAYOUT_BM_5KEY_A = 23;
+    BUTTON_LAYOUT_BM_7KEY_A = 24;
+    BUTTON_LAYOUT_GITADORA_FRET_A = 25;
+    BUTTON_LAYOUT_GITADORA_STRUM_A = 26;
+    BUTTON_LAYOUT_BOARD_DEFINED_A = 27;
 }
 
 enum ButtonLayoutRight
@@ -45,6 +59,19 @@ enum ButtonLayoutRight
     BUTTON_LAYOUT_CUSTOMB = 16;
     BUTTON_LAYOUT_KEYBOARD8B = 17;
     BUTTON_LAYOUT_OPENCORE0WASDB = 18;
+    BUTTON_LAYOUT_STICKLESS_13B = 19;
+    BUTTON_LAYOUT_STICKLESS_16B = 20;
+    BUTTON_LAYOUT_STICKLESS_14B = 21;
+    BUTTON_LAYOUT_DANCEPAD_DDR_RIGHT = 22;
+    BUTTON_LAYOUT_DANCEPAD_PIU_RIGHT = 23;
+    BUTTON_LAYOUT_POPN_B = 24;
+    BUTTON_LAYOUT_TAIKO_B = 25;
+    BUTTON_LAYOUT_BM_TURNTABLE_B = 26;
+    BUTTON_LAYOUT_BM_5KEY_B = 27;
+    BUTTON_LAYOUT_BM_7KEY_B = 28;
+    BUTTON_LAYOUT_GITADORA_FRET_B = 29;
+    BUTTON_LAYOUT_GITADORA_STRUM_B = 30;
+    BUTTON_LAYOUT_BOARD_DEFINED_B = 31;
 }
 
 enum SplashMode
@@ -96,7 +123,18 @@ enum InputMode
     INPUT_MODE_ASTRO = 10;
     INPUT_MODE_PSCLASSIC = 11;
     INPUT_MODE_XBOXORIGINAL = 12;
+    INPUT_MODE_PS5 = 13;
     INPUT_MODE_CONFIG = 255;
+}
+
+enum InputModeAuthType
+{
+    option (nanopb_enumopt).long_names = false;
+
+    INPUT_MODE_AUTH_TYPE_NONE = 0;
+    INPUT_MODE_AUTH_TYPE_KEYS = 1;
+    INPUT_MODE_AUTH_TYPE_USB = 2;
+    INPUT_MODE_AUTH_TYPE_I2C = 3;
 }
 
 enum DpadMode
@@ -169,6 +207,14 @@ enum GpioAction
     SUSTAIN_SOCD_MODE_SECOND_WIN = 29;
     SUSTAIN_SOCD_MODE_FIRST_WIN  = 30;
     SUSTAIN_SOCD_MODE_BYPASS     = 31;
+    BUTTON_PRESS_TURBO           = 32;
+    BUTTON_PRESS_MACRO           = 33;
+    BUTTON_PRESS_MACRO_1         = 34;
+    BUTTON_PRESS_MACRO_2         = 35;
+    BUTTON_PRESS_MACRO_3         = 36;
+    BUTTON_PRESS_MACRO_4         = 37;
+    BUTTON_PRESS_MACRO_5         = 38;
+    BUTTON_PRESS_MACRO_6         = 39;
 }
 
 enum GamepadHotkey
@@ -248,6 +294,16 @@ enum ForcedSetupMode
 	FORCED_SETUP_MODE_LOCK_BOTH = 3;
 };
 
+enum DualDirectionalCombinationMode
+{
+	option (nanopb_enumopt).long_names = false;
+
+	MIXED_MODE = 0;
+	GAMEPAD_MODE = 1;
+	DUAL_MODE = 2;
+	NONE_MODE = 3;
+}
+
 enum PS4ControllerType
 {
     option (nanopb_enumopt).long_names = false;
@@ -263,4 +319,45 @@ enum MacroType
     ON_PRESS = 1;
     ON_HOLD_REPEAT = 2;
     ON_TOGGLE = 3;
+};
+
+enum GPElement
+{
+    option (nanopb_enumopt).long_names = false;
+
+    GP_ELEMENT_WIDGET = 0;
+    GP_ELEMENT_SCREEN = 1;
+    GP_ELEMENT_BTN_BUTTON = 2;
+    GP_ELEMENT_DIR_BUTTON = 3;
+    GP_ELEMENT_PIN_BUTTON = 4;
+    GP_ELEMENT_LEVER = 5;
+    GP_ELEMENT_LABEL = 6;
+    GP_ELEMENT_SPRITE = 7;
+    GP_ELEMENT_SHAPE = 8;
+};
+
+enum GPShape_Type
+{
+    option (nanopb_enumopt).long_names = false;
+    
+    GP_SHAPE_ELLIPSE = 0;
+    GP_SHAPE_SQUARE = 1;
+    GP_SHAPE_DIAMOND = 2;
+    GP_SHAPE_POLYGON = 3;
+    GP_SHAPE_ARC = 4;
+};
+
+enum RotaryEncoderPinMode
+{
+    option (nanopb_enumopt).long_names = false;
+
+    ENCODER_MODE_NONE = 0;
+    ENCODER_MODE_LEFT_ANALOG_X = 1;
+    ENCODER_MODE_LEFT_ANALOG_Y = 2;
+    ENCODER_MODE_RIGHT_ANALOG_X = 3;
+    ENCODER_MODE_RIGHT_ANALOG_Y = 4;
+    ENCODER_MODE_LEFT_TRIGGER = 5;
+    ENCODER_MODE_RIGHT_TRIGGER = 6;
+    ENCODER_MODE_DPAD_X = 7;
+    ENCODER_MODE_DPAD_Y = 8;
 };

@@ -201,8 +201,15 @@ forcedSetupOptions {
 The GP2040-CE configuration is still changing, so the tools are changing accordingly. This project doesn't currently make
 a huge effort to be backwards compatible, so instead, refer to this:
 
-* `gp2040ce-binary-tools >=v0.5.1` supports `GP2040-CE >=v0.7.5`.
-* `gp2040ce-binary-tools <=v0.5.0` supported `GP2040-CE <v0.7.5`.
+#### Flash Layouts
+
+* `gp2040ce-binary-tools >=v0.6.0` supports both board and user configs still being developed in `GP2040-CE`.
+* `gp2040ce-binary-tools >=v0.5.1` supported the increased user config size in `GP2040-CE >=v0.7.5`.
+* `gp2040ce-binary-tools <=v0.5.0` supported the smaller user config size in `GP2040-CE <v0.7.5`.
+
+#### Config Structures
+
+The latest update of the configuration snapshot is from **v0.7.8-RC2**.
 
 ### Dumping the GP2040-CE board with picotool
 
