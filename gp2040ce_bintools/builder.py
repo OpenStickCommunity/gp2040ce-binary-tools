@@ -274,7 +274,7 @@ def concatenate():
     user_config_group.add_argument('--json-user-config-filename', help=".json file of a GP2040-CE user config")
     output_group = parser.add_mutually_exclusive_group(required=True)
     output_group.add_argument('--usb', action='store_true', help="write the resulting firmware + storage to USB")
-    output_group.add_argument('--new-binary-filename', help="output .bin file of the resulting firmware + storage")
+    output_group.add_argument('--new-filename', help="output .bin or .uf2 file of the resulting firmware + storage")
 
     args, _ = parser.parse_known_args()
     concatenate_firmware_and_storage_files(args.firmware_filename,
@@ -282,7 +282,7 @@ def concatenate():
                                            json_board_config_filename=args.json_board_config_filename,
                                            binary_user_config_filename=args.binary_user_config_filename,
                                            json_user_config_filename=args.json_user_config_filename,
-                                           combined_filename=args.new_binary_filename, usb=args.usb,
+                                           combined_filename=args.new_filename, usb=args.usb,
                                            replace_extra=args.replace_extra)
 
 

@@ -44,7 +44,7 @@ def test_concatenate_invocation(tmpdir):
     """Test that a normal invocation against a dump works."""
     out_filename = os.path.join(tmpdir, 'out.bin')
     _ = run(['concatenate', 'tests/test-files/test-firmware.bin', '--binary-user-config-filename',
-             'tests/test-files/test-storage-area.bin', '--new-binary-filename', out_filename])
+             'tests/test-files/test-storage-area.bin', '--new-filename', out_filename])
     with open(out_filename, 'rb') as out_file, open('tests/test-files/test-storage-area.bin', 'rb') as storage_file:
         out = out_file.read()
         storage = storage_file.read()
@@ -55,7 +55,7 @@ def test_concatenate_invocation_json(tmpdir):
     """Test that a normal invocation with a firmware and a JSON file works."""
     out_filename = os.path.join(tmpdir, 'out.bin')
     _ = run(['concatenate', '-P', 'tests/test-files/proto-files', 'tests/test-files/test-firmware.bin',
-             '--json-user-config-filename', 'tests/test-files/test-config.json', '--new-binary-filename',
+             '--json-user-config-filename', 'tests/test-files/test-config.json', '--new-filename',
              out_filename])
     with open(out_filename, 'rb') as out_file, open('tests/test-files/test-binary-source-of-json-config.bin',
                                                     'rb') as storage_file:
