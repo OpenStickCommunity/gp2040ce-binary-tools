@@ -117,6 +117,10 @@ def convert_uf2_to_binary(uf2: bytearray) -> bytearray:
 
         binary += content[0:bytes_]
         old_uf2_addr = uf2_addr
+
+    # when this is all done we should have counted the expected number of blocks
+    if block_count != block_num + 1:
+        raise ValueError(f"not all expected blocks ({block_count}) were found, only got {block_num + 1}!")
     return binary
 
 

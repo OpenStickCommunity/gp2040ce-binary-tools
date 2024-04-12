@@ -166,6 +166,27 @@ def test_convert_binary_to_uf2_to_binary(whole_board_with_board_config_dump):
     assert whole_board_with_board_config_dump == binary
 
 
+def test_malformed_uf2(whole_board_with_board_config_dump):
+    """Check that we expect a properly-formed UF2."""
+    uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump)
+
+    # truncated UF2 --- byte mismatch
+    with pytest.raises(ValueError):
+        storage.convert_uf2_to_binary(uf2[:-4])
+
+    # truncated uf2 --- counter is wrong
+    with pytest.raises(ValueError):
+        storage.convert_uf2_to_binary(uf2[512:])
+
+    # truncated uf2 --- total count is wrong
+    with pytest.raises(ValueError):
+        storage.convert_uf2_to_binary(uf2[:-512])
+
+    # malformed UF2 --- counter jumps in the middle, suggests total blocks is wrong
+    with pytest.raises(ValueError):
+        storage.convert_uf2_to_binary(uf2 + uf2)
+
+
 @with_pb2s
 def test_serialize_config_with_footer(storage_dump, config_binary):
     """Test that reserializing a read in config matches the original.
