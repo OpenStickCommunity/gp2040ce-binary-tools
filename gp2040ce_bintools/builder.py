@@ -6,6 +6,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 import argparse
 import copy
 import logging
+import re
 from typing import Optional
 
 from google.protobuf.message import Message
@@ -128,6 +129,20 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
     if usb:
         endpoint_out, endpoint_in = get_bootsel_endpoints()
         write(endpoint_out, endpoint_in, GP2040CE_START_ADDRESS, bytes(new_binary))
+
+
+def find_version_string_in_binary(binary: bytes) -> str:
+    """Search for a git describe style version string in a binary file.
+
+    Args:
+        binary: the binary to search
+    Returns:
+        the first found string, or None
+    """
+    match = re.search(b'v[0-9]+.[0-9]+.[0-9]+[A-Za-z0-9-+.]*', binary)
+    if match:
+        return match.group(0).decode(encoding='ascii')
+    return None
 
 
 def get_gp2040ce_from_usb() -> tuple[bytes, object, object]:

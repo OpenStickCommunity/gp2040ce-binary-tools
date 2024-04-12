@@ -134,6 +134,16 @@ def test_concatenate_to_uf2_board_only(tmp_path, firmware_binary, config_binary)
     assert len(content) == 2 * (2 * 1024 * 1024 - 16384)
 
 
+def test_find_version_string(firmware_binary):
+    """Test that we can find a version string in a binary."""
+    assert builder.find_version_string_in_binary(firmware_binary) == 'v0.7.5'
+
+
+def test_dont_always_find_version_string(firmware_binary):
+    """Test that we can find a version string in a binary."""
+    assert builder.find_version_string_in_binary(b'\x00') is None
+
+
 def test_padding_firmware(firmware_binary):
     """Test that firmware is padded to the expected size."""
     padded = builder.pad_binary_up_to_user_config(firmware_binary)
