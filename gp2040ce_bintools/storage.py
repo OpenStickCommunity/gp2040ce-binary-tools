@@ -217,7 +217,7 @@ def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file
     try:
         with open(filename, 'rb') as dump:
             if filename[-4:] == '.uf2':
-                content = bytes(convert_uf2_to_binary(dump.read()))
+                content = bytes(convert_uf2_to_binary(bytearray(dump.read())))
             else:
                 content = dump.read()
     except FileNotFoundError:
