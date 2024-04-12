@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "gp2040ce-binary-tools"
 description = "Tools for working with GP2040-CE firmware and storage binaries."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = {text = "GPL-3.0-or-later"}
 authors = [
     {name = "Brian S. Stephan", email = "bss@incorporeal.org"},
 ]
