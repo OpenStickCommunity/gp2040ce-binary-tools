@@ -74,7 +74,7 @@ ignore_errors = true
 python_files = ["*_tests.py", "tests.py", "test_*.py"]
 
 [tool.setuptools]
-py-modules = ["__init__"]
+packages = ["gp2040ce_bintools"]
 
 [tool.setuptools_scm]
 write_to = "gp2040ce_bintools/_version.py"
