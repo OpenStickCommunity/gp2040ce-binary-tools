@@ -121,8 +121,8 @@ def test_concatenate_to_uf2(tmp_path, firmware_binary, config_binary):
                                            combined_filename=tmp_file)
     with open(tmp_file, 'rb') as file:
         content = file.read()
-    # size of the file should be 2x firmware in 256 byte blocks + 2x padded board config + 2x padding user config
-    assert len(content) == 2 * (math.ceil(len(firmware_binary)/256) * 256) + 2 * STORAGE_SIZE + 2 * STORAGE_SIZE
+    # size of the file should be 2x the binary version, and the binary is 2 MB
+    assert len(content) == 2 * 2 * 1024 * 1024
 
 
 def test_concatenate_to_uf2_board_only(tmp_path, firmware_binary, config_binary):
@@ -134,8 +134,8 @@ def test_concatenate_to_uf2_board_only(tmp_path, firmware_binary, config_binary)
                                            combined_filename=tmp_file)
     with open(tmp_file, 'rb') as file:
         content = file.read()
-    # size of the file should be 2x firmware in 256 byte blocks + 2x padded board config + 2x padding user config
-    assert len(content) == 2 * (math.ceil(len(firmware_binary)/256) * 256) + 2 * STORAGE_SIZE
+    # size of the file should be 2x the binary version (minus user config space), and the binary is 2 MB - 16KB
+    assert len(content) == 2 * (2 * 1024 * 1024 - 16384)
 
 
 def test_padding_firmware(firmware_binary):
