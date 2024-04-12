@@ -86,7 +86,7 @@ The `--...-board-config-filename` flags allow for shipping a default configurati
 the need for generating these board configurations at compile time. This allows for more custom builds and less
 dependency on the build jobs, and is a feature in progress in the core firmware.
 
-The produced firmware + config(s) can be written to a file with `--new-binary-filename FILENAME` or straight to a RP2040
+The produced firmware + config(s) can be written to a file with `--new-filename FILENAME` or straight to a RP2040
 in BOOTSEL mode with `--usb`. The output file is a direct binary representation by default, but if `FILENAME` ends in
 ".uf2", it will be written in the UF2 format, which is generally more convenient to the end user.
 
@@ -94,7 +94,7 @@ Sample usage:
 
 ```
 % concatenate build/GP2040-CE_foo_bar.bin --binary-user-config-filename storage-dump.bin \
-    --new-binary-filename new-firmware-with-config.bin
+    --new-filename new-firmware-with-config.bin
 ```
 
 ### dump-config
