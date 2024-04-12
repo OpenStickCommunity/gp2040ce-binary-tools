@@ -158,6 +158,14 @@ def test_convert_binary_to_uf2_with_offsets(whole_board_with_board_config_dump):
     assert uf2[524:528] == bytearray(b'\x00\xc1\x1f\x10')   # address to write the second chunk
 
 
+def test_convert_binary_to_uf2_to_binary(whole_board_with_board_config_dump):
+    """Do some sanity checks in the attempt to convert a binary to a UF2."""
+    uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump)
+    binary = storage.convert_uf2_to_binary(uf2)
+    assert len(binary) == 2097152
+    assert whole_board_with_board_config_dump == binary
+
+
 @with_pb2s
 def test_serialize_config_with_footer(storage_dump, config_binary):
     """Test that reserializing a read in config matches the original.

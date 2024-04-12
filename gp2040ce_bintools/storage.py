@@ -86,6 +86,40 @@ def convert_binary_to_uf2(binary: bytearray, start: int = 0) -> bytearray:
     return uf2
 
 
+def convert_uf2_to_binary(uf2: bytearray) -> bytearray:
+    """Convert a Microsoft's UF2 payload to a raw binary.
+
+    https://github.com/microsoft/uf2/tree/master#overview
+
+    Args:
+        uf2: bytearray content to convert from a UF2 payload
+    Returns:
+        the content in sequential binary format
+    """
+    if len(uf2) % 512 != 0:
+        raise ValueError(f"provided binary is length {len(uf2)}, which isn't fully divisible by 512!")
+
+    binary = bytearray()
+    old_uf2_addr = None
+
+    for index in range(0, len(uf2), 512):
+        chunk = uf2[index:index+512]
+        _, _, _, uf2_addr, bytes_, block_num, block_count, _ = struct.unpack('<LLLLLLLL', chunk[0:32])
+        content = chunk[32:508]
+        if block_num != index // 512:
+            raise ValueError(f"inconsistent block number in reading UF2, got {block_num}, expected {index // 512}!")
+        if block_count != len(uf2) // 512:
+            raise ValueError(f"inconsistent block count in reading UF2, got {block_count}, expected {len(uf2) // 512}!")
+
+        # the UF2 is indexed, which we could convert to binary with padding 0s, but we don't yet
+        if old_uf2_addr and (uf2_addr != old_uf2_addr + 256):
+            raise ValueError("segmented UF2 files are not yet supported!")
+
+        binary += content[0:bytes_]
+        old_uf2_addr = uf2_addr
+    return binary
+
+
 def get_config(content: bytes) -> Message:
     """Read the config from a GP2040-CE storage section.
 
@@ -178,7 +212,10 @@ def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file
     """
     try:
         with open(filename, 'rb') as dump:
-            content = dump.read()
+            if filename[-4:] == '.uf2':
+                content = bytes(convert_uf2_to_binary(dump.read()))
+            else:
+                content = dump.read()
     except FileNotFoundError:
         if not allow_no_file:
             raise
