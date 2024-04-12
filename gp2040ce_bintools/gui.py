@@ -54,9 +54,7 @@ class EditScreen(ModalScreen):
             self.input_field = Input(value=repr(self.field_value), validators=[Number()], id='field-input')
         elif self.field_descriptor.type == descriptor.FieldDescriptor.TYPE_STRING:
             self.input_field = Input(value=self.field_value, id='field-input')
-        else:
-            # we don't handle whatever these are yet
-            self.input_field = Label(repr(self.field_value), id='field-input')
+
         yield Grid(
             Container(Label(self.field_descriptor.full_name, id='field-name'), id='field-name-container'),
             Container(self.input_field, id='input-field-container'),
@@ -91,17 +89,16 @@ class EditScreen(ModalScreen):
 
     def _save(self):
         """Save the field value to the retained config item."""
-        if not isinstance(self.input_field, Label):
-            if self.field_descriptor.type in (descriptor.FieldDescriptor.TYPE_INT32,
-                                              descriptor.FieldDescriptor.TYPE_INT64,
-                                              descriptor.FieldDescriptor.TYPE_UINT32,
-                                              descriptor.FieldDescriptor.TYPE_UINT64):
-                field_value = int(self.input_field.value)
-            else:
-                field_value = self.input_field.value
-            setattr(self.parent_config, self.field_descriptor.name, field_value)
-            logger.debug("parent config post-change: %s", self.parent_config)
-            self.node.set_label(pb_field_to_node_label(self.field_descriptor, field_value))
+        if self.field_descriptor.type in (descriptor.FieldDescriptor.TYPE_INT32,
+                                          descriptor.FieldDescriptor.TYPE_INT64,
+                                          descriptor.FieldDescriptor.TYPE_UINT32,
+                                          descriptor.FieldDescriptor.TYPE_UINT64):
+            field_value = int(self.input_field.value)
+        else:
+            field_value = self.input_field.value
+        setattr(self.parent_config, self.field_descriptor.name, field_value)
+        logger.debug("parent config post-change: %s", self.parent_config)
+        self.node.set_label(pb_field_to_node_label(self.field_descriptor, field_value))
 
 
 class MessageScreen(ModalScreen):

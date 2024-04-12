@@ -127,6 +127,41 @@ async def test_simple_edit_via_input_field():
 
 @pytest.mark.asyncio
 @with_pb2s
+async def test_cancel_simple_edit_via_input_field():
+    """Test that we can cancel out of saving an int via UI and see it reflected in the config."""
+    app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
+    async with app.run_test() as pilot:
+        tree = pilot.app.query_one(Tree)
+        display_node = tree.root.children[5]
+        i2cspeed_node = display_node.children[4]
+        assert pilot.app.config.displayOptions.deprecatedI2cSpeed == 400000
+
+        tree.root.expand_all()
+        await pilot.wait_for_scheduled_animations()
+        tree.select_node(i2cspeed_node)
+        tree.action_select_cursor()
+        await pilot.wait_for_scheduled_animations()
+        await pilot.click('Input#field-input')
+        await pilot.wait_for_scheduled_animations()
+        await pilot.press('backspace', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', '5')
+        await pilot.wait_for_scheduled_animations()
+        await pilot.click('Button#cancel-button')
+        assert pilot.app.config.displayOptions.deprecatedI2cSpeed == 400000
+
+
+@pytest.mark.asyncio
+@with_pb2s
+async def test_about():
+    """Test that we can bring up the about box."""
+    app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
+    async with app.run_test() as pilot:
+        await pilot.press('?')
+        await pilot.wait_for_scheduled_animations()
+        await pilot.click('Button#ok-button')
+
+
+@pytest.mark.asyncio
+@with_pb2s
 async def test_simple_edit_via_input_field_enum():
     """Test that we can change an enum via the UI and see it reflected in the config."""
     app = ConfigEditor(config_filename=os.path.join(HERE, 'test-files/test-config.bin'))
