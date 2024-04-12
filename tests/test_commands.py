@@ -29,14 +29,14 @@ def with_pb2s(test, *args, **kwargs):
 
 def test_version_flag():
     """Test that tools report the version."""
-    result = run(['visualize-storage', '-v'], capture_output=True, encoding='utf8')
+    result = run(['visualize-config', '-v'], capture_output=True, encoding='utf8')
     assert __version__ in result.stdout
 
 
 def test_help_flag():
     """Test that tools report the usage information."""
-    result = run(['visualize-storage', '-h'], capture_output=True, encoding='utf8')
-    assert 'usage: visualize-storage' in result.stdout
+    result = run(['visualize-config', '-h'], capture_output=True, encoding='utf8')
+    assert 'usage: visualize-config' in result.stdout
     assert 'Read the configuration section from a dump of a GP2040-CE board' in result.stdout
 
 
@@ -66,7 +66,7 @@ def test_concatenate_invocation_json(tmpdir):
 
 def test_storage_dump_invocation():
     """Test that a normal invocation against a dump works."""
-    result = run(['visualize-storage', '-P', 'tests/test-files/proto-files',
+    result = run(['visualize-config', '-P', 'tests/test-files/proto-files',
                   '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
     assert 'boardVersion: "v0.7.5"' in result.stdout
@@ -74,7 +74,7 @@ def test_storage_dump_invocation():
 
 def test_debug_storage_dump_invocation():
     """Test that a normal invocation against a dump works."""
-    result = run(['visualize-storage', '-d', '-P', 'tests/test-files/proto-files',
+    result = run(['visualize-config', '-d', '-P', 'tests/test-files/proto-files',
                   '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
     assert 'boardVersion: "v0.7.5"' in result.stdout
@@ -83,7 +83,7 @@ def test_debug_storage_dump_invocation():
 
 def test_storage_dump_json_invocation():
     """Test that a normal invocation against a dump works."""
-    result = run(['visualize-storage', '-P', 'tests/test-files/proto-files', '--json',
+    result = run(['visualize-config', '-P', 'tests/test-files/proto-files', '--json',
                   '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
     to_dict = json.loads(result.stdout)

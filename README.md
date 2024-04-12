@@ -19,7 +19,7 @@ latest Protobuf files if you can.
 
 An example of this invocation is:
 
-`visualize-storage -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --filename memory.bin`
+`visualize-config -P ~/proj/GP2040-CE/proto -P ~/proj/GP2040-CE/lib/nanopb/generator/proto --filename memory.bin`
 
 ## Installation
 
@@ -119,9 +119,9 @@ Sample usage:
 % dump-gp2040ce `date +%Y%m%d`-backup.bin
 ```
 
-### visualize-storage
+### visualize-config
 
-`visualize-storage` reads a GP2040-CE board's configuration, either over USB or from a dump of the board's flash
+`visualize-config` reads a GP2040-CE board's configuration, either over USB or from a dump of the board's flash
 storage section, and prints it out for visual inspection or diffing with other tools. It can also find the storage
 section from a GP2040-CE whole board dump, if you have that instead. Usage is simple; just connect your board in BOOTSEL
 mode or pass the tool your binary file to analyze along with the path to the Protobuf files.
@@ -129,7 +129,7 @@ mode or pass the tool your binary file to analyze along with the path to the Pro
 Sample output:
 
 ```
-% visualize-storage --usb
+% visualize-config --usb
 boardVersion: "v0.7.2"
 gamepadOptions {
   inputMode: INPUT_MODE_HID
