@@ -209,7 +209,7 @@ a huge effort to be backwards compatible, so instead, refer to this:
 
 #### Config Structures
 
-The latest update of the configuration snapshot is from **v0.7.8-RC2**.
+The latest update of the configuration snapshot is from **v0.7.8**.
 
 ### Dumping the GP2040-CE board with picotool
 
