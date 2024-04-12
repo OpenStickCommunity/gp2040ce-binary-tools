@@ -12,12 +12,21 @@ attrs==23.2.0
     # via aiohttp
 bandit==1.7.8
     # via gp2040ce-binary-tools (pyproject.toml)
+binaryornot==0.4.4
+    # via reuse
+boolean-py==4.0
+    # via
+    #   license-expression
+    #   reuse
 build==1.2.1
     # via pip-tools
 cachetools==5.3.3
     # via tox
 chardet==5.2.0
-    # via tox
+    # via
+    #   binaryornot
+    #   python-debian
+    #   tox
 click==8.1.7
     # via
     #   pip-tools
@@ -75,6 +84,10 @@ iniconfig==2.0.0
     # via pytest
 isort==5.13.2
     # via flake8-isort
+jinja2==3.1.3
+    # via reuse
+license-expression==30.3.0
+    # via reuse
 linkify-it-py==2.0.3
     # via markdown-it-py
 markdown-it-py[linkify,plugins]==3.0.0
@@ -82,6 +95,8 @@ markdown-it-py[linkify,plugins]==3.0.0
     #   mdit-py-plugins
     #   rich
     #   textual
+markupsafe==2.1.5
+    # via jinja2
 mccabe==0.7.0
     # via flake8
 mdit-py-plugins==0.4.0
@@ -142,10 +157,14 @@ pytest-asyncio==0.23.6
     # via gp2040ce-binary-tools (pyproject.toml)
 pytest-cov==5.0.0
     # via gp2040ce-binary-tools (pyproject.toml)
+python-debian==0.1.49
+    # via reuse
 pyusb==1.2.1
     # via gp2040ce-binary-tools (pyproject.toml)
 pyyaml==6.0.1
     # via bandit
+reuse==3.0.2
+    # via gp2040ce-binary-tools (pyproject.toml)
 rich==13.7.1
     # via
     #   bandit

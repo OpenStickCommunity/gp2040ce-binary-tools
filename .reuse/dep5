@@ -1,0 +1,34 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: GP2040-CE Binary Tools
+Upstream-Contact: Brian S. Stephan <bss@incorporeal.org>
+Source: https://github.com/OpenStickCommunity/gp2040ce-binary-tools
+
+# Trivial files
+Files: .gitignore .gitattributes
+Copyright: © 2023 Brian S. Stephan <bss@incorporeal.org>
+License: GPL-3.0-or-later
+
+# Protobuf from GP2040-CE (MIT) and derived compilations
+Files: gp2040ce_bintools/proto_snapshot/*
+Copyright: (c) 2024 OpenStickCommunity (gp2040-ce.info)
+License: MIT
+
+# High level repo docs
+Files: *.md
+Copyright: © 2023 Brian S. Stephan <bss@incorporeal.org>
+License: CC-BY-SA-4.0
+
+# Test data (GP2040-CE-derived)
+Files: tests/test-files/pb2-files/* tests/test-files/proto-files/*
+Copyright: (c) 2024 OpenStickCommunity (gp2040-ce.info)
+License: MIT
+
+# Test data
+Files: tests/test-files/*
+Copyright: © 2023 Brian S. Stephan <bss@incorporeal.org>
+License: GPL-3.0-or-later
+
+# Python packaging, scaffolding, and errata
+Files: pyproject.toml tox.ini requirements/*
+Copyright: © 2023 Brian S. Stephan <bss@incorporeal.org>
+License: GPL-3.0-or-later
