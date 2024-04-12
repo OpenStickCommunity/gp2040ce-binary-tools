@@ -3,6 +3,7 @@
 SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
 SPDX-License-Identifier: GPL-3.0-or-later
 """
+import math
 import os
 import sys
 import unittest.mock as mock
@@ -134,6 +135,15 @@ def test_convert_binary_to_uf2(whole_board_with_board_config_dump):
     """Do some sanity checks in the attempt to convert a binary to a UF2."""
     uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump)
     assert len(uf2) == 4194304                              # binary is 8192 256 byte chunks, UF2 is 512 b per chunk
+    assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
+    assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
+    assert uf2[524:528] == bytearray(b'\x00\x01\x00\x10')   # address to write the second chunk
+
+
+def test_convert_unaligned_binary_to_uf2(firmware_binary):
+    """Do some sanity checks in the attempt to convert a binary to a UF2."""
+    uf2 = storage.convert_binary_to_uf2(firmware_binary)
+    assert len(uf2) == math.ceil(len(firmware_binary)/256) * 512    # 256 byte complete/partial chunks -> 512 b chunks
     assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
     assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
     assert uf2[524:528] == bytearray(b'\x00\x01\x00\x10')   # address to write the second chunk

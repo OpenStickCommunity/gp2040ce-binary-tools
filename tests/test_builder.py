@@ -3,6 +3,7 @@
 SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
 SPDX-License-Identifier: GPL-3.0-or-later
 """
+import math
 import os
 import sys
 import unittest.mock as mock
@@ -108,6 +109,33 @@ def test_concatenate_to_usb(tmp_path):
 
     assert mock_write.call_args.args[2] == 0x10000000
     assert len(mock_write.call_args.args[3]) == 2 * 1024 * 1024
+
+
+def test_concatenate_to_uf2(tmp_path, firmware_binary, config_binary):
+    """Test that we write a UF2 file as expected."""
+    tmp_file = os.path.join(tmp_path, 'concat.uf2')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
+    concatenate_firmware_and_storage_files(firmware_file, binary_board_config_filename=config_file,
+                                           binary_user_config_filename=config_file,
+                                           combined_filename=tmp_file)
+    with open(tmp_file, 'rb') as file:
+        content = file.read()
+    # size of the file should be 2x firmware in 256 byte blocks + 2x padded board config + 2x padding user config
+    assert len(content) == 2 * (math.ceil(len(firmware_binary)/256) * 256) + 2 * STORAGE_SIZE + 2 * STORAGE_SIZE
+
+
+def test_concatenate_to_uf2_board_only(tmp_path, firmware_binary, config_binary):
+    """Test that we write a UF2 file as expected."""
+    tmp_file = os.path.join(tmp_path, 'concat.uf2')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
+    concatenate_firmware_and_storage_files(firmware_file, binary_board_config_filename=config_file,
+                                           combined_filename=tmp_file)
+    with open(tmp_file, 'rb') as file:
+        content = file.read()
+    # size of the file should be 2x firmware in 256 byte blocks + 2x padded board config + 2x padding user config
+    assert len(content) == 2 * (math.ceil(len(firmware_binary)/256) * 256) + 2 * STORAGE_SIZE
 
 
 def test_padding_firmware(firmware_binary):

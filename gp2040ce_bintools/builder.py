@@ -95,15 +95,25 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
             user_config_binary = serialize_config_with_footer(config)
 
     with open(firmware_filename, 'rb') as firmware:
-        new_binary = combine_firmware_and_config(bytearray(firmware.read()), board_config_binary, user_config_binary,
+        firmware_binary = bytearray(firmware.read())
+
+    # create a sequential binary for .bin and USB uses, or index it for .uf2
+    if usb or combined_filename[-4:] != '.uf2':
+        new_binary = combine_firmware_and_config(firmware_binary, board_config_binary, user_config_binary,
                                                  replace_extra=replace_extra)
+    else:
+        new_binary = convert_binary_to_uf2(firmware_binary)
+        if board_config_binary:
+            new_binary += convert_binary_to_uf2(pad_config_to_storage_size(board_config_binary),
+                                                start=BOARD_CONFIG_BINARY_LOCATION)
+        if user_config_binary:
+            new_binary += convert_binary_to_uf2(pad_config_to_storage_size(user_config_binary),
+                                                start=USER_CONFIG_BINARY_LOCATION)
 
     if combined_filename:
         with open(combined_filename, 'wb') as combined:
-            if combined_filename[-4:] == '.uf2':
-                combined.write(convert_binary_to_uf2(new_binary))
-            else:
-                combined.write(new_binary)
+            combined.write(new_binary)
+
     if usb:
         endpoint_out, endpoint_in = get_bootsel_endpoints()
         write(endpoint_out, endpoint_in, GP2040CE_START_ADDRESS, bytes(new_binary))
