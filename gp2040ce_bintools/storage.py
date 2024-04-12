@@ -361,10 +361,15 @@ def dump_config():
         description="Read the configuration section from a USB device and save it to a binary file.",
         parents=[core_parser],
     )
+    parser.add_argument('--board-config', action='store_true', default=False,
+                        help="dump the board config rather than the user config")
     parser.add_argument('filename', help="file to save the GP2040-CE board's config section to --- if the "
                                          "suffix is .uf2, it is saved in UF2 format, else it is a raw binary")
     args, _ = parser.parse_known_args()
-    config, _, _ = get_user_config_from_usb()
+    if args.board_config:
+        config, _, _ = get_board_config_from_usb()
+    else:
+        config, _, _ = get_user_config_from_usb()
     binary_config = serialize_config_with_footer(config)
     with open(args.filename, 'wb') as out_file:
         if args.filename[-4:] == '.uf2':
