@@ -3,6 +3,26 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.7.0
+
+### Features
+
+* New configurations can be saved as .bin/.uf2 files via "Save As..." in the TUI editor. This allows for making files of
+  different configurations that can be applied on top of one another simply by dragging the tiny UF2 onto the device.
+  This is useful for backup purposes and might also be a handy way to apply different configurations in a networkless
+  environment.
+
+### Improvements
+
+* The GP2040-CE configuration structure has been updated to v0.7.8-RC2.
+* There's a small About screen now in the TUI, but I didn't get around to adding online help yet.
+* TUI tweaks, none of which are earthshattering.
+
+### Miscellaneous
+
+* The license has been changed to GPLv3 (or later).
+* Library/dependency version bumps, a couple times.
+
 ## v0.6.0
 
 ### Added
