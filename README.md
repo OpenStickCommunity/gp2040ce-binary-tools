@@ -119,6 +119,24 @@ Sample usage:
 % dump-gp2040ce `date +%Y%m%d`-backup.bin
 ```
 
+### summarize-gp2040ce
+
+`summarize-gp2040ce` prints information regarding the provided USB device or file. It attempts to detect the firmware
+and/or board config and/or user config version, which might be useful for confirming files are built properly, or to
+determine the lineage of something.
+
+Sample usage:
+
+```
+% summarize-gp2040ce --usb
+USB device:
+
+GP2040-CE Information
+  detected GP2040-CE version:     v0.7.8-9-g59e2d19b-dirty
+  detected board config version:  v0.7.8-board-test
+  detected user config version:   v0.7.8-RC2-1-g882235b3
+```
+
 ### visualize-config
 
 `visualize-config` reads a GP2040-CE board's configuration, either over USB or from a dump of the board's flash

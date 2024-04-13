@@ -38,6 +38,7 @@ concatenate = "gp2040ce_bintools.builder:concatenate"
 dump-config = "gp2040ce_bintools.storage:dump_config"
 dump-gp2040ce = "gp2040ce_bintools.builder:dump_gp2040ce"
 edit-config = "gp2040ce_bintools.gui:edit_config"
+summarize-gp2040ce = "gp2040ce_bintools.builder:summarize_gp2040ce"
 visualize-config = "gp2040ce_bintools.storage:visualize"
 
 [tool.flake8]

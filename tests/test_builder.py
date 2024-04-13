@@ -141,7 +141,7 @@ def test_find_version_string(firmware_binary):
 
 def test_dont_always_find_version_string(firmware_binary):
     """Test that we can find a version string in a binary."""
-    assert builder.find_version_string_in_binary(b'\x00') is None
+    assert builder.find_version_string_in_binary(b'\x00') == 'NONE'
 
 
 def test_padding_firmware(firmware_binary):

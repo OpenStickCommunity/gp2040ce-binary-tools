@@ -64,6 +64,13 @@ def test_concatenate_invocation_json(tmpdir):
     assert out[2093382:2097152] == storage
 
 
+def test_summarize_invocation(tmpdir):
+    """Test that we can get some summary information."""
+    result = run(['summarize-gp2040ce', '--filename', 'tests/test-files/test-firmware.bin'],
+                 capture_output=True, encoding='utf8')
+    assert 'detected GP2040-CE version:     v0.7.5' in result.stdout
+
+
 def test_storage_dump_invocation():
     """Test that a normal invocation against a dump works."""
     result = run(['visualize-config', '-P', 'tests/test-files/proto-files',

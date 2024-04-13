@@ -141,7 +141,7 @@ def find_version_string_in_binary(binary: bytes) -> str:
     match = re.search(b'v[0-9]+.[0-9]+.[0-9]+[A-Za-z0-9-+.]*', binary)
     if match:
         return match.group(0).decode(encoding='ascii')
-    return None
+    return 'NONE'
 
 
 def get_gp2040ce_from_usb() -> tuple[bytes, object, object]:
@@ -335,3 +335,40 @@ def dump_gp2040ce():
     content, _, _ = get_gp2040ce_from_usb()
     with open(args.binary_filename, 'wb') as out_file:
         out_file.write(content)
+
+
+def summarize_gp2040ce():
+    """Provide information on a dump or USB device."""
+    parser = argparse.ArgumentParser(
+        description="Read a file or USB device to determine what GP2040-CE parts are present.",
+        parents=[core_parser],
+    )
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument('--usb', action='store_true', help="inspect the RP2040 device over USB")
+    input_group.add_argument('--filename', help="input .bin or .uf2 file to inspect")
+
+    args, _ = parser.parse_known_args()
+    if args.usb:
+        content, endpoint, _ = get_gp2040ce_from_usb()
+        print(f"USB device {hex(endpoint.device.idVendor)}:{hex(endpoint.device.idProduct)}:\n")
+    else:
+        with open(args.filename, 'rb') as file_:
+            content = file_.read()
+        print(f"File {args.filename}:\n")
+
+    gp2040ce_version = find_version_string_in_binary(content)
+    try:
+        board_config = storage.get_config(storage.get_board_storage_section(bytes(content)))
+        board_config_version = board_config.boardVersion if board_config.boardVersion else "NOT SPECIFIED"
+    except storage.ConfigReadError:
+        board_config_version = "NONE"
+    try:
+        user_config = storage.get_config(storage.get_user_storage_section(bytes(content)))
+        user_config_version = user_config.boardVersion if user_config.boardVersion else "NOT FOUND"
+    except storage.ConfigReadError:
+        user_config_version = "NONE"
+
+    print("GP2040-CE Information")
+    print(f"  detected GP2040-CE version:     {gp2040ce_version}")
+    print(f"  detected board config version:  {board_config_version}")
+    print(f"  detected user config version:   {user_config_version}")
