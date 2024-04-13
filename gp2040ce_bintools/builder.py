@@ -11,11 +11,9 @@ from typing import Optional
 
 from google.protobuf.message import Message
 
+import gp2040ce_bintools.storage as storage
 from gp2040ce_bintools import core_parser
 from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read, write
-from gp2040ce_bintools.storage import (BOARD_CONFIG_BINARY_LOCATION, STORAGE_SIZE, USER_CONFIG_BINARY_LOCATION,
-                                       USER_CONFIG_BOOTSEL_ADDRESS, convert_binary_to_uf2, get_config_from_json,
-                                       pad_config_to_storage_size, serialize_config_with_footer)
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +48,10 @@ def combine_firmware_and_config(firmware_binary: bytearray, board_config_binary:
     combined = copy.copy(firmware_binary)
     if board_config_binary:
         combined = (pad_binary_up_to_board_config(combined, or_truncate=replace_extra) +
-                    pad_config_to_storage_size(board_config_binary))
+                    storage.pad_config_to_storage_size(board_config_binary))
     if user_config_binary:
         combined = (pad_binary_up_to_user_config(combined, or_truncate=replace_extra) +
-                    pad_config_to_storage_size(user_config_binary))
+                    storage.pad_config_to_storage_size(user_config_binary))
     return combined
 
 
@@ -80,20 +78,20 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
     user_config_binary = bytearray([])
 
     if binary_board_config_filename:
-        with open(binary_board_config_filename, 'rb') as storage:
-            board_config_binary = bytearray(storage.read())
+        with open(binary_board_config_filename, 'rb') as binary_file:
+            board_config_binary = bytearray(binary_file.read())
     elif json_board_config_filename:
         with open(json_board_config_filename, 'r') as json_file:
-            config = get_config_from_json(json_file.read())
-            board_config_binary = serialize_config_with_footer(config)
+            config = storage.get_config_from_json(json_file.read())
+            board_config_binary = storage.serialize_config_with_footer(config)
 
     if binary_user_config_filename:
-        with open(binary_user_config_filename, 'rb') as storage:
-            user_config_binary = bytearray(storage.read())
+        with open(binary_user_config_filename, 'rb') as binary_file:
+            user_config_binary = bytearray(binary_file.read())
     elif json_user_config_filename:
         with open(json_user_config_filename, 'r') as json_file:
-            config = get_config_from_json(json_file.read())
-            user_config_binary = serialize_config_with_footer(config)
+            config = storage.get_config_from_json(json_file.read())
+            user_config_binary = storage.serialize_config_with_footer(config)
 
     with open(firmware_filename, 'rb') as firmware:
         firmware_binary = bytearray(firmware.read())
@@ -119,8 +117,9 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
         # the correct way to do the above would be to pass a list of {offset,binary_data} to convert...,
         # and have it calculate the total block size before starting to write, and then iterating over
         # the three lists. doable, just not on the top of my mind right now
-        new_binary = convert_binary_to_uf2(combine_firmware_and_config(firmware_binary, board_config_binary,
-                                                                       user_config_binary, replace_extra=replace_extra))
+        new_binary = storage.convert_binary_to_uf2(combine_firmware_and_config(firmware_binary, board_config_binary,
+                                                                               user_config_binary,
+                                                                               replace_extra=replace_extra))
 
     if combined_filename:
         with open(combined_filename, 'wb') as combined:
@@ -193,7 +192,7 @@ def pad_binary_up_to_board_config(firmware: bytes, or_truncate: bool = False) ->
     Raises:
         FirmwareLengthError: if the firmware is larger than the storage location
     """
-    return pad_binary_up_to_address(firmware, BOARD_CONFIG_BINARY_LOCATION, or_truncate)
+    return pad_binary_up_to_address(firmware, storage.BOARD_CONFIG_BINARY_LOCATION, or_truncate)
 
 
 def pad_binary_up_to_user_config(firmware: bytes, or_truncate: bool = False) -> bytearray:
@@ -207,7 +206,7 @@ def pad_binary_up_to_user_config(firmware: bytes, or_truncate: bool = False) -> 
     Raises:
         FirmwareLengthError: if the firmware is larger than the storage location
     """
-    return pad_binary_up_to_address(firmware, USER_CONFIG_BINARY_LOCATION, or_truncate)
+    return pad_binary_up_to_address(firmware, storage.USER_CONFIG_BINARY_LOCATION, or_truncate)
 
 
 def replace_config_in_binary(board_binary: bytearray, config_binary: bytearray) -> bytearray:
@@ -223,13 +222,14 @@ def replace_config_in_binary(board_binary: bytearray, config_binary: bytearray) 
     Returns:
         the resulting correctly-offset binary suitable for a GP2040-CE board
     """
-    if len(board_binary) < USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE:
+    if len(board_binary) < storage.USER_CONFIG_BINARY_LOCATION + storage.STORAGE_SIZE:
         # this is functionally the same, since this doesn't sanity check the firmware
         return combine_firmware_and_config(board_binary, bytearray([]), config_binary)
     else:
         new_binary = bytearray(copy.copy(board_binary))
-        new_config = pad_config_to_storage_size(config_binary)
-        new_binary[USER_CONFIG_BINARY_LOCATION:(USER_CONFIG_BINARY_LOCATION + STORAGE_SIZE)] = new_config
+        new_config = storage.pad_config_to_storage_size(config_binary)
+        location_end = storage.USER_CONFIG_BINARY_LOCATION + storage.STORAGE_SIZE
+        new_binary[storage.USER_CONFIG_BINARY_LOCATION:location_end] = new_config
         return new_binary
 
 
@@ -246,18 +246,18 @@ def write_new_config_to_filename(config: Message, filename: str, inject: bool = 
                 the whole file is replaced
     """
     if inject:
-        config_binary = serialize_config_with_footer(config)
+        config_binary = storage.serialize_config_with_footer(config)
         with open(filename, 'rb') as file:
             existing_binary = file.read()
         binary = replace_config_in_binary(bytearray(existing_binary), config_binary)
         with open(filename, 'wb') as file:
             file.write(binary)
     else:
-        binary = serialize_config_with_footer(config)
+        binary = storage.serialize_config_with_footer(config)
         with open(filename, 'wb') as file:
             if filename[-4:] == '.uf2':
-                file.write(convert_binary_to_uf2(pad_config_to_storage_size(binary),
-                                                 start=USER_CONFIG_BINARY_LOCATION))
+                file.write(storage.convert_binary_to_uf2(storage.pad_config_to_storage_size(binary),
+                                                         start=storage.USER_CONFIG_BINARY_LOCATION))
             else:
                 file.write(binary)
 
@@ -270,7 +270,7 @@ def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: 
         endpoint_out: the USB endpoint to write to
         endpoint_in: the USB endpoint to read from
     """
-    serialized = serialize_config_with_footer(config)
+    serialized = storage.serialize_config_with_footer(config)
     # we don't write the whole area, just the minimum from the end of the storage section
     # nevertheless, the USB device needs writes to start at 256 byte boundaries
     logger.debug("serialized: %s", serialized)
@@ -281,7 +281,8 @@ def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: 
     logger.debug("length: %s with %s bytes of padding", len(serialized), padding)
     binary = bytearray(b'\x00' * padding) + serialized
     logger.debug("binary for writing: %s", binary)
-    write(endpoint_out, endpoint_in, USER_CONFIG_BOOTSEL_ADDRESS + (STORAGE_SIZE - len(binary)), bytes(binary))
+    write(endpoint_out, endpoint_in, storage.USER_CONFIG_BOOTSEL_ADDRESS + (storage.STORAGE_SIZE - len(binary)),
+          bytes(binary))
 
 
 ############
