@@ -3,6 +3,28 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.8.0
+
+### Features
+
+* New command, `summarize-gp2040ce`, to get info about a board image or USB device. Details are limited at the moment,
+  but more will come as we need them.
+* `dump-config` can now dump the board config rather than only the user config.
+
+### Improvements
+
+* `visualize-config` can now read UF2 files in addition to raw binary files.
+    * `visualize-config` is the new name of what was formerly `visualize-storage`, to keep things consistent-ish.
+* `concatenate`'s output flag is now `--new-filename`.
+
+### Miscellaneous
+
+* Increased test coverage, especially in the TUI, to stay at 90% despite not being able to cover some USB stuff.
+* The repository is now compliant with the REUSE specification.
+    * This included moving the DCO and making the license a Markdown file, for cleanliness.
+* Some minor docs updates.
+* The SPDX descriptor is used in `pyproject.toml` as that displays better.
+
 ## v0.7.0
 
 ### Features
