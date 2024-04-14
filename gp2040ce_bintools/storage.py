@@ -202,6 +202,25 @@ def get_config_footer(content: bytes) -> tuple[int, int, str]:
     return config_size, config_crc, config_magic
 
 
+def get_binary_from_file(filename: str) -> bytes:
+    """Read the specified file (.bin or .uf2) and get back its raw binary contents.
+
+    Args:
+        filename: the filename of the file to open and read
+    Returns:
+        the file's content, in raw binary format
+    Raises:
+        FileNotFoundError: if the file was not found
+    """
+    with open(filename, 'rb') as dump:
+        if filename[-4:] == '.uf2':
+            content = bytes(convert_uf2_to_binary(bytearray(dump.read())))
+        else:
+            content = dump.read()
+
+    return content
+
+
 def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file: bool = False,
                          board_config: bool = False) -> Message:
     """Read the specified file (memory dump or whole board dump) and get back its config section.
@@ -215,11 +234,7 @@ def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file
         the parsed configuration
     """
     try:
-        with open(filename, 'rb') as dump:
-            if filename[-4:] == '.uf2':
-                content = bytes(convert_uf2_to_binary(bytearray(dump.read())))
-            else:
-                content = dump.read()
+        content = get_binary_from_file(filename)
     except FileNotFoundError:
         if not allow_no_file:
             raise

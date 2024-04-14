@@ -352,8 +352,7 @@ def summarize_gp2040ce():
         content, endpoint, _ = get_gp2040ce_from_usb()
         print(f"USB device {hex(endpoint.device.idVendor)}:{hex(endpoint.device.idProduct)}:\n")
     else:
-        with open(args.filename, 'rb') as file_:
-            content = file_.read()
+        content = storage.get_binary_from_file(args.filename)
         print(f"File {args.filename}:\n")
 
     gp2040ce_version = find_version_string_in_binary(content)
