@@ -133,7 +133,7 @@ def test_config_from_whole_board_parses(whole_board_dump):
 
 def test_convert_binary_to_uf2(whole_board_with_board_config_dump):
     """Do some sanity checks in the attempt to convert a binary to a UF2."""
-    uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump)
+    uf2 = storage.convert_binary_to_uf2([{0, whole_board_with_board_config_dump}])
     assert len(uf2) == 4194304                              # binary is 8192 256 byte chunks, UF2 is 512 b per chunk
     assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
     assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
@@ -142,7 +142,7 @@ def test_convert_binary_to_uf2(whole_board_with_board_config_dump):
 
 def test_convert_unaligned_binary_to_uf2(firmware_binary):
     """Do some sanity checks in the attempt to convert a binary to a UF2."""
-    uf2 = storage.convert_binary_to_uf2(firmware_binary)
+    uf2 = storage.convert_binary_to_uf2([{0, firmware_binary}])
     assert len(uf2) == math.ceil(len(firmware_binary)/256) * 512    # 256 byte complete/partial chunks -> 512 b chunks
     assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
     assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
@@ -151,7 +151,7 @@ def test_convert_unaligned_binary_to_uf2(firmware_binary):
 
 def test_convert_binary_to_uf2_with_offsets(whole_board_with_board_config_dump):
     """Do some sanity checks in the attempt to convert a binary to a UF2."""
-    uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump, start=storage.USER_CONFIG_BINARY_LOCATION)
+    uf2 = storage.convert_binary_to_uf2([{storage.USER_CONFIG_BINARY_LOCATION, whole_board_with_board_config_dump}])
     assert len(uf2) == 4194304                              # binary is 8192 256 byte chunks, UF2 is 512 b per chunk
     assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
     assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
@@ -160,7 +160,7 @@ def test_convert_binary_to_uf2_with_offsets(whole_board_with_board_config_dump):
 
 def test_convert_binary_to_uf2_to_binary(whole_board_with_board_config_dump):
     """Do some sanity checks in the attempt to convert a binary to a UF2."""
-    uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump)
+    uf2 = storage.convert_binary_to_uf2([{0, whole_board_with_board_config_dump}])
     binary = storage.convert_uf2_to_binary(uf2)
     assert len(binary) == 2097152
     assert whole_board_with_board_config_dump == binary
@@ -168,7 +168,7 @@ def test_convert_binary_to_uf2_to_binary(whole_board_with_board_config_dump):
 
 def test_malformed_uf2(whole_board_with_board_config_dump):
     """Check that we expect a properly-formed UF2."""
-    uf2 = storage.convert_binary_to_uf2(whole_board_with_board_config_dump)
+    uf2 = storage.convert_binary_to_uf2([{0, whole_board_with_board_config_dump}])
 
     # truncated UF2 --- byte mismatch
     with pytest.raises(ValueError):

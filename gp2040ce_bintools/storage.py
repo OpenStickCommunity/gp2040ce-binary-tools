@@ -53,36 +53,37 @@ class ConfigMagicError(ConfigReadError):
     """Exception raised when the config section does not have the magic value in its footer."""
 
 
-def convert_binary_to_uf2(binary: bytearray, start: int = 0) -> bytearray:
+def convert_binary_to_uf2(binaries: list[tuple[int, bytearray]]) -> bytearray:
     """Convert a GP2040-CE binary payload to Microsoft's UF2 format.
 
     https://github.com/microsoft/uf2/tree/master#overview
 
     Args:
-        binary: bytearray content to convert to a UF2 payload
-        start: position offset to start at rather than flash start (for creating e.g. user config UF2s)
+        binaries: list of start,binary pairs of binary data to write at the specified memory offset in flash
     Returns:
         the content in UF2 format
     """
-    size = len(binary)
-    blocks = (len(binary) // 256) + 1 if len(binary) % 256 else len(binary) // 256
-    uf2 = bytearray()
+    total_blocks = sum([(len(binary) // 256) + 1 if len(binary) % 256 else len(binary) // 256
+                        for offset, binary in binaries])
 
-    index = 0
-    while index < size:
-        pad_count = 476 - len(binary[index:index+256])
-        uf2 += struct.pack('<LLLLLLLL',
-                           UF2_MAGIC_FIRST,                                 # first magic number
-                           UF2_MAGIC_SECOND,                                # second magic number
-                           0x00002000,                                      # familyID present
-                           0x10000000 + start + index,                      # address to write to
-                           256,                                             # bytes to write in this block
-                           index // 256,                                    # sequential block number
-                           blocks,                                          # total number of blocks
-                           UF2_FAMILY_ID)                                   # family ID
-        uf2 += binary[index:index+256] + bytearray(b'\x00' * pad_count)     # content
-        uf2 += struct.pack('<L', UF2_MAGIC_FINAL)                           # final magic number
-        index += 256
+    uf2 = bytearray()
+    for start, binary in binaries:
+        size = len(binary)
+        index = 0
+        while index < size:
+            pad_count = 476 - len(binary[index:index+256])
+            uf2 += struct.pack('<LLLLLLLL',
+                               UF2_MAGIC_FIRST,                                 # first magic number
+                               UF2_MAGIC_SECOND,                                # second magic number
+                               0x00002000,                                      # familyID present
+                               0x10000000 + start + index,                      # address to write to
+                               256,                                             # bytes to write in this block
+                               index // 256,                                    # sequential block number
+                               total_blocks,                                    # total number of blocks
+                               UF2_FAMILY_ID)                                   # family ID
+            uf2 += binary[index:index+256] + bytearray(b'\x00' * pad_count)     # content
+            uf2 += struct.pack('<L', UF2_MAGIC_FINAL)                           # final magic number
+            index += 256
     return uf2
 
 
@@ -393,8 +394,9 @@ def dump_config():
     with open(args.filename, 'wb') as out_file:
         if args.filename[-4:] == '.uf2':
             # we must pad to storage start in order for the UF2 write addresses to make sense
-            out_file.write(convert_binary_to_uf2(pad_config_to_storage_size(binary_config),
-                                                 start=USER_CONFIG_BINARY_LOCATION))
+            out_file.write(convert_binary_to_uf2([
+                (USER_CONFIG_BINARY_LOCATION, pad_config_to_storage_size(binary_config)),
+            ]))
         else:
             out_file.write(binary_config)
 

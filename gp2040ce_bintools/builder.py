@@ -117,9 +117,10 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
         # the correct way to do the above would be to pass a list of {offset,binary_data} to convert...,
         # and have it calculate the total block size before starting to write, and then iterating over
         # the three lists. doable, just not on the top of my mind right now
-        new_binary = storage.convert_binary_to_uf2(combine_firmware_and_config(firmware_binary, board_config_binary,
-                                                                               user_config_binary,
-                                                                               replace_extra=replace_extra))
+        new_binary = storage.convert_binary_to_uf2([
+            (0, combine_firmware_and_config(firmware_binary, board_config_binary, user_config_binary,
+                                            replace_extra=replace_extra)),
+        ])
 
     if combined_filename:
         with open(combined_filename, 'wb') as combined:
@@ -256,8 +257,9 @@ def write_new_config_to_filename(config: Message, filename: str, inject: bool = 
         binary = storage.serialize_config_with_footer(config)
         with open(filename, 'wb') as file:
             if filename[-4:] == '.uf2':
-                file.write(storage.convert_binary_to_uf2(storage.pad_config_to_storage_size(binary),
-                                                         start=storage.USER_CONFIG_BINARY_LOCATION))
+                file.write(storage.convert_binary_to_uf2([
+                    (storage.USER_CONFIG_BINARY_LOCATION, storage.pad_config_to_storage_size(binary)),
+                ]))
             else:
                 file.write(binary)
 
