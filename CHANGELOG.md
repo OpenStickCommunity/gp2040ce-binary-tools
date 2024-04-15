@@ -3,6 +3,17 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.8.1
+
+### Improvements
+
+* `concatenate` no longer writes a padded 2 MB binary (so 4 MB UF2), instead properly indexing the board/user configs
+  separately from the binary, leading to smaller UF2s.
+
+### Bugfixes
+
+* `summarize-gp2040ce` now properly reads UF2 files.
+
 ## v0.8.0
 
 ### Features
