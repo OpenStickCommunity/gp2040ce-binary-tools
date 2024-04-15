@@ -3,6 +3,12 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.8.2
+
+### Bugfixes
+
+* UF2 files made of parts now have the proper block counts.
+
 ## v0.8.1
 
 ### Improvements
