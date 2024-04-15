@@ -3,6 +3,14 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.8.3
+
+### Improvements
+
+* `summarize-gp2040ce` can now understand the segmented UF2 files written in v0.8.1.
+* `concatenate` has an added `--backup` flag, which will move an existing output file aside before writing the new
+  output.
+
 ## v0.8.2
 
 ### Bugfixes
