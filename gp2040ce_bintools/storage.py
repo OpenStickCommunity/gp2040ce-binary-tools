@@ -114,9 +114,13 @@ def convert_uf2_to_binary(uf2: bytearray) -> bytearray:
         if block_count != len(uf2) // 512:
             raise ValueError(f"inconsistent block count in reading UF2, got {block_count}, expected {len(uf2) // 512}!")
 
-        # the UF2 is indexed, which we could convert to binary with padding 0s, but we don't yet
-        if old_uf2_addr and (uf2_addr != old_uf2_addr + 256):
-            raise ValueError("segmented UF2 files are not yet supported!")
+        if old_uf2_addr and (uf2_addr >= old_uf2_addr + bytes_):
+            # the new binary content is not immediately after what we wrote, it's further ahead, so pad
+            # the difference
+            binary += bytearray(b'\x00' * (uf2_addr - (old_uf2_addr + bytes_)))
+        elif old_uf2_addr and (uf2_addr < old_uf2_addr + bytes_):
+            # this is seeking backwards which we don't see yet
+            raise NotImplementedError("going backwards in binary files is not yet supported")
 
         binary += content[0:bytes_]
         old_uf2_addr = uf2_addr

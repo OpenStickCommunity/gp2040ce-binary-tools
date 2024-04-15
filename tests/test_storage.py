@@ -12,6 +12,7 @@ import pytest
 from decorator import decorator
 
 import gp2040ce_bintools.storage as storage
+from gp2040ce_bintools.builder import concatenate_firmware_and_storage_files
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -185,6 +186,36 @@ def test_malformed_uf2(whole_board_with_board_config_dump):
     # malformed UF2 --- counter jumps in the middle, suggests total blocks is wrong
     with pytest.raises(ValueError):
         storage.convert_uf2_to_binary(uf2 + uf2)
+
+
+def test_read_created_uf2(tmp_path, firmware_binary, config_binary):
+    """Test that we read a UF2 with disjoint segments."""
+    tmp_file = os.path.join(tmp_path, 'concat.uf2')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
+    concatenate_firmware_and_storage_files(firmware_file, binary_board_config_filename=config_file,
+                                           binary_user_config_filename=config_file,
+                                           combined_filename=tmp_file)
+    with open(tmp_file, 'rb') as file:
+        content = file.read()
+    assert len(content) == (math.ceil(len(firmware_binary)/256) * 512 +
+                            math.ceil(storage.STORAGE_SIZE/256) * 512 * 2)
+
+    binary = storage.convert_uf2_to_binary(content)
+    # the converted binary should be aligned properly and of the right size
+    assert len(binary) == 2 * 1024 * 1024
+    assert binary[-16384-4:-16384] == storage.FOOTER_MAGIC
+    assert binary[-4:] == storage.FOOTER_MAGIC
+    user_storage = storage.get_user_storage_section(binary)
+    footer_size, _, _ = storage.get_config_footer(user_storage)
+    assert footer_size == 3309
+
+
+def test_cant_read_out_of_order_uf2():
+    """Test that we currently raise an exception at out of order UF2s until we fix it."""
+    uf2 = storage.convert_binary_to_uf2([(0x1000, b'\x11'), (0, b'\x11')])
+    with pytest.raises(NotImplementedError):
+        storage.convert_uf2_to_binary(uf2)
 
 
 @with_pb2s
