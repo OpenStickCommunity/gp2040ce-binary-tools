@@ -3,6 +3,7 @@
 SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
 SPDX-License-Identifier: GPL-3.0-or-later
 """
+import math
 import os
 import sys
 import unittest.mock as mock
@@ -117,8 +118,9 @@ def test_concatenate_to_uf2(tmp_path, firmware_binary, config_binary):
                                                    combined_filename=tmp_file)
     with open(tmp_file, 'rb') as file:
         content = file.read()
-    # size of the file should be 2x the binary version, and the binary is 2 MB
-    assert len(content) == 2 * 2 * 1024 * 1024
+    # size of the file should be 2x the padded firmware + 2x the board config space + 2x the user config space
+    assert len(content) == (math.ceil(len(firmware_binary)/256) * 512 +
+                            math.ceil(STORAGE_SIZE/256) * 512 * 2)
 
 
 def test_concatenate_to_uf2_board_only(tmp_path, firmware_binary, config_binary):
@@ -130,8 +132,9 @@ def test_concatenate_to_uf2_board_only(tmp_path, firmware_binary, config_binary)
                                                    combined_filename=tmp_file)
     with open(tmp_file, 'rb') as file:
         content = file.read()
-    # size of the file should be 2x the binary version (minus user config space), and the binary is 2 MB - 16KB
-    assert len(content) == 2 * (2 * 1024 * 1024 - 16384)
+    # size of the file should be 2x the padded firmware + 2x the board config space
+    assert len(content) == (math.ceil(len(firmware_binary)/256) * 512 +
+                            math.ceil(STORAGE_SIZE/256) * 512)
 
 
 def test_find_version_string(firmware_binary):

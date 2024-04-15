@@ -101,26 +101,15 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
         new_binary = combine_firmware_and_config(firmware_binary, board_config_binary, user_config_binary,
                                                  replace_extra=replace_extra)
     else:
-        # this was kind of fine, but combining multiple calls of convert_binary_to_uf2 produced
-        # incorrect total block counts in the file, which picotool handled with some squirrely
-        # double-output behavior that has me worried it'd cause a real issue, so doing the
-        # crude padding + write of empty blocks, for now...
-        #
-        # new_binary = convert_binary_to_uf2(firmware_binary)
-        # if board_config_binary:
-        #     new_binary += convert_binary_to_uf2(pad_config_to_storage_size(board_config_binary),
-        #                                         start=BOARD_CONFIG_BINARY_LOCATION)
-        # if user_config_binary:
-        #     new_binary += convert_binary_to_uf2(pad_config_to_storage_size(user_config_binary),
-        #                                         start=USER_CONFIG_BINARY_LOCATION)
-        #
-        # the correct way to do the above would be to pass a list of {offset,binary_data} to convert...,
-        # and have it calculate the total block size before starting to write, and then iterating over
-        # the three lists. doable, just not on the top of my mind right now
-        new_binary = storage.convert_binary_to_uf2([
-            (0, combine_firmware_and_config(firmware_binary, board_config_binary, user_config_binary,
-                                            replace_extra=replace_extra)),
-        ])
+        binary_list = [(0, firmware_binary)]
+        # we must pad to storage start in order for the UF2 write addresses to make sense
+        if board_config_binary:
+            binary_list.append((storage.BOARD_CONFIG_BINARY_LOCATION,
+                                storage.pad_config_to_storage_size(board_config_binary)))
+        if user_config_binary:
+            binary_list.append((storage.USER_CONFIG_BINARY_LOCATION,
+                                storage.pad_config_to_storage_size(user_config_binary)))
+        new_binary = storage.convert_binary_to_uf2(binary_list)
 
     if combined_filename:
         with open(combined_filename, 'wb') as combined:
@@ -257,6 +246,7 @@ def write_new_config_to_filename(config: Message, filename: str, inject: bool = 
         binary = storage.serialize_config_with_footer(config)
         with open(filename, 'wb') as file:
             if filename[-4:] == '.uf2':
+                # we must pad to storage start in order for the UF2 write addresses to make sense
                 file.write(storage.convert_binary_to_uf2([
                     (storage.USER_CONFIG_BINARY_LOCATION, storage.pad_config_to_storage_size(binary)),
                 ]))
