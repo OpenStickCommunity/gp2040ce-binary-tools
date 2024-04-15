@@ -6,6 +6,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 import argparse
 import copy
 import logging
+import os
 import re
 from typing import Optional
 
@@ -55,13 +56,14 @@ def combine_firmware_and_config(firmware_binary: bytearray, board_config_binary:
     return combined
 
 
-def concatenate_firmware_and_storage_files(firmware_filename: str,
+def concatenate_firmware_and_storage_files(firmware_filename: str,      # noqa: C901
                                            binary_board_config_filename: Optional[str] = None,
                                            json_board_config_filename: Optional[str] = None,
                                            binary_user_config_filename: Optional[str] = None,
                                            json_user_config_filename: Optional[str] = None,
                                            combined_filename: str = '', usb: bool = False,
-                                           replace_extra: bool = False) -> None:
+                                           replace_extra: bool = False,
+                                           backup: bool = False) -> None:
     """Open the provided binary files and combine them into one combined GP2040-CE with config file.
 
     Args:
@@ -72,6 +74,7 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
         json_user_config_filename: filename of the user config section to read, in JSON format
         combined_filename: filename of where to write the combine binary
         replace_extra: if larger than normal firmware files should have their overage replaced
+        backup: if the output filename exists, move it to foo.ext.old before writing foo.ext
     """
     new_binary = bytearray([])
     board_config_binary = bytearray([])
@@ -112,6 +115,8 @@ def concatenate_firmware_and_storage_files(firmware_filename: str,
         new_binary = storage.convert_binary_to_uf2(binary_list)
 
     if combined_filename:
+        if backup and os.path.exists(combined_filename):
+            os.rename(combined_filename, f'{combined_filename}.old')
         with open(combined_filename, 'wb') as combined:
             combined.write(new_binary)
 
@@ -304,6 +309,8 @@ def concatenate():
     output_group = parser.add_mutually_exclusive_group(required=True)
     output_group.add_argument('--usb', action='store_true', help="write the resulting firmware + storage to USB")
     output_group.add_argument('--new-filename', help="output .bin or .uf2 file of the resulting firmware + storage")
+    parser.add_argument('--backup', action='store_true', default=False,
+                        help="if the output file exists, move it to .old before writing")
 
     args, _ = parser.parse_known_args()
     concatenate_firmware_and_storage_files(args.firmware_filename,
@@ -312,7 +319,7 @@ def concatenate():
                                            binary_user_config_filename=args.binary_user_config_filename,
                                            json_user_config_filename=args.json_user_config_filename,
                                            combined_filename=args.new_filename, usb=args.usb,
-                                           replace_extra=args.replace_extra)
+                                           replace_extra=args.replace_extra, backup=args.backup)
 
 
 def dump_gp2040ce():

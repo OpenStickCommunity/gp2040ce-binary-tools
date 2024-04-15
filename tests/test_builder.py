@@ -137,6 +137,31 @@ def test_concatenate_to_uf2_board_only(tmp_path, firmware_binary, config_binary)
                             math.ceil(STORAGE_SIZE/256) * 512)
 
 
+def test_concatenate_with_backup(tmp_path, firmware_binary, config_binary):
+    """Test that we write a UF2 file as expected."""
+    tmp_file = os.path.join(tmp_path, 'concat.uf2')
+    firmware_file = os.path.join(HERE, 'test-files', 'test-firmware.bin')
+    config_file = os.path.join(HERE, 'test-files', 'test-config.bin')
+    # create the file we are going to try to overwrite and want backed up
+    builder.concatenate_firmware_and_storage_files(firmware_file, binary_board_config_filename=config_file,
+                                                   combined_filename=tmp_file)
+    # second file, expecting an overwrite of the target with a backup made
+    builder.concatenate_firmware_and_storage_files(firmware_file, binary_board_config_filename=config_file,
+                                                   binary_user_config_filename=config_file,
+                                                   combined_filename=tmp_file,
+                                                   backup=True)
+    # size of the file should be 2x the padded firmware + 2x the board config space + 2x the user config space
+    with open(tmp_file, 'rb') as file:
+        content = file.read()
+    assert len(content) == (math.ceil(len(firmware_binary)/256) * 512 +
+                            math.ceil(STORAGE_SIZE/256) * 512 * 2)
+    # size of the backup file should be 2x the padded firmware + 2x the board config space
+    with open(f'{tmp_file}.old', 'rb') as file:
+        content = file.read()
+    assert len(content) == (math.ceil(len(firmware_binary)/256) * 512 +
+                            math.ceil(STORAGE_SIZE/256) * 512)
+
+
 def test_find_version_string(firmware_binary):
     """Test that we can find a version string in a binary."""
     assert builder.find_version_string_in_binary(firmware_binary) == 'v0.7.5'
