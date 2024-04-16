@@ -251,7 +251,7 @@ def write_new_config_to_filename(config: Message, filename: str, inject: bool = 
     else:
         if filename[-5:] == '.json':
             with open(filename, 'w') as file:
-                file.write(MessageToJson(config))
+                file.write(f'{MessageToJson(config)}\n')
         else:
             binary = storage.serialize_config_with_footer(config)
             with open(filename, 'wb') as file:
