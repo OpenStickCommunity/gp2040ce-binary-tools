@@ -134,7 +134,8 @@ class SaveAsScreen(ModalScreen):
         """Build the pop-up window prompting for the new filename to save the configuration as."""
         self.filename_field = Input(value=None, id='field-input', validators=[Length(minimum=1)])
         yield Grid(
-            Container(Label("Filename (.uf2 or .bin) to write to:", id='field-name'), id='field-name-container'),
+            Container(Label("Filename (.uf2, .bin, or .json) to write to:", id='field-name'),
+                      id='field-name-container'),
             Container(self.filename_field, id='input-field-container'),
             Container(Pretty('', id='input-errors', classes='hidden'), id='error-container'),
             Horizontal(Container(Button("Cancel", id='cancel-button'), id='cancel-button-container'),
