@@ -3,6 +3,7 @@
 SPDX-FileCopyrightText: © 2023 Brian S. Stephan <bss@incorporeal.org>
 SPDX-License-Identifier: GPL-3.0-or-later
 """
+import logging
 import math
 import os
 import sys
@@ -14,9 +15,11 @@ from decorator import decorator
 import gp2040ce_bintools.builder as builder
 from gp2040ce_bintools import get_config_pb2
 from gp2040ce_bintools.storage import (STORAGE_SIZE, get_board_storage_section, get_config, get_config_footer,
-                                       get_user_storage_section, serialize_config_with_footer)
+                                       get_config_from_json, get_user_storage_section, serialize_config_with_footer)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+logger = logging.getLogger(__name__)
 
 
 @decorator
@@ -349,6 +352,21 @@ def test_write_new_config_to_config_uf2(firmware_binary, tmp_path):
     # the current implementation of UF2 writing does it in 256 blocks, so each 256 byte block of
     # binary is 512 bytes in the UF2
     assert len(config_dump) == STORAGE_SIZE * 2
+
+
+@with_pb2s
+def test_write_new_config_to_config_json(config_binary, tmp_path):
+    """Test that the config can be written to a file."""
+    tmp_file = os.path.join(tmp_path, 'config.json')
+    config = get_config(config_binary)
+    builder.write_new_config_to_filename(config, tmp_file)
+
+    # read new file
+    with open(tmp_file, 'r') as file:
+        config_dump = file.read()
+    logger.debug(config_dump)
+    config = get_config_from_json(config_dump)
+    assert config.boardVersion == 'v0.7.5'
 
 
 @with_pb2s

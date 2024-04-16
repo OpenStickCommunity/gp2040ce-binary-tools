@@ -10,6 +10,7 @@ import os
 import re
 from typing import Optional
 
+from google.protobuf.json_format import MessageToJson
 from google.protobuf.message import Message
 
 import gp2040ce_bintools.storage as storage
@@ -248,15 +249,19 @@ def write_new_config_to_filename(config: Message, filename: str, inject: bool = 
         with open(filename, 'wb') as file:
             file.write(binary)
     else:
-        binary = storage.serialize_config_with_footer(config)
-        with open(filename, 'wb') as file:
-            if filename[-4:] == '.uf2':
-                # we must pad to storage start in order for the UF2 write addresses to make sense
-                file.write(storage.convert_binary_to_uf2([
-                    (storage.USER_CONFIG_BINARY_LOCATION, storage.pad_config_to_storage_size(binary)),
-                ]))
-            else:
-                file.write(binary)
+        if filename[-5:] == '.json':
+            with open(filename, 'w') as file:
+                file.write(MessageToJson(config))
+        else:
+            binary = storage.serialize_config_with_footer(config)
+            with open(filename, 'wb') as file:
+                if filename[-4:] == '.uf2':
+                    # we must pad to storage start in order for the UF2 write addresses to make sense
+                    file.write(storage.convert_binary_to_uf2([
+                        (storage.USER_CONFIG_BINARY_LOCATION, storage.pad_config_to_storage_size(binary)),
+                    ]))
+                else:
+                    file.write(binary)
 
 
 def write_new_config_to_usb(config: Message, endpoint_out: object, endpoint_in: object):
