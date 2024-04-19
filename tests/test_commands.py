@@ -30,7 +30,8 @@ def with_pb2s(test, *args, **kwargs):
 def test_version_flag():
     """Test that tools report the version."""
     result = run(['visualize-config', '-v'], capture_output=True, encoding='utf8')
-    assert __version__ in result.stdout
+    assert f'gp2040ce-binary-tools {__version__}' in result.stdout
+    assert 'Python 3' in result.stdout
 
 
 def test_help_flag():
