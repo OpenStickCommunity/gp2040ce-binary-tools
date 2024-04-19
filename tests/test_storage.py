@@ -100,6 +100,15 @@ def test_get_board_config_from_file_whole_board_dump():
 
 
 @with_pb2s
+def test_get_board_config_from_json_file():
+    """Test that we can open a JSON file and parse the config."""
+    filename = os.path.join(HERE, 'test-files', 'test-config.json')
+    config = storage.get_config_from_file(filename, whole_board=True, board_config=True)
+    assert config.boardVersion == 'v0.7.6-15-g71f4512'
+    assert config.addonOptions.bootselButtonOptions.enabled is False
+
+
+@with_pb2s
 def test_get_config_from_file_file_not_fonud_ok():
     """If we allow opening a file that doesn't exist (e.g. for the editor), check we get an empty config."""
     filename = os.path.join(HERE, 'test-files', 'nope.bin')

@@ -241,20 +241,23 @@ def get_config_from_file(filename: str, whole_board: bool = False, allow_no_file
         the parsed configuration
     """
     try:
-        content = get_binary_from_file(filename)
+        if filename[-5:] == '.json':
+            with open(filename) as file_:
+                return get_config_from_json(file_.read())
+        else:
+            content = get_binary_from_file(filename)
+            if whole_board:
+                if board_config:
+                    return get_config(get_board_storage_section(content))
+                else:
+                    return get_config(get_user_storage_section(content))
+            else:
+                return get_config(content)
     except FileNotFoundError:
         if not allow_no_file:
             raise
         config_pb2 = get_config_pb2()
         return config_pb2.Config()
-
-    if whole_board:
-        if board_config:
-            return get_config(get_board_storage_section(content))
-        else:
-            return get_config(get_user_storage_section(content))
-    else:
-        return get_config(content)
 
 
 def get_config_from_usb(address: int) -> tuple[Message, object, object]:
