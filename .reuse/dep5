@@ -16,7 +16,7 @@ License: MIT
 # High level repo docs
 Files: *.md
 Copyright: © 2023 Brian S. Stephan <bss@incorporeal.org>
-License: CC-BY-SA-4.0
+License: GPL-3.0-or-later
 
 # Test data (GP2040-CE-derived)
 Files: tests/test-files/pb2-files/* tests/test-files/proto-files/*
