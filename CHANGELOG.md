@@ -3,6 +3,20 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.9.0
+
+### Features
+
+* The TUI editor can read and save configs as JSON files, which should create another avenue for making configs
+  available and editable for humans.
+
+### Miscellaneous
+
+* The `--version` flag outputs a bit of information about the program and Python version.
+* The config protobuf snapshot has been updated for (what should be) GP2040-CE v0.7.9.
+* Requirements version bumps.
+* REUSE specification errata.
+
 ## v0.8.3
 
 ### Improvements
