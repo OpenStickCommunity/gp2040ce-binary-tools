@@ -22,11 +22,17 @@ build==1.2.1
     # via pip-tools
 cachetools==5.3.3
     # via tox
+certifi==2024.2.2
+    # via requests
+cffi==1.16.0
+    # via cryptography
 chardet==5.2.0
     # via
     #   binaryornot
     #   python-debian
     #   tox
+charset-normalizer==3.3.2
+    # via requests
 click==8.1.7
     # via
     #   pip-tools
@@ -35,10 +41,14 @@ colorama==0.4.6
     # via tox
 coverage[toml]==7.5.1
     # via pytest-cov
+cryptography==42.0.7
+    # via secretstorage
 decorator==5.1.1
     # via gp2040ce-binary-tools (pyproject.toml)
 distlib==0.3.8
     # via virtualenv
+docutils==0.21.2
+    # via readme-renderer
 filelock==3.14.0
     # via
     #   tox
@@ -79,13 +89,29 @@ grpcio==1.64.0
 grpcio-tools==1.64.0
     # via gp2040ce-binary-tools (pyproject.toml)
 idna==3.7
-    # via yarl
+    # via
+    #   requests
+    #   yarl
+importlib-metadata==7.1.0
+    # via twine
 iniconfig==2.0.0
     # via pytest
 isort==5.13.2
     # via flake8-isort
+jaraco-classes==3.4.0
+    # via keyring
+jaraco-context==5.3.0
+    # via keyring
+jaraco-functools==4.0.1
+    # via keyring
+jeepney==0.8.0
+    # via
+    #   keyring
+    #   secretstorage
 jinja2==3.1.4
     # via reuse
+keyring==25.2.1
+    # via twine
 license-expression==30.3.0
     # via reuse
 linkify-it-py==2.0.3
@@ -103,6 +129,10 @@ mdit-py-plugins==0.4.1
     # via markdown-it-py
 mdurl==0.1.2
     # via markdown-it-py
+more-itertools==10.2.0
+    # via
+    #   jaraco-classes
+    #   jaraco-functools
 msgpack==1.0.8
     # via textual-dev
 multidict==6.0.5
@@ -113,6 +143,8 @@ mypy==1.10.0
     # via gp2040ce-binary-tools (pyproject.toml)
 mypy-extensions==1.0.0
     # via mypy
+nh3==0.2.17
+    # via readme-renderer
 packaging==24.0
     # via
     #   build
@@ -124,6 +156,8 @@ pbr==6.0.0
     # via stevedore
 pip-tools==7.4.1
     # via gp2040ce-binary-tools (pyproject.toml)
+pkginfo==1.10.0
+    # via twine
 platformdirs==4.2.2
     # via
     #   tox
@@ -136,12 +170,16 @@ protobuf==5.26.1
     # via grpcio-tools
 pycodestyle==2.11.1
     # via flake8
+pycparser==2.22
+    # via cffi
 pydocstyle==6.3.0
     # via flake8-docstrings
 pyflakes==3.2.0
     # via flake8
 pygments==2.18.0
-    # via rich
+    # via
+    #   readme-renderer
+    #   rich
 pyproject-api==1.6.1
     # via tox
 pyproject-hooks==1.1.0
@@ -163,12 +201,25 @@ pyusb==1.2.1
     # via gp2040ce-binary-tools (pyproject.toml)
 pyyaml==6.0.1
     # via bandit
+readme-renderer==43.0
+    # via twine
+requests==2.32.1
+    # via
+    #   requests-toolbelt
+    #   twine
+requests-toolbelt==1.0.0
+    # via twine
 reuse==3.0.2
     # via gp2040ce-binary-tools (pyproject.toml)
+rfc3986==2.0.0
+    # via twine
 rich==13.7.1
     # via
     #   bandit
     #   textual
+    #   twine
+secretstorage==3.3.3
+    # via keyring
 setuptools-scm==8.1.0
     # via gp2040ce-binary-tools (pyproject.toml)
 snowballstemmer==2.2.0
@@ -183,6 +234,8 @@ textual-dev==1.5.1
     # via gp2040ce-binary-tools (pyproject.toml)
 tox==4.15.0
     # via gp2040ce-binary-tools (pyproject.toml)
+twine==5.1.0
+    # via gp2040ce-binary-tools (pyproject.toml)
 typing-extensions==4.11.0
     # via
     #   mypy
@@ -190,12 +243,18 @@ typing-extensions==4.11.0
     #   textual-dev
 uc-micro-py==1.0.3
     # via linkify-it-py
+urllib3==2.2.1
+    # via
+    #   requests
+    #   twine
 virtualenv==20.26.2
     # via tox
 wheel==0.43.0
     # via pip-tools
 yarl==1.9.4
     # via aiohttp
+zipp==3.18.2
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip

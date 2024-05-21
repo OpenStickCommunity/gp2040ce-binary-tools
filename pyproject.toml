@@ -31,7 +31,7 @@ classifiers = [
 dev = ["bandit", "decorator", "flake8", "flake8-blind-except", "flake8-builtins", "flake8-docstrings",
        "flake8-executable", "flake8-fixme", "flake8-isort", "flake8-logging-format", "flake8-mutable",
        "flake8-pyproject", "mypy", "pip-tools", "pytest", "pytest-asyncio", "pytest-cov", "reuse",
-       "setuptools-scm", "textual-dev", "tox"]
+       "setuptools-scm", "textual-dev", "tox", "twine"]
 
 [project.scripts]
 concatenate = "gp2040ce_bintools.builder:concatenate"
