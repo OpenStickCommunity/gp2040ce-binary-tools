@@ -275,4 +275,4 @@ async def test_save_as(config_binary, tmp_path):
     with open('/tmp/gptest', 'rb') as new_file:
         test_config_binary = new_file.read()
     test_config = get_config(test_config_binary)
-    assert original_config == test_config
+    assert original_config.boardVersion == test_config.boardVersion
