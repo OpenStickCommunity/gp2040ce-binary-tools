@@ -297,7 +297,7 @@
       "analogAdc1PinX": -1,
       "analogAdc1PinY": -1,
       "forcedCircularity": false,
-      "analogDeadzone": 5,
+      "innerDeadzone": 5,
       "analogAdc2PinX": -1,
       "analogAdc2PinY": -1,
       "analogAdc1Mode": "DPAD_MODE_LEFT_ANALOG",
