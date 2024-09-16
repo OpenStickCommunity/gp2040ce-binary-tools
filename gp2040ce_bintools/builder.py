@@ -338,7 +338,11 @@ def dump_gp2040ce():
     args, _ = parser.parse_known_args()
     content, _, _ = get_gp2040ce_from_usb()
     with open(args.binary_filename, 'wb') as out_file:
-        out_file.write(content)
+        if args.binary_filename[-4:] == '.uf2':
+            # we must pad to storage start in order for the UF2 write addresses to make sense
+            out_file.write(storage.convert_binary_to_uf2([(0, content)]))
+        else:
+            out_file.write(content)
 
 
 def summarize_gp2040ce():
