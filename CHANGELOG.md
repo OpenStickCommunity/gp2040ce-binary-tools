@@ -3,6 +3,26 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.10.0
+
+### Features
+
+* The board dump can now be made in UF2 format.
+* Kind of a retrograde feature --- precompiled Python files are no longer shipped with the project, as that is not
+  recommended by upstream protobuf. The version bumps have potentially fixed the Windows issues that led to the
+  precompiled Python files (rather than just the protobuf snapshots) being shipped in the first place, so we'll stop
+  shipping them for now.
+
+### Improvements
+
+* The protobuf snapshot files have been updated for GP2040-CE v0.7.10.
+
+### Miscellaneous
+
+* The TUI "Save As" test was checking old vs. new outputs, which wouldn't make any sense once the latest output fills in
+  new defaults, etc. not present in the origin file, which is pretty normal, so the test was simplified.
+* twine was added in the dev dependencies, and version bumps done for both requirements files.
+
 ## v0.9.0
 
 ### Features
