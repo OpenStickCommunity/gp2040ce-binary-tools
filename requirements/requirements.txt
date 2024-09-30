@@ -4,9 +4,9 @@
 #
 #    pip-compile --output-file=requirements/requirements.txt
 #
-grpcio==1.64.0
+grpcio==1.66.2
     # via grpcio-tools
-grpcio-tools==1.64.0
+grpcio-tools==1.66.2
     # via gp2040ce-binary-tools (pyproject.toml)
 linkify-it-py==2.0.3
     # via markdown-it-py
@@ -15,21 +15,23 @@ markdown-it-py[linkify,plugins]==3.0.0
     #   mdit-py-plugins
     #   rich
     #   textual
-mdit-py-plugins==0.4.1
+mdit-py-plugins==0.4.2
     # via markdown-it-py
 mdurl==0.1.2
     # via markdown-it-py
-protobuf==5.26.1
+platformdirs==4.3.6
+    # via textual
+protobuf==5.28.2
     # via grpcio-tools
 pygments==2.18.0
     # via rich
 pyusb==1.2.1
     # via gp2040ce-binary-tools (pyproject.toml)
-rich==13.7.1
+rich==13.8.1
     # via textual
-textual==0.62.0
+textual==0.81.0
     # via gp2040ce-binary-tools (pyproject.toml)
-typing-extensions==4.11.0
+typing-extensions==4.12.2
     # via textual
 uc-micro-py==1.0.3
     # via linkify-it-py

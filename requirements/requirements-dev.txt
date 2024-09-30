@@ -4,13 +4,22 @@
 #
 #    pip-compile --extra=dev --output-file=requirements/requirements-dev.txt
 #
-aiohttp==3.9.5
-    # via textual-dev
+aiohappyeyeballs==2.4.2
+    # via aiohttp
+aiohttp==3.10.8
+    # via
+    #   aiohttp-jinja2
+    #   textual-dev
+    #   textual-serve
+aiohttp-jinja2==1.6
+    # via textual-serve
 aiosignal==1.3.1
     # via aiohttp
-attrs==23.2.0
-    # via aiohttp
-bandit==1.7.8
+attrs==24.2.0
+    # via
+    #   aiohttp
+    #   reuse
+bandit==1.7.10
     # via gp2040ce-binary-tools (pyproject.toml)
 binaryornot==0.4.4
     # via reuse
@@ -18,13 +27,13 @@ boolean-py==4.0
     # via
     #   license-expression
     #   reuse
-build==1.2.1
+build==1.2.2
     # via pip-tools
-cachetools==5.3.3
+cachetools==5.5.0
     # via tox
-certifi==2024.2.2
+certifi==2024.8.30
     # via requests
-cffi==1.16.0
+cffi==1.17.1
     # via cryptography
 chardet==5.2.0
     # via
@@ -39,9 +48,9 @@ click==8.1.7
     #   textual-dev
 colorama==0.4.6
     # via tox
-coverage[toml]==7.5.1
+coverage[toml]==7.6.1
     # via pytest-cov
-cryptography==42.0.7
+cryptography==43.0.1
     # via secretstorage
 decorator==5.1.1
     # via gp2040ce-binary-tools (pyproject.toml)
@@ -49,11 +58,11 @@ distlib==0.3.8
     # via virtualenv
 docutils==0.21.2
     # via readme-renderer
-filelock==3.14.0
+filelock==3.16.1
     # via
     #   tox
     #   virtualenv
-flake8==7.0.0
+flake8==7.1.1
     # via
     #   flake8-builtins
     #   flake8-docstrings
@@ -74,7 +83,7 @@ flake8-fixme==1.1.1
     # via gp2040ce-binary-tools (pyproject.toml)
 flake8-isort==6.1.1
     # via gp2040ce-binary-tools (pyproject.toml)
-flake8-logging-format==0.9.0
+flake8-logging-format==2024.24.12
     # via gp2040ce-binary-tools (pyproject.toml)
 flake8-mutable==1.2.0
     # via gp2040ce-binary-tools (pyproject.toml)
@@ -84,15 +93,15 @@ frozenlist==1.4.1
     # via
     #   aiohttp
     #   aiosignal
-grpcio==1.64.0
+grpcio==1.66.2
     # via grpcio-tools
-grpcio-tools==1.64.0
+grpcio-tools==1.66.2
     # via gp2040ce-binary-tools (pyproject.toml)
-idna==3.7
+idna==3.10
     # via
     #   requests
     #   yarl
-importlib-metadata==7.1.0
+importlib-metadata==8.5.0
     # via twine
 iniconfig==2.0.0
     # via pytest
@@ -100,19 +109,22 @@ isort==5.13.2
     # via flake8-isort
 jaraco-classes==3.4.0
     # via keyring
-jaraco-context==5.3.0
+jaraco-context==6.0.1
     # via keyring
-jaraco-functools==4.0.1
+jaraco-functools==4.1.0
     # via keyring
 jeepney==0.8.0
     # via
     #   keyring
     #   secretstorage
 jinja2==3.1.4
-    # via reuse
-keyring==25.2.1
+    # via
+    #   aiohttp-jinja2
+    #   reuse
+    #   textual-serve
+keyring==25.4.1
     # via twine
-license-expression==30.3.0
+license-expression==30.3.1
     # via reuse
 linkify-it-py==2.0.3
     # via markdown-it-py
@@ -125,50 +137,51 @@ markupsafe==2.1.5
     # via jinja2
 mccabe==0.7.0
     # via flake8
-mdit-py-plugins==0.4.1
+mdit-py-plugins==0.4.2
     # via markdown-it-py
 mdurl==0.1.2
     # via markdown-it-py
-more-itertools==10.2.0
+more-itertools==10.5.0
     # via
     #   jaraco-classes
     #   jaraco-functools
-msgpack==1.0.8
+msgpack==1.1.0
     # via textual-dev
-multidict==6.0.5
+multidict==6.1.0
     # via
     #   aiohttp
     #   yarl
-mypy==1.10.0
+mypy==1.11.2
     # via gp2040ce-binary-tools (pyproject.toml)
 mypy-extensions==1.0.0
     # via mypy
-nh3==0.2.17
+nh3==0.2.18
     # via readme-renderer
-packaging==24.0
+packaging==24.1
     # via
     #   build
     #   pyproject-api
     #   pytest
     #   setuptools-scm
     #   tox
-pbr==6.0.0
+pbr==6.1.0
     # via stevedore
 pip-tools==7.4.1
     # via gp2040ce-binary-tools (pyproject.toml)
 pkginfo==1.10.0
     # via twine
-platformdirs==4.2.2
+platformdirs==4.3.6
     # via
+    #   textual
     #   tox
     #   virtualenv
 pluggy==1.5.0
     # via
     #   pytest
     #   tox
-protobuf==5.26.1
+protobuf==5.28.2
     # via grpcio-tools
-pycodestyle==2.11.1
+pycodestyle==2.12.1
     # via flake8
 pycparser==2.22
     # via cffi
@@ -180,18 +193,18 @@ pygments==2.18.0
     # via
     #   readme-renderer
     #   rich
-pyproject-api==1.6.1
+pyproject-api==1.8.0
     # via tox
-pyproject-hooks==1.1.0
+pyproject-hooks==1.2.0
     # via
     #   build
     #   pip-tools
-pytest==8.2.1
+pytest==8.3.3
     # via
     #   gp2040ce-binary-tools (pyproject.toml)
     #   pytest-asyncio
     #   pytest-cov
-pytest-asyncio==0.23.7
+pytest-asyncio==0.24.0
     # via gp2040ce-binary-tools (pyproject.toml)
 pytest-cov==5.0.0
     # via gp2040ce-binary-tools (pyproject.toml)
@@ -199,24 +212,25 @@ python-debian==0.1.49
     # via reuse
 pyusb==1.2.1
     # via gp2040ce-binary-tools (pyproject.toml)
-pyyaml==6.0.1
+pyyaml==6.0.2
     # via bandit
-readme-renderer==43.0
+readme-renderer==44.0
     # via twine
-requests==2.32.1
+requests==2.32.3
     # via
     #   requests-toolbelt
     #   twine
 requests-toolbelt==1.0.0
     # via twine
-reuse==3.0.2
+reuse==4.0.3
     # via gp2040ce-binary-tools (pyproject.toml)
 rfc3986==2.0.0
     # via twine
-rich==13.7.1
+rich==13.8.1
     # via
     #   bandit
     #   textual
+    #   textual-serve
     #   twine
 secretstorage==3.3.3
     # via keyring
@@ -224,36 +238,41 @@ setuptools-scm==8.1.0
     # via gp2040ce-binary-tools (pyproject.toml)
 snowballstemmer==2.2.0
     # via pydocstyle
-stevedore==5.2.0
+stevedore==5.3.0
     # via bandit
-textual==0.62.0
+textual==0.81.0
     # via
     #   gp2040ce-binary-tools (pyproject.toml)
     #   textual-dev
-textual-dev==1.5.1
+    #   textual-serve
+textual-dev==1.6.1
     # via gp2040ce-binary-tools (pyproject.toml)
-tox==4.15.0
+textual-serve==1.1.1
+    # via textual-dev
+tomlkit==0.13.2
+    # via reuse
+tox==4.20.0
     # via gp2040ce-binary-tools (pyproject.toml)
-twine==5.1.0
+twine==5.1.1
     # via gp2040ce-binary-tools (pyproject.toml)
-typing-extensions==4.11.0
+typing-extensions==4.12.2
     # via
     #   mypy
     #   textual
     #   textual-dev
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==2.2.1
+urllib3==2.2.3
     # via
     #   requests
     #   twine
-virtualenv==20.26.2
+virtualenv==20.26.6
     # via tox
-wheel==0.43.0
+wheel==0.44.0
     # via pip-tools
-yarl==1.9.4
+yarl==1.13.1
     # via aiohttp
-zipp==3.18.2
+zipp==3.20.2
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
