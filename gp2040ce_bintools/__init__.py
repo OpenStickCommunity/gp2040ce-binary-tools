@@ -64,8 +64,7 @@ def get_config_pb2():
             return grpc.protos('config.proto')
         except (ModuleNotFoundError, TypeError):
             # (TypeError could be the windows bug https://github.com/protocolbuffers/protobuf/issues/14345)
-            # that failed, import a precompiled snapshot (may be lagging what's in GP2040-CE)
-            logger.exception("couldn't compile the proto files for the below reason:")
+            # that failed, import the snapshot (may be lagging what's in GP2040-CE)
+            logger.warning("using the fallback .proto files! please supply your files with -P if you can!")
             sys.path.append(os.path.join(pathlib.Path(__file__).parent.resolve(), 'proto_snapshot'))
-            logger.warning("using the precompiled fallback!")
-            return importlib.import_module('config_pb2')
+            return grpc.protos('config.proto')

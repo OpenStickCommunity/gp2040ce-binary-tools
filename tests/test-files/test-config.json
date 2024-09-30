@@ -1,7 +1,7 @@
 {
   "boardVersion": "v0.7.6-15-g71f4512",
   "gamepadOptions": {
-    "inputMode": "INPUT_MODE_HID",
+    "inputMode": "INPUT_MODE_PS3",
     "dpadMode": "DPAD_MODE_DIGITAL",
     "socdMode": "SOCD_MODE_SECOND_INPUT_PRIORITY",
     "invertXAxis": false,
@@ -163,10 +163,10 @@
   },
   "displayOptions": {
     "enabled": false,
-    "i2cBlock": 0,
+    "deprecatedI2cBlock": 0,
     "deprecatedI2cSDAPin": 0,
     "deprecatedI2cSCLPin": 1,
-    "i2cAddress": 60,
+    "deprecatedI2cAddress": 60,
     "deprecatedI2cSpeed": 400000,
     "buttonLayout": "BUTTON_LAYOUT_STICK",
     "buttonLayoutRight": "BUTTON_LAYOUT_VEWLIX",
@@ -327,13 +327,13 @@
       "shmupBtnMask4": 0,
       "shmupMixMode": "SHMUP_MIX_MODE_TURBO_PRIORITY"
     },
-    "sliderOptions": {
+    "deprecatedSliderOptions": {
       "enabled": false,
       "deprecatedPinSliderOne": 0,
       "deprecatedPinSliderTwo": 0,
       "deprecatedModeOne": "DPAD_MODE_DIGITAL",
       "deprecatedModeTwo": "DPAD_MODE_DIGITAL",
-      "modeDefault": "DPAD_MODE_DIGITAL"
+      "deprecatedModeDefault": "DPAD_MODE_DIGITAL"
     },
     "reverseOptions": {
       "enabled": false,
@@ -346,10 +346,10 @@
     },
     "analogADS1219Options": {
       "enabled": false,
-      "i2cBlock": 0,
+      "deprecatedI2cBlock": 0,
       "deprecatedI2cSDAPin": -1,
       "deprecatedI2cSCLPin": -1,
-      "i2cAddress": 64,
+      "deprecatedI2cAddress": 64,
       "deprecatedI2cSpeed": 400000
     },
     "dualDirectionalOptions": {
@@ -392,7 +392,7 @@
     },
     "wiiOptions": {
       "enabled": false,
-      "i2cBlock": 0,
+      "deprecatedI2cBlock": 0,
       "deprecatedI2cSDAPin": -1,
       "deprecatedI2cSCLPin": -1,
       "deprecatedI2cSpeed": 400000,

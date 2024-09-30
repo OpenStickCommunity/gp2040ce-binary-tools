@@ -19,7 +19,7 @@ Copyright: © 2023 Brian S. Stephan <bss@incorporeal.org>
 License: GPL-3.0-or-later
 
 # Test data (GP2040-CE-derived)
-Files: tests/test-files/pb2-files/* tests/test-files/proto-files/*
+Files: tests/test-files/proto-files/*
 Copyright: (c) 2024 OpenStickCommunity (gp2040-ce.info)
 License: MIT
 

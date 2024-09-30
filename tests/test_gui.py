@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 @decorator
 async def with_pb2s(test, *args, **kwargs):
     """Wrap a test with precompiled pb2 files on the path."""
-    proto_path = os.path.join(HERE, 'test-files', 'pb2-files')
+    proto_path = os.path.join(HERE, 'test-files')
     sys.path.append(proto_path)
 
     await test(*args, **kwargs)
@@ -109,7 +109,7 @@ async def test_simple_edit_via_input_field():
     async with app.run_test() as pilot:
         tree = pilot.app.query_one(Tree)
         display_node = tree.root.children[5]
-        i2cspeed_node = display_node.children[4]
+        i2cspeed_node = display_node.children[6]
         assert pilot.app.config.displayOptions.deprecatedI2cSpeed == 400000
 
         tree.root.expand_all()

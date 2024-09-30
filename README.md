@@ -13,9 +13,9 @@ over USB.
 
 All tools take `-P PATH` flag(s) in order to import Protobuf files (either precompiled Python files or raw .proto files)
 if you have them locally, in order to work with the latest (or development) version of the configuration. That said,
-this tool also includes a precompiled fallback version of the config structure if you cannot supply these files. Be
-aware, however, that they are a point in time snapshot, and may lag the real format in undesirable ways. Supply the
-latest Protobuf files if you can.
+this tool also includes a copy of the config files if you cannot supply these files, and will attempt to compile those
+as a fallback. Be aware, however, that they are a point in time snapshot, and may lag the real format in undesirable
+ways. Supply the latest Protobuf files if you can.
 
 An example of this invocation is:
 

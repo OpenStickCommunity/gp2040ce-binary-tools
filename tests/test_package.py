@@ -36,7 +36,7 @@ def test_get_config_pb2_exception():
 
 def test_get_config_pb2_precompile():
     """Test we can import precompiled protobuf files."""
-    proto_path = os.path.join(HERE, 'test-files', 'pb2-files')
+    proto_path = os.path.join(HERE, 'test-files')
     sys.path.append(proto_path)
 
     # let grpc tools import the proto files normally

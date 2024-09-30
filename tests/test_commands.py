@@ -18,7 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 @decorator
 def with_pb2s(test, *args, **kwargs):
     """Wrap a test with precompiled pb2 files on the path."""
-    proto_path = os.path.join(HERE, 'test-files', 'pb2-files')
+    proto_path = os.path.join(HERE, 'test-files')
     sys.path.append(proto_path)
 
     test(*args, **kwargs)
