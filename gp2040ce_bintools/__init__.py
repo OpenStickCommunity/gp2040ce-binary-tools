@@ -55,16 +55,18 @@ def get_config_pb2():
     # try to just import a precompiled module if we have been given it in our path
     # (perhaps someone already compiled it for us for whatever reason)
     try:
+        logger.debug("Trying precompiled protobuf modules...")
         return importlib.import_module('config_pb2')
     except ModuleNotFoundError:
         # no found precompiled config, try to compile the proto files in realtime
         # because it's possible someone put them on the path
         try:
-            logger.info("Invoking gRPC tool to compile config.proto...")
+            logger.debug("No precompiled protobuf modules found, invoking gRPC tool to compile config.proto...")
             return grpc.protos('config.proto')
         except (ModuleNotFoundError, TypeError):
             # (TypeError could be the windows bug https://github.com/protocolbuffers/protobuf/issues/14345)
             # that failed, import the snapshot (may be lagging what's in GP2040-CE)
             logger.warning("using the fallback .proto files! please supply your files with -P if you can!")
             sys.path.append(os.path.join(pathlib.Path(__file__).parent.resolve(), 'proto_snapshot'))
+            logger.debug("Invoking gRPC tool again to compile shipped config.proto...")
             return grpc.protos('config.proto')
