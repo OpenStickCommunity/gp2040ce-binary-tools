@@ -68,7 +68,8 @@ def get_config_pb2(with_fallback: bool = args.use_shipped_fallback):
         except (ModuleNotFoundError, TypeError):
             # (TypeError could be the windows bug https://github.com/protocolbuffers/protobuf/issues/14345)
             if not with_fallback:
-                raise
+                logger.exception("no viable set of protobuf modules could be found, please use -P or -S!")
+                raise RuntimeError("no viable set of protobuf modules could be found, please use -P or -S!")
 
             # that failed, import the snapshot (may be lagging what's in GP2040-CE)
             logger.warning("using the fallback .proto files! please supply your files with -P if you can!")

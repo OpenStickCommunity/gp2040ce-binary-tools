@@ -52,7 +52,7 @@ def test_get_config_pb2_precompiled():
 
 def test_get_config_pb2_exception():
     """Test that we fail if no config .proto files are available."""
-    with pytest.raises(ModuleNotFoundError):
+    with pytest.raises(RuntimeError):
         _ = get_config_pb2()
 
 
