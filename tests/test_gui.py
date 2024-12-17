@@ -119,7 +119,7 @@ async def test_simple_edit_via_input_field():
         await pilot.wait_for_scheduled_animations()
         await pilot.click('Input#field-input')
         await pilot.wait_for_scheduled_animations()
-        await pilot.press('backspace', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', '5')
+        await pilot.press('end', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', '5')
         await pilot.wait_for_scheduled_animations()
         await pilot.click('Button#confirm-button')
         assert pilot.app.config.displayOptions.deprecatedI2cSpeed == 5
@@ -199,7 +199,7 @@ async def test_simple_edit_via_input_field_string():
         await pilot.wait_for_scheduled_animations()
         await pilot.click('Input#field-input')
         await pilot.wait_for_scheduled_animations()
-        await pilot.press('backspace', '-', 'h', 'i')
+        await pilot.press('end', 'backspace', '-', 'h', 'i')
         await pilot.wait_for_scheduled_animations()
         await pilot.click('Button#confirm-button')
         assert pilot.app.config.boardVersion == 'v0.7.-hi'
@@ -229,7 +229,7 @@ async def test_add_node_to_repeated():
         await pilot.wait_for_scheduled_animations()
         await pilot.click('Input#field-input')
         await pilot.wait_for_scheduled_animations()
-        await pilot.press('backspace', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', '5')
+        await pilot.press('end', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', 'backspace', '5')
         await pilot.wait_for_scheduled_animations()
         await pilot.click('Button#confirm-button')
 
