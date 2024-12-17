@@ -21,13 +21,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 @decorator
 async def with_pb2s(test, *args, **kwargs):
     """Wrap a test with precompiled pb2 files on the path."""
-    proto_path = os.path.join(HERE, 'test-files')
+    proto_path = os.path.join(HERE, 'test-files', 'pb2-files')
     sys.path.append(proto_path)
 
     await test(*args, **kwargs)
 
     sys.path.pop()
     del sys.modules['config_pb2']
+    del sys.modules['enums_pb2']
+    del sys.modules['nanopb_pb2']
 
 
 @pytest.mark.asyncio

@@ -74,6 +74,10 @@ ignore_errors = true
 [tool.pytest]
 python_files = ["*_tests.py", "tests.py", "test_*.py"]
 
+[tool.pytest.ini_options]
+log_cli = 0
+log_cli_level = "WARNING"
+
 [tool.setuptools]
 packages = [
     "gp2040ce_bintools",

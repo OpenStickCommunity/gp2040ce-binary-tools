@@ -40,6 +40,8 @@ core_parser.add_argument('-d', '--debug', action='store_true', help="enable debu
 core_parser.add_argument('-P', '--proto-files-path', type=pathlib.Path, default=list(), action='append',
                          help="path to .proto files to read, including dependencies; you will likely need "
                               "to supply this twice, once for GP2040-CE's .proto files and once for nanopb's")
+core_parser.add_argument('-S', '--use-shipped-fallback', action='store_true',
+                         help="utilize shipped (potentially stale) .proto files because you can't supply your own")
 args, _ = core_parser.parse_known_args()
 for path in args.proto_files_path:
     sys.path.append(os.path.abspath(os.path.expanduser(path)))
@@ -50,7 +52,7 @@ else:
     handler.setLevel(logging.WARNING)
 
 
-def get_config_pb2():
+def get_config_pb2(with_fallback: bool = args.use_shipped_fallback):
     """Retrieve prebuilt _pb2 file or attempt to compile it live."""
     # try to just import a precompiled module if we have been given it in our path
     # (perhaps someone already compiled it for us for whatever reason)
@@ -65,6 +67,9 @@ def get_config_pb2():
             return grpc.protos('config.proto')
         except (ModuleNotFoundError, TypeError):
             # (TypeError could be the windows bug https://github.com/protocolbuffers/protobuf/issues/14345)
+            if not with_fallback:
+                raise
+
             # that failed, import the snapshot (may be lagging what's in GP2040-CE)
             logger.warning("using the fallback .proto files! please supply your files with -P if you can!")
             sys.path.append(os.path.join(pathlib.Path(__file__).parent.resolve(), 'proto_snapshot'))

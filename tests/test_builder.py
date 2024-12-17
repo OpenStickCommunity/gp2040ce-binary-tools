@@ -25,13 +25,15 @@ logger = logging.getLogger(__name__)
 @decorator
 def with_pb2s(test, *args, **kwargs):
     """Wrap a test with precompiled pb2 files on the path."""
-    proto_path = os.path.join(HERE, 'test-files')
+    proto_path = os.path.join(HERE, 'test-files', 'pb2-files')
     sys.path.append(proto_path)
 
     test(*args, **kwargs)
 
     sys.path.pop()
     del sys.modules['config_pb2']
+    del sys.modules['enums_pb2']
+    del sys.modules['nanopb_pb2']
 
 
 def test_concatenate_to_file(tmp_path):
