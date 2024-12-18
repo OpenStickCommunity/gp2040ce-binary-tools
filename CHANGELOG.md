@@ -3,6 +3,19 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.11.0
+
+### Improvements
+
+* The usage of provided GP2040-CE config Protobuf files must be explicitly specified via the `-S` flag. This is in order
+  to not accidentally fall back to them and be confused by the results. The net effect is that in most situations, users
+  will have to provide either `-P PATH` or `-S`.
+* The testing of the above fallbacks covers the options far better than before now.
+
+### Miscellaneous
+
+* Version bumps, which brought about a couple updates to the tests.
+
 ## v0.10.0
 
 ### Features
