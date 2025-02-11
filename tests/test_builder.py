@@ -57,7 +57,7 @@ def test_concatenate_board_config_to_file(tmp_path):
                                                    combined_filename=tmp_file)
     with open(tmp_file, 'rb') as file:
         content = file.read()
-    assert len(content) == (2 * 1024 * 1024) - (16 * 1024)
+    assert len(content) == (2 * 1024 * 1024) - (32 * 1024)
 
 
 def test_concatenate_both_configs_to_file(tmp_path):
@@ -180,19 +180,19 @@ def test_dont_always_find_version_string(firmware_binary):
 def test_padding_firmware(firmware_binary):
     """Test that firmware is padded to the expected size."""
     padded = builder.pad_binary_up_to_user_config(firmware_binary)
-    assert len(padded) == 2080768
+    assert len(padded) == 2064384
 
 
 def test_padding_firmware_can_truncate():
     """Test that firmware is padded to the expected size."""
     padded = builder.pad_binary_up_to_user_config(bytearray(b'\x00' * 4 * 1024 * 1024), or_truncate=True)
-    assert len(padded) == 2080768
+    assert len(padded) == 2064384
 
 
 def test_padding_firmware_to_board(firmware_binary):
     """Test that firmware is padded to the expected size."""
     padded = builder.pad_binary_up_to_board_config(firmware_binary)
-    assert len(padded) == 2080768 - (16 * 1024)
+    assert len(padded) == 2064384 - (32 * 1024)
 
 
 def test_firmware_plus_storage_section(firmware_binary, storage_dump):
@@ -226,7 +226,7 @@ def test_chunky_firmware_plus_user_config_binary(config_binary):
 def test_firmware_plus_board_config_binary(firmware_binary, config_binary):
     """Test that combining firmware and board config produces a valid combined binary."""
     almost_whole_board = builder.combine_firmware_and_config(firmware_binary, config_binary, None)
-    assert len(almost_whole_board) == (2 * 1024 * 1024) - (16 * 1024)
+    assert len(almost_whole_board) == (2 * 1024 * 1024) - (32 * 1024)
     # if this is valid, we should be able to find the storage and footer again
     storage = get_board_storage_section(almost_whole_board)
     footer_size, _, _ = get_config_footer(storage)

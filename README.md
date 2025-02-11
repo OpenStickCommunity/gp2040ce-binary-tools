@@ -232,11 +232,11 @@ The latest update of the configuration snapshot is from **v0.7.8**.
 ### Dumping the GP2040-CE board with picotool
 
 Some of these tools require a dump of your GP2040-CE board, either the storage section or the whole board, depending on
-the context. The storage section of a GP2040-CE board is a reserved 16 KB starting at `0x101FC000`. To dump your board's
-storage with picotool:
+the context. The user config storage section of a GP2040-CE board is a reserved 32 KB starting at `0x101F8000`. To dump
+your board's storage with picotool:
 
 ```
-% picotool save -r 101FC000 10200000 memory.bin
+% picotool save -r 101F8000 10200000 memory.bin
 ```
 
 And to dump your whole board:

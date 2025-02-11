@@ -97,7 +97,7 @@ def test_get_board_config_from_file_whole_board_dump():
     """Test that we can open a storage dump file and find its config."""
     filename = os.path.join(HERE, 'test-files', 'test-whole-board-with-board-config.bin')
     config = storage.get_config_from_file(filename, whole_board=True, board_config=True)
-    assert config.boardVersion == 'v0.7.6-15-g71f4512'
+    assert config.boardVersion == 'v0.7.8'
     assert config.addonOptions.bootselButtonOptions.enabled is False
 
 
@@ -167,7 +167,7 @@ def test_convert_binary_to_uf2_with_offsets(whole_board_with_board_config_dump):
     assert len(uf2) == 4194304                              # binary is 8192 256 byte chunks, UF2 is 512 b per chunk
     assert uf2[0:4] == b'\x55\x46\x32\x0a' == b'UF2\n'      # proper magic
     assert uf2[8:12] == bytearray(b'\x00\x20\x00\x00')      # family ID set
-    assert uf2[524:528] == bytearray(b'\x00\xc1\x1f\x10')   # address to write the second chunk
+    assert uf2[524:528] == bytearray(b'\x00\x81\x1f\x10')   # address to write the second chunk
 
 
 def test_convert_binary_to_uf2_to_binary(whole_board_with_board_config_dump):
@@ -215,7 +215,7 @@ def test_read_created_uf2(tmp_path, firmware_binary, config_binary):
     binary = storage.convert_uf2_to_binary(content)
     # the converted binary should be aligned properly and of the right size
     assert len(binary) == 2 * 1024 * 1024
-    assert binary[-16384-4:-16384] == storage.FOOTER_MAGIC
+    assert binary[-32768-4:-32768] == storage.FOOTER_MAGIC
     assert binary[-4:] == storage.FOOTER_MAGIC
     user_storage = storage.get_user_storage_section(binary)
     footer_size, _, _ = storage.get_config_footer(user_storage)
@@ -257,13 +257,13 @@ def test_serialize_modified_config_with_footer(storage_dump):
 def test_pad_config_to_storage(config_binary):
     """Test that we can properly pad a config section to the correct storage section size."""
     storage_section = storage.pad_config_to_storage_size(config_binary)
-    assert len(storage_section) == 16384
+    assert len(storage_section) == 32768
 
 
 def test_pad_config_to_storage_raises(config_binary):
     """Test that we raise an exception if the config is bigger than the storage section."""
     with pytest.raises(storage.ConfigLengthError):
-        _ = storage.pad_config_to_storage_size(config_binary * 5)
+        _ = storage.pad_config_to_storage_size(config_binary * 10)
 
 
 @with_pb2s
@@ -280,7 +280,7 @@ def test_get_board_config_from_usb(config_binary):
             config, _, _ = storage.get_board_config_from_usb()
 
     mock_get.assert_called_once()
-    mock_read.assert_called_with(mock_out, mock_in, 0x101F8000, 16384)
+    mock_read.assert_called_with(mock_out, mock_in, 0x101F0000, 32768)
     assert config == storage.get_config(config_binary)
 
 
@@ -298,7 +298,7 @@ def test_get_user_config_from_usb(config_binary):
             config, _, _ = storage.get_user_config_from_usb()
 
     mock_get.assert_called_once()
-    mock_read.assert_called_with(mock_out, mock_in, 0x101FC000, 16384)
+    mock_read.assert_called_with(mock_out, mock_in, 0x101F8000, 32768)
     assert config == storage.get_config(config_binary)
 
 

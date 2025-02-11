@@ -51,7 +51,7 @@ def test_concatenate_invocation(tmpdir):
     with open(out_filename, 'rb') as out_file, open('tests/test-files/test-storage-area.bin', 'rb') as storage_file:
         out = out_file.read()
         storage = storage_file.read()
-    assert out[2080768:2097152] == storage
+    assert out[2064384:2097152] == storage
 
 
 def test_concatenate_invocation_json(tmpdir):
@@ -88,7 +88,7 @@ def test_debug_storage_dump_invocation():
                   '--filename', 'tests/test-files/test-storage-area.bin'],
                  capture_output=True, encoding='utf8')
     assert 'boardVersion: "v0.7.5"' in result.stdout
-    assert 'length of content to look for footer in: 16384' in result.stderr
+    assert 'length of content to look for footer in: 32768' in result.stderr
 
 
 def test_storage_dump_json_invocation():

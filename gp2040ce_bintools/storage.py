@@ -17,10 +17,11 @@ from gp2040ce_bintools.rp2040 import get_bootsel_endpoints, read
 
 logger = logging.getLogger(__name__)
 
-BOARD_CONFIG_BINARY_LOCATION = 0x1F8000
+STORAGE_SIZE = 32768
+
+BOARD_CONFIG_BINARY_LOCATION = (2 * 1024 * 1024) - (STORAGE_SIZE * 2)   # 0x1F0000
 BOARD_CONFIG_BOOTSEL_ADDRESS = 0x10000000 + BOARD_CONFIG_BINARY_LOCATION
-STORAGE_SIZE = 16384
-USER_CONFIG_BINARY_LOCATION = 0x1FC000
+USER_CONFIG_BINARY_LOCATION = (2 * 1024 * 1024) - STORAGE_SIZE          # 0x1F8000
 USER_CONFIG_BOOTSEL_ADDRESS = 0x10000000 + USER_CONFIG_BINARY_LOCATION
 
 FOOTER_SIZE = 12
@@ -425,7 +426,7 @@ def visualize():
     group.add_argument('--usb', action='store_true', help="retrieve the config from a RP2040 board connected over USB "
                                                           "and in BOOTSEL mode")
     group.add_argument('--filename', help=".bin file of a GP2040-CE board's storage section, bytes "
-                                          "101FC000-10200000, or of a GP2040-CE's whole board dump "
+                                          "101F8000-10200000, or of a GP2040-CE's whole board dump "
                                           "if --whole-board is specified")
     args, _ = parser.parse_known_args()
 
