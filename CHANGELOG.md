@@ -3,6 +3,13 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## v0.11.1
+
+### Miscellaneous
+
+* The storage size and subsequent tests have been updated to expect a 32 KB config section (rather than the previous 16
+  KB).
+
 ## v0.11.0
 
 ### Improvements
