@@ -158,6 +158,17 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
   shared unless `--exclusive` makes it exclusive: until the lights are handed back, the board then refuses
   changes from applications that do not hold the claim (an `hlp-settings` run alongside is refused with
   `CLAIMED`, naming the holder), while reads, `CLAIM` and `SUBSCRIBE` still work.
+* `hlp-settings` shows the input profile, animation, animation speeds and brightness with the values each
+  accepts, and changes them (`--profile`, `--animation N|off`, `--speed ORDINAL --idle/--pressed/--case`,
+  `--brightness`). Each differing value is written to the board's settings flash shortly after, so use it for
+  a user's choice, not as an effect; `--profile` switches the live button mapping. `--brightness N --unsaved`
+  instead shows step N unsaved for `--seconds` (default 5), writing nothing: the command holds the claim
+  meanwhile (so `--force` and `--exclusive` apply), and the board shows the saved step again when it ends,
+  Ctrl-C and a lost process included.
+* `hlp-watch` subscribes to the board's `STATE_CHANGED` event and prints what each one changes: input mode,
+  profile, player, animation, brightness (and whether unsaved), takeover, the application holding the claim
+  (and whether exclusively), the `CONFIGURE` settings and the state token. The subscription is shared: every
+  application with the interface open receives the event until the board's USB session ends.
 * `hlp-input-mode` sets the board's input mode and reboots into it. It accepts the modes the board lists, and
   a mode without the lighting interface only with `--force`: these tools cannot switch the board back from
   one.
@@ -186,6 +197,25 @@ page 10 (controls): 21 (16 lit), token 0x0C37AC27
   ...
   GP27 action 1 instance 2 of 2 LED 12 at (7,2), 1 light(s) from ordinal 12
 ...
+
+% hlp-settings --brightness 6
+profile 1:
+  * 1 enabled
+animation 0 (an enabled ordinal, or off); speeds 0-10:
+  * 0 enabled, idle 1, pressed 0, case 1, speeds 4/4/4
+    1 enabled, idle 0, pressed 0, case 0, speeds 4/4/4
+  ...
+brightness step 6 of 0-10 (maximum 199)
+
+% hlp-settings --brightness 2 --unsaved --exclusive
+brightness step 2 shown, unsaved, for 5.0s
+released - on-board animations restored
+...
+brightness step 6 of 0-10 (maximum 199)
+
+% hlp-watch
+   0.000 takeover_live False, brightness_unsaved False, input_mode 0, profile 1, player 1, animation 0, ...
+   2.013 animation 0 -> off, brightness_step 5 -> 6
 
 % hlp-fill --scope case 0000FF
 filled case with #0000FF for 3.0s

@@ -131,6 +131,7 @@ NONE_8 = 0xFF
 NONE_16 = 0xFFFF
 ACTION_NONE = -32768            # 0x8000 as a signed 16-bit action
 ANIMATION_OFF = 0xFFFF
+SPEED_UNCHANGED = 0xFF          # SET_ANIMATION_SPEED: leave this speed as it is
 BRIGHTNESS_SAVED = 0xFF         # SET_BRIGHTNESS: show the saved step
 
 # staging: [3] bits 0-3 addressing, bits 4-7 pixel format
@@ -428,6 +429,18 @@ def decode_records(reply: bytes) -> list:
                 offset += width
         records.append(record)
     return records
+
+
+def decode_state_changed(event: bytes) -> tuple[dict, int]:
+    """Decode a STATE_CHANGED event, whose [3..63] are those of a page 1 reply with mask 0.
+
+    :param event: the event report ([1] is the event number)
+    :return: (the page 1 record, the state token)
+    :raises HostLightingError: for any other event
+    """
+    if event[1] != EVENT_STATE_CHANGED:
+        raise HostLightingError(f"event {event[1]} is not STATE_CHANGED")
+    return decode_records(event)[0], _u32(event, TOKEN_OFFSET)
 
 
 def decode_identity(reply: bytes) -> dict:
@@ -757,6 +770,36 @@ class HostLightingDevice:
         return {'overlay': reply[3] == TAKEOVER_OVERLAY, 'keepalive_ms': _u16(reply, 4),
                 'brightness_applied': bool(reply[6])}
 
+    def subscribe(self, events: int) -> int:
+        """Enable events. The subscription is shared by every application on the board, so this only adds.
+
+        :param events: bit n enables event n (EVENT_STATE_CHANGED is 0)
+        :return: the events now enabled
+        """
+        return _u16(self.request_ok(CMD_SUBSCRIBE, struct.pack('<H', events)), 3)
+
+    def next_event(self, timeout: float) -> Optional[bytes]:
+        """Wait for the next event; events that arrived while waiting for a reply come first.
+
+        A reply to a request still awaited is kept for its wait_reply; another application's is dropped.
+
+        :param timeout: seconds to wait
+        :return: the event report, or None when none arrives in time
+        """
+        if self.events:
+            return self.events.pop(0)
+        deadline = time.monotonic() + timeout
+        while True:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                return None
+            report = bytes(self.device.read(REPORT_SIZE, max(1, int(left * 1000))))
+            if not report:
+                continue
+            if is_event(report):
+                return report
+            self._keep(report)
+
     def stage_entries(self, addressing: int, entries: list, pixel_format: int = PIXEL_RGB,
                       commit: bool = False) -> list:
         """Stage entries addressed by light, pin, action or kind, chunked to the report capacity.
@@ -936,6 +979,25 @@ def add_claim_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument('--exclusive', action='store_true',
                         help="claim the lights exclusively: until they are handed back, the board refuses changes "
                              "from applications that do not hold the claim (default: a shared claim)")
+
+
+def ranged(low: int, high: int):
+    """Build an argparse type for an integer from low to high, decimal or 0x hex."""
+    def parse(text: str) -> int:
+        """Parse and range-check one value."""
+        try:
+            value = int(text, 0)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"not a number: {text}") from None
+        if not low <= value <= high:
+            raise argparse.ArgumentTypeError(f"{text} is outside {low}-{high}")
+        return value
+    return parse
+
+
+def _animation(text: str) -> int:
+    """Parse an animation ordinal, or 'off'."""
+    return ANIMATION_OFF if text == 'off' else ranged(0, 0xFFFF)(text)
 
 
 def _parse_colour(text: str) -> tuple:
@@ -1208,6 +1270,152 @@ def _print_animations(device: HostLightingDevice) -> None:
         state = 'enabled' if animation['enabled'] else 'disabled'
         print(f"  {ordinal} {state}, effects idle/pressed/case %d/%d/%d, speeds %d/%d/%d"
               % (animation['effects'] + animation['speeds']))
+
+
+@hlp_command
+def settings():
+    """Show or change a board's profile, animation, animation speeds and brightness."""
+    parser = device_parser("Show a GP2040-CE board's input profile, animation, animation speeds and brightness, "
+                           "or change them. The board applies a change live and saves it to its settings flash "
+                           "shortly after; a value equal to the current one writes nothing. Use it for a user's "
+                           "choice, not as an effect. A profile change switches the live button mapping. "
+                           "--brightness with --unsaved writes nothing: the board shows the step while this "
+                           "command holds the claim, and the saved step again when it ends.")
+    parser.add_argument('--profile', type=ranged(0, 0xFF), help="select this input profile (a page 9 number)")
+    parser.add_argument('--animation', type=_animation, help="select this animation (a page 12 ordinal) or 'off'")
+    parser.add_argument('--speed', type=ranged(0, 0xFFFF), metavar='ORDINAL',
+                        help="set this animation's speeds from --idle, --pressed and --case")
+    for name in ('idle', 'pressed', 'case'):
+        parser.add_argument('--' + name, type=ranged(0, SPEED_UNCHANGED - 1), default=SPEED_UNCHANGED,
+                            help=f"{name} speed for --speed (default: unchanged)")
+    parser.add_argument('--brightness', type=ranged(0, BRIGHTNESS_SAVED - 1), help="set this brightness step")
+    parser.add_argument('--unsaved', action='store_true',
+                        help="show --brightness unsaved for --seconds, holding the claim, then the saved step again")
+    parser.add_argument('--seconds', type=float, default=5.0, help="how long --unsaved holds the step (default: 5)")
+    add_claim_arguments(parser)
+    args, _ = parser.parse_known_args()
+    speeds = _checked_options(args)
+    names = enum_names()
+    device = open_device(args.board_id)
+    try:
+        if args.unsaved:
+            _hold_unsaved_brightness(device, args.brightness, args.seconds, args.force, args.exclusive)
+        if args.profile is not None:
+            _apply(device, f"--profile {args.profile}", CMD_SET_PROFILE, bytes([args.profile]))
+        if args.animation is not None:
+            _apply(device, f"--animation {args.animation}", CMD_SET_ANIMATION, struct.pack('<H', args.animation))
+        if args.speed is not None:
+            _apply(device, f"--speed {args.speed}", CMD_SET_ANIMATION_SPEED,
+                   struct.pack('<HBBB', args.speed, *speeds))
+        if args.brightness is not None and not args.unsaved:
+            _apply(device, f"--brightness {args.brightness}", CMD_SET_BRIGHTNESS, bytes([args.brightness, 1]))
+        _print_settings(device, names)
+    finally:
+        device.close()
+
+
+def _checked_options(args: argparse.Namespace) -> tuple:
+    """Check how hlp-settings' options combine; return the speeds for --speed."""
+    speeds = (args.idle, args.pressed, args.case)
+    if args.speed is None and speeds != (SPEED_UNCHANGED,) * 3:
+        raise SystemExit("--idle, --pressed and --case need --speed ORDINAL")
+    if args.speed is not None and speeds == (SPEED_UNCHANGED,) * 3:
+        raise SystemExit("--speed needs at least one of --idle, --pressed, --case")
+    if args.unsaved and (args.brightness is None or (args.profile, args.animation, args.speed) != (None,) * 3):
+        raise SystemExit("--unsaved takes --brightness alone: the other settings are always saved")
+    if (args.force or args.exclusive) and not args.unsaved:
+        raise SystemExit("--force and --exclusive go with --unsaved, which holds the claim")
+    return speeds
+
+
+def _hold_unsaved_brightness(device: HostLightingDevice, step: int, seconds: float, force: bool,
+                             exclusive: bool) -> None:
+    """Show a brightness step unsaved while holding the claim; the hand-back ends it and the saved step returns.
+
+    Each renewal carries KEEPALIVE, which keeps the unsaved step; were the command to stop without handing back,
+    the step would end at the keepalive timeout.
+    """
+    with holding_lights(device, 'hlp-settings', force, exclusive) as claim:
+        _apply(device, f"--brightness {step}", CMD_SET_BRIGHTNESS, bytes([step, 0]))
+        print(f"brightness step {step} shown, unsaved, for {seconds}s")
+        claim.keep(seconds)
+
+
+def _apply(device: HostLightingDevice, option: str, command: int, payload: bytes) -> None:
+    """Send one board-feature command, naming the option when the board refuses it."""
+    try:
+        device.request_ok(command, payload)
+    except HostLightingRejected as error:
+        raise SystemExit(f"error: {option}: {error}") from error
+
+
+def _print_settings(device: HostLightingDevice, names: dict) -> None:
+    """Print the settings hlp-settings changes, with the values each accepts."""
+    state, _ = device.read_record(PAGE_STATE)
+    summary, _ = device.read_record(PAGE_SUMMARY)
+    profiles, _ = device.read_table(PAGE_PROFILES)
+    animations, _ = device.read_table(PAGE_ANIMATIONS)
+    print(f"profile {state['profile']}:")
+    for profile in profiles:
+        mark = '*' if profile['number'] == state['profile'] else ' '
+        enabled = 'enabled' if profile['enabled'] else 'disabled'
+        print(f"  {mark} {profile['number']} {enabled} {profile['label']}".rstrip())
+    animation = 'off' if state['animation'] is None else state['animation']
+    print(f"animation {animation} (an enabled ordinal, or off); speeds 0-{summary['speed_steps']}:")
+    for ordinal, entry in enumerate(animations):
+        mark = '*' if ordinal == state['animation'] else ' '
+        idle, pressed, case = entry['effects']
+        print(f"  {mark} {ordinal} {'enabled' if entry['enabled'] else 'disabled'}, "
+              f"idle {_named(idle, names, 'AnimationNonPressedEffects')}, "
+              f"pressed {_named(pressed, names, 'AnimationPressedEffects')}, "
+              f"case {_named(case, names, 'AnimationNonPressedEffects')}, speeds %d/%d/%d" % entry['speeds'])
+    print(f"brightness step {state['brightness_step']} of 0-{summary['brightness_steps']} "
+          f"(maximum {summary['brightness_maximum']}){', unsaved' if state['brightness_unsaved'] else ''}")
+
+
+def _state_text(key: str, value) -> str:
+    """Show one page 1 field for hlp-watch."""
+    if key in ('token', 'holder_token'):
+        return f"0x{value:08X}"
+    if key == 'animation' and value is None:
+        return 'off'
+    return str(value)
+
+
+@hlp_command
+def watch():
+    """Print a board's STATE_CHANGED events as they arrive."""
+    parser = device_parser("Subscribe to a GP2040-CE board's STATE_CHANGED event and print page 1, then what each "
+                           "event changes. The subscription is shared by every application and lasts until the "
+                           "board's USB session ends.")
+    parser.add_argument('--seconds', type=float, default=0.0, help="stop after this long (default: until Ctrl-C)")
+    args, _ = parser.parse_known_args()
+    device = open_device(args.board_id)
+    try:
+        if not device.subscribe(1 << EVENT_STATE_CHANGED) & (1 << EVENT_STATE_CHANGED):
+            raise HostLightingError("the board did not enable STATE_CHANGED")
+        last, token = device.read_record(PAGE_STATE)
+        last['token'] = token
+        device.events.clear()       # sent before the page 1 reply, so older than it
+        start = time.monotonic()
+        print("   0.000 " + ', '.join(f"{key} {_state_text(key, value)}" for key, value in last.items()))
+        while True:
+            left = args.seconds - (time.monotonic() - start) if args.seconds else 0.5
+            if left <= 0:
+                break
+            event = device.next_event(min(0.5, left))
+            if event is None or event[1] != EVENT_STATE_CHANGED:
+                continue
+            now, token = decode_state_changed(event)
+            now['token'] = token
+            changes = [f"{key} {_state_text(key, last[key])} -> {_state_text(key, value)}"
+                       for key, value in now.items() if value != last[key]]
+            print(f"{time.monotonic() - start:8.3f} " + (', '.join(changes) or 'no change'))
+            last = now
+    except KeyboardInterrupt:
+        pass
+    finally:
+        device.close()
 
 
 @hlp_command

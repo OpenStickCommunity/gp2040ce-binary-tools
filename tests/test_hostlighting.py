@@ -271,7 +271,10 @@ class FakeBoard:
         self.holder = 0
         self.holder_name = bytes(16)
         self.holder_flags = 0
+        self.saved_step = self.state[0][6]
+        self.subscribed = 0
         self.before: dict = {}          # command -> reports that arrive between it and its reply
+        self.after: dict = {}           # command -> reports queued after its reply (events)
 
     def write(self, data: bytes) -> int:
         """Take one report as hidapi writes it (report ID 0 first) and queue the reply."""
@@ -285,6 +288,7 @@ class FakeBoard:
         self.outbox.extend(self.before.pop(command, []))
         if reply is not None and not flags & hl.FLAG_NO_REPLY:
             self.outbox.append(reply)
+        self.outbox.extend(self.after.pop(command, []))
         return len(data)
 
     def answer(self, command: int, sequence: int, request: bytes):
@@ -300,6 +304,8 @@ class FakeBoard:
             return self.claim(ok, request)
         if command == hl.CMD_STAGE:
             return self.stage(ok, request)
+        if command == hl.CMD_SUBSCRIBE or hl.CMD_SET_PROFILE <= command <= hl.CMD_SET_BRIGHTNESS:
+            return self.feature(ok, command, request)
         if command in (hl.CMD_SET_INPUT_MODE, hl.CMD_REBOOT):
             wrong = self.wrong_magic(request, hl.MAGIC_INPUT_MODE if command == hl.CMD_SET_INPUT_MODE else
                                      hl.MAGIC_REBOOT)
@@ -317,6 +323,11 @@ class FakeBoard:
         action, token = request[3], struct.unpack_from('<I', request, 4)[0]
         if action > hl.CLAIM_GIVE_UP or token == 0:
             return ok[:2] + bytes([hl.STATUS_INVALID, 3 if action > hl.CLAIM_GIVE_UP else 4]) + bytes(60)
+        given_up = action == hl.CLAIM_GIVE_UP and token == self.holder
+        taken = action != hl.CLAIM_GIVE_UP and token != self.holder and (
+            action == hl.CLAIM_TAKE_OVER or not self.holder)
+        if given_up or taken:
+            self.show_step(self.saved_step)     # a change of holder ends an unsaved step
         if action == hl.CLAIM_GIVE_UP:
             if token == self.holder:
                 self.holder, self.holder_name, self.holder_flags = 0, bytes(16), 0
@@ -327,6 +338,73 @@ class FakeBoard:
     def controller(self) -> bytes:
         """Page 1's Controller group: the holder's token, name and claim flags."""
         return struct.pack('<I', self.holder) + self.holder_name + bytes([self.holder_flags])
+
+    def feature(self, ok: bytes, command: int, request: bytes) -> bytes:
+        """Answer SUBSCRIBE and the board-feature commands as the firmware checks them."""
+        if command == hl.CMD_SUBSCRIBE:
+            self.subscribed |= struct.unpack_from('<H', request, 3)[0] & (1 << hl.EVENT_STATE_CHANGED)
+            return (ok + struct.pack('<H', self.subscribed)).ljust(hl.REPORT_SIZE, b'\x00')
+        setters = {hl.CMD_SET_PROFILE: self.set_profile, hl.CMD_SET_ANIMATION: self.set_animation,
+                   hl.CMD_SET_ANIMATION_SPEED: self.set_speed, hl.CMD_SET_BRIGHTNESS: self.set_brightness}
+        offset = setters[command](request)
+        if offset:
+            return ok[:2] + bytes([hl.STATUS_INVALID, offset]) + bytes(60)
+        return ok.ljust(hl.REPORT_SIZE, b'\x00')
+
+    def set_state(self, offset: int, value: bytes) -> None:
+        """Change page 1's State group from offset."""
+        state = bytearray(self.state[0])
+        state[offset:offset + len(value)] = value
+        self.state = [bytes(state)] + self.state[1:]
+
+    def set_profile(self, request: bytes) -> int:
+        """Apply SET_PROFILE; return the byte at fault, or 0."""
+        if request[3] not in [record[0][0] for record in self.profiles if record[0][1] & 1]:
+            return 3
+        self.set_state(2, request[3:4])
+        return 0
+
+    def set_animation(self, request: bytes) -> int:
+        """Apply SET_ANIMATION; return the byte at fault, or 0."""
+        index = struct.unpack_from('<H', request, 3)[0]
+        if index != hl.ANIMATION_OFF and (index >= len(self.animations) or not self.animations[index][0][0] & 1):
+            return 3
+        self.set_state(4, request[3:5])
+        return 0
+
+    def set_speed(self, request: bytes) -> int:
+        """Apply SET_ANIMATION_SPEED up to the Summary's speed steps; return the byte at fault, or 0."""
+        index = struct.unpack_from('<H', request, 3)[0]
+        if index >= len(self.animations):
+            return 3
+        new = request[5:8]
+        for place, speed in enumerate(new):
+            if speed != hl.SPEED_UNCHANGED and speed > self.summary[0][9]:
+                return 5 + place
+        old = self.animations[index][1]
+        speeds = bytes(was if speed == hl.SPEED_UNCHANGED else speed for was, speed in zip(old, new))
+        self.animations[index] = [self.animations[index][0], speeds]
+        return 0
+
+    def set_brightness(self, request: bytes) -> int:
+        """Apply SET_BRIGHTNESS; return the byte at fault, or 0.
+
+        A step up to the Summary's steps is saved with [4] = 1 and otherwise only shown; 0xFF shows the saved step.
+        """
+        step = request[3]
+        if step != hl.BRIGHTNESS_SAVED and step > self.summary[0][8]:
+            return 3
+        if request[4] > 1:
+            return 4
+        if request[4] and step != hl.BRIGHTNESS_SAVED:
+            self.saved_step = step
+        self.show_step(self.saved_step if step == hl.BRIGHTNESS_SAVED else step)
+        return 0
+
+    def show_step(self, step: int) -> None:
+        """Show a brightness step in page 1, flagged unsaved while it differs from the saved step."""
+        self.set_state(6, bytes([step]))
+        self.set_state(0, bytes([self.state[0][0] & ~0x02 | (0x02 if step != self.saved_step else 0)]))
 
     def stage(self, ok: bytes, request: bytes) -> bytes:
         """Answer STAGE with each entry's outcome."""
@@ -387,6 +465,19 @@ class FakeBoard:
     def sent(self, command: int) -> list:
         """Every request with this command."""
         return [request for request in self.requests if request[0] == command]
+
+
+def state_event(page_token: int = 0x1234ABCD, **fields) -> bytes:
+    """Build a STATE_CHANGED event: [3..63] of a page 1 reply with mask 0 (fields as for state_record)."""
+    reply = page_reply(hl.PAGE_STATE, [state_record(**fields)], token=page_token)
+    return bytes([hl.EVENT_MARKER, 0, 0]) + reply[3:]
+
+
+def other_event() -> bytes:
+    """Build an event other than STATE_CHANGED (event 1)."""
+    event = bytearray(state_event(profile=9))
+    event[1] = 1
+    return bytes(event)
 
 
 def fake_device(hlp_fake_board: FakeBoard) -> hl.HostLightingDevice:
@@ -940,3 +1031,106 @@ def test_enum_names_from_the_proto_files(monkeypatch):
     assert hl.enum_names() == {'GpioAction': {1: 'BUTTON_PRESS_UP'}}
     monkeypatch.setattr(hl, 'get_config_pb2', lambda: (_ for _ in ()).throw(RuntimeError('no protos')))
     assert hl.enum_names() == {}
+
+
+# -- settings and events ------------------------------------------------------
+
+def test_subscribe_and_next_event(hlp_fake_device, hlp_fake_board):
+    """Test SUBSCRIBE's reply, events kept while waiting for a reply, and the event wait, which keeps replies."""
+    assert hlp_fake_device.subscribe(1) == 1 and hlp_fake_device.subscribe(0) == 1
+    assert hlp_fake_device.subscribe(0xFFFF) == 1
+    hlp_fake_board.before[hl.CMD_HELLO] = [state_event(profile=2)]    # arrives before the HELLO reply: kept
+    hlp_fake_device.hello()
+    hlp_fake_board.outbox.append(state_event(profile=3))
+    first, _ = hl.decode_state_changed(hlp_fake_device.next_event(0.01))
+    second, token = hl.decode_state_changed(hlp_fake_device.next_event(0.01))
+    assert (first['profile'], second['profile'], token) == (2, 3, 0x1234ABCD)
+    hlp_fake_board.outbox.append(hello_reply(9))              # another application's reply: skipped
+    assert hlp_fake_device.next_event(0.01) is None
+    sequence = hlp_fake_device.send(hl.CMD_HELLO)             # its reply, read while waiting for an event: kept
+    assert hlp_fake_device.next_event(0.01) is None
+    assert hlp_fake_device.wait_reply(hl.CMD_HELLO, sequence)[1] == sequence
+
+
+def test_decode_state_changed_matches_page_1():
+    """Test that a STATE_CHANGED event decodes as the page 1 record it carries."""
+    record, token = hl.decode_state_changed(state_event(0xCAFE, animation=0xFFFF, name=b'MESH', token=7))
+    assert token == 0xCAFE and record['animation'] is None
+    assert record['holder_token'] == 7 and record['holder_name'] == 'MESH'
+    with pytest.raises(hl.HostLightingError, match='event 1 is not STATE_CHANGED'):
+        hl.decode_state_changed(other_event())
+
+
+def test_settings_shows_and_changes(hlp_run_on_fake_board, hlp_fake_board, capsys, monkeypatch):
+    """Test hlp-settings: the display with names, each change's payload, and the board's refusal."""
+    monkeypatch.setattr(hl, 'enum_names', lambda: {'AnimationNonPressedEffects': {2: 'EFFECT_RAINBOW_ROTATE'},
+                                                   'AnimationPressedEffects': {1: 'PRESSEDEFFECT_RANDOM'}})
+    hlp_fake_board.profiles.append([bytes([2, 0]) + b'Alt'.ljust(16, b'\x00')])
+    hlp_run_on_fake_board(hl.settings)
+    out = capsys.readouterr().out
+    assert 'profile 1:\n  * 1 enabled Base\n    2 disabled Alt\n' in out
+    assert 'animation 0 (an enabled ordinal, or off); speeds 0-10:' in out
+    assert ('* 0 enabled, idle 2 (EFFECT_RAINBOW_ROTATE), pressed 1 (PRESSEDEFFECT_RANDOM), '
+            'case 2 (EFFECT_RAINBOW_ROTATE), speeds 5/5/5') in out
+    assert 'brightness step 5 of 0-10 (maximum 255)' in out
+    hlp_run_on_fake_board(hl.settings, '--profile', '1', '--animation', 'off', '--speed', '0', '--idle', '3',
+                          '--brightness', '7')
+    out = capsys.readouterr().out
+    assert hlp_fake_board.sent(hl.CMD_SET_PROFILE)[-1][3] == 1
+    assert hlp_fake_board.sent(hl.CMD_SET_ANIMATION)[-1][3:5] == b'\xff\xff'
+    assert hlp_fake_board.sent(hl.CMD_SET_ANIMATION_SPEED)[-1][3:8] == bytes([0, 0, 3, 0xFF, 0xFF])
+    assert hlp_fake_board.sent(hl.CMD_SET_BRIGHTNESS)[-1][3:5] == bytes([7, 1])
+    assert 'animation off' in out and 'speeds 3/5/5' in out and 'brightness step 7 of 0-10' in out
+    with pytest.raises(SystemExit, match='--profile 2: command 0x30 rejected: INVALID_ARG at request byte 3'):
+        hlp_run_on_fake_board(hl.settings, '--profile', '2')
+
+
+def test_settings_argument_checks(hlp_run_on_fake_board, hlp_fake_board, capsys):
+    """Test that hlp-settings range-checks its values and pairs --speed with a speed."""
+    for arguments, message in ((('--brightness', '255'), 'outside 0-254'), (('--animation', '-1'), 'outside 0-65535'),
+                               (('--speed', '0', '--idle', '255'), 'outside 0-254')):
+        with pytest.raises(SystemExit):
+            hlp_run_on_fake_board(hl.settings, *arguments)
+        assert message in capsys.readouterr().err
+    with pytest.raises(SystemExit, match='need --speed'):
+        hlp_run_on_fake_board(hl.settings, '--idle', '3')
+    with pytest.raises(SystemExit, match='needs at least one of'):
+        hlp_run_on_fake_board(hl.settings, '--speed', '0')
+    assert not hlp_fake_board.sent(hl.CMD_SET_BRIGHTNESS) and not hlp_fake_board.sent(hl.CMD_SET_ANIMATION_SPEED)
+
+
+def test_settings_holds_an_unsaved_brightness_step(hlp_run_on_fake_board, hlp_fake_board, capsys):
+    """Test hlp-settings --unsaved: an unsaved SET_BRIGHTNESS held under the claim, then the saved step again."""
+    hlp_run_on_fake_board(hl.settings, '--brightness', '2', '--unsaved', '--seconds', '2', '--exclusive')
+    out = capsys.readouterr().out
+    (brightness,) = hlp_fake_board.sent(hl.CMD_SET_BRIGHTNESS)
+    assert brightness[3:5] == bytes([2, 0]) and brightness[2] == hl.FLAG_HOLDER
+    claims = hlp_fake_board.sent(hl.CMD_CLAIM)
+    assert [claim[2] & hl.FLAG_KEEPALIVE for claim in claims] == [0, hl.FLAG_KEEPALIVE, hl.FLAG_KEEPALIVE, 0]
+    assert claims[0][24] == hl.CLAIM_EXCLUSIVE and claims[-1][3] == hl.CLAIM_GIVE_UP and hlp_fake_board.holder == 0
+    assert 'brightness step 2 shown, unsaved, for 2.0s' in out and 'brightness step 5 of 0-10 (maximum 255)\n' in out
+    for arguments, message in ((('--unsaved',), '--unsaved takes --brightness alone'),
+                               (('--brightness', '2', '--unsaved', '--profile', '1'), '--unsaved takes --brightness'),
+                               (('--brightness', '2', '--exclusive'), '--force and --exclusive go with --unsaved')):
+        with pytest.raises(SystemExit, match=message):
+            hlp_run_on_fake_board(hl.settings, *arguments)
+
+
+def test_watch_prints_what_each_event_changes(hlp_run_on_fake_board, hlp_fake_board, capsys):
+    """Test hlp-watch: SUBSCRIBE, page 1 first, events older than it and other events dropped, then changes."""
+    hlp_fake_board.before[hl.CMD_SUBSCRIBE] = [state_event(profile=4)]   # during the SUBSCRIBE wait
+    hlp_fake_board.after[hl.CMD_SUBSCRIBE] = [state_event(profile=5)]    # during the page 1 wait
+    hlp_fake_board.after[hl.CMD_GET_PAGE] = [state_event(0x00000002, profile=2), other_event(),
+                                             state_event(0x00000002, profile=2),
+                                             state_event(0x00000002, profile=2, animation=0xFFFF, token=5,
+                                                         name=b'MESH')]
+    hlp_run_on_fake_board(hl.watch, '--seconds', '0.05')
+    lines = capsys.readouterr().out.splitlines()
+    assert hlp_fake_board.subscribed == 1
+    assert lines[0].endswith('profile 1, player 1, animation 0, brightness_step 5, takeover_number 3, '
+                             'holder_token 0x00000000, holder_name , claim_exclusive False, overlay False, '
+                             'keepalive_ms 2000, brightness_applied True, token 0x1234ABCD')
+    assert lines[1].endswith(' profile 1 -> 2, token 0x1234ABCD -> 0x00000002')
+    assert lines[2].endswith(' no change')
+    assert lines[3].endswith(' animation 0 -> off, holder_token 0x00000000 -> 0x00000005, holder_name  -> MESH')
+    assert len(lines) == 4

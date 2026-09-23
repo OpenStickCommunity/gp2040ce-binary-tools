@@ -45,6 +45,8 @@ hlp-ping = "gp2040ce_bintools.hostlighting:ping"
 hlp-reboot-bootsel = "gp2040ce_bintools.hostlighting:reboot_bootsel"
 hlp-reboot-webconfig = "gp2040ce_bintools.hostlighting:reboot_webconfig"
 hlp-set-light = "gp2040ce_bintools.hostlighting:set_light"
+hlp-settings = "gp2040ce_bintools.hostlighting:settings"
+hlp-watch = "gp2040ce_bintools.hostlighting:watch"
 summarize-gp2040ce = "gp2040ce_bintools.builder:summarize_gp2040ce"
 visualize-config = "gp2040ce_bintools.storage:visualize"
 
