@@ -8,6 +8,8 @@ grpcio==1.68.1
     # via grpcio-tools
 grpcio-tools==1.68.1
     # via gp2040ce-binary-tools (pyproject.toml)
+hidapi==0.15.0
+    # via gp2040ce-binary-tools (pyproject.toml)
 linkify-it-py==2.0.3
     # via markdown-it-py
 markdown-it-py[linkify,plugins]==3.0.0

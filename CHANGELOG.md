@@ -3,6 +3,16 @@
 Included is a summary of changes to the project. For full details, especially on behind-the-scenes code changes and
 development tools, see the commit history.
 
+## Unreleased
+
+### Features
+
+* New `hlp-*` tools for the GP2040-CE Host Lighting add-on, speaking Host Lighting Protocol 2.0: `hlp-ping`,
+  `hlp-caps`, `hlp-fill`, `hlp-set-light`, `hlp-input-mode`, `hlp-reboot-webconfig` and `hlp-reboot-bootsel`
+  talk to the add-on's vendor HID interface to verify a board, decode everything it reports about itself (its
+  controls, lights, input modes, profiles and animations), run a quick visual test, colour single lights,
+  and manage the board. Adds a dependency on `hidapi`.
+
 ## v0.11.1
 
 ### Miscellaneous

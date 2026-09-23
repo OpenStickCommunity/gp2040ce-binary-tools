@@ -119,6 +119,87 @@ Sample usage:
 % dump-gp2040ce `date +%Y%m%d`-backup.bin
 ```
 
+### hlp-* (Host Lighting tools)
+
+The `hlp-*` tools talk to a board running the GP2040-CE Host Lighting add-on, which exposes a vendor HID
+interface for driving the board's RGB LEDs from host software. They speak Host Lighting Protocol 2.0 and
+require the `hidapi` package and a board with the add-on enabled (Configuration -> Add-Ons Configuration ->
+Host Lighting in the web configurator). If more than one board is connected, select one with `--board-id <hex
+prefix of its factory ID>`. Actions, light kinds and colour formats are GP2040-CE's own enum values; given
+GP2040-CE's `.proto` files (`-P`), the tools also print their names (`-S` uses the shipped snapshot, which may
+lag and name fewer).
+
+On Linux, a board's hidraw node is open only to root until a udev rule grants access. This rule lets the
+logged-in user reach the lighting interface in each mode that carries it, at the mode's USB ID (a USB ID
+override in the web configurator changes it): put it in `/etc/udev/rules.d/70-gp2040ce-host-lighting.rules`,
+run `sudo udevadm control --reload-rules` and replug the board.
+
+```
+# Generic HID, Keyboard, SInput, and XInput with Host Lighting
+KERNEL=="hidraw*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="82c0", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="cafe", ATTRS{idProduct}=="0001", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="10c6", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uaccess"
+```
+
+* `hlp-ping` says HELLO, checks the magic and protocol version, and times the command round trip.
+* `hlp-caps` decodes everything the board reports about itself: the HELLO capabilities, identity, state, the
+  input modes it accepts, the summary, the input profiles, every control (lit or not), every light with its
+  LEDs, kind, owner and grid cell, and the on-board animations with their speeds.
+* `hlp-fill` fills the LEDs with a colour (`--scope all|buttons|case|pleds`) as a quick visual test, then
+  restores the board's own animations.
+* `hlp-set-light` colours lights by their light ordinal, or with `--by pin|action|kind` by what they belong to,
+  then restores the board's own animations; addresses skipped, with no light or none below the LED limit, are
+  named. An eight-digit colour (`RRGGBBWW`) sends RGBW pixels. Put `--` before the entries when an address is
+  negative (`--by action -- -10:FF0000`).
+* Both claim the board for as long as they drive its LEDs and give it back afterwards, Ctrl-C included,
+  restoring the on-board animations and the `CONFIGURE` defaults. While another application (MESH, for
+  example) holds the claim they leave the lights alone, unless `--force` takes them over. Their claim is
+  shared unless `--exclusive` makes it exclusive: until the lights are handed back, the board then refuses
+  changes from applications that do not hold the claim (an `hlp-settings` run alongside is refused with
+  `CLAIMED`, naming the holder), while reads, `CLAIM` and `SUBSCRIBE` still work.
+* `hlp-input-mode` sets the board's input mode and reboots into it. It accepts the modes the board lists, and
+  a mode without the lighting interface only with `--force`: these tools cannot switch the board back from
+  one.
+* `hlp-reboot-webconfig` / `hlp-reboot-bootsel` reboot the board into the web configurator or the BOOTSEL
+  bootloader for flashing.
+
+Sample usage:
+
+```
+% hlp-ping
+Haute42 COSMOX M Ultra (v0.7.12-88-g6ae1596), board ID 433030343237362E
+magic GPHL, protocol 2.0, reply queue limit 16
+100 round trips in 200 ms (2.0 ms average)
+
+% hlp-caps
+...
+page 8 (summary): LED extent 46, limit 100, render rate 40 Hz, colour format 0
+  brightness maximum 199, 10 steps; animation speed steps 10; grid 19x13
+  1 profiles, 21 controls (16 lit, 5 unlit), 46 lights, 4 animations
+...
+page 10 (controls): 21 (16 lit), token 0x0C37AC27
+  GP2 action 1 instance 1 of 2 LED 3 at (9,9), 1 light(s) from ordinal 3
+  GP3 action 2 LED 1 at (6,4), 1 light(s) from ordinal 1
+  ...
+  GP14 action 32 unlit
+  ...
+  GP27 action 1 instance 2 of 2 LED 12 at (7,2), 1 light(s) from ordinal 12
+...
+
+% hlp-fill --scope case 0000FF
+filled case with #0000FF for 3.0s
+released - on-board animations restored
+
+% hlp-set-light --by action 1:FFFFFF00 17:00000080 99:FF0000
+2 applied, 1 skipped for 3.0s
+skipped addresses (no light, or none below the LED limit): [99]
+released - on-board animations restored
+```
+
+The controls page is what reveals that this board wires two buttons to action 1 (Up) and two to action 17
+(L3); `hlp-set-light --by action 1` lights both, and `--by pin` or a light ordinal addresses one.
+
 ### summarize-gp2040ce
 
 `summarize-gp2040ce` prints information regarding the provided USB device or file. It attempts to detect the firmware
