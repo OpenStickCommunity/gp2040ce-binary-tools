@@ -71,3 +71,43 @@ def whole_board_with_board_config_dump():
         content = file.read()
 
     yield content
+
+
+# Host Lighting: a fake board (tests/hostlighting_fakes.py) and a runner for the hlp-* commands
+
+@pytest.fixture
+def hlp_fake_board():
+    """Make a fake Host Lighting board that answers as the firmware does."""
+    from hostlighting_fakes import FakeBoard
+    return FakeBoard()
+
+
+@pytest.fixture
+def hlp_fake_device(hlp_fake_board):
+    """Make a HostLightingDevice talking to the fake board."""
+    from hostlighting_fakes import fake_device
+    return fake_device(hlp_fake_board)
+
+
+@pytest.fixture
+def hlp_run_on_fake_board(hlp_fake_board, monkeypatch):
+    """Run an hlp-* command against the fake board, with no real waiting.
+
+    The Host Lighting modules each get this `time`; the rest of the process keeps the real one.
+    """
+    import sys
+    import time
+    from types import SimpleNamespace
+
+    from hostlighting_fakes import fake_device
+
+    from gp2040ce_bintools import hostlighting, hostlighting_tools
+    timing = SimpleNamespace(sleep=lambda seconds: None, monotonic=time.monotonic, perf_counter=time.perf_counter)
+    for module in (hostlighting, hostlighting_tools):
+        monkeypatch.setattr(module, 'time', timing)
+    monkeypatch.setattr(hostlighting_tools, 'open_device', lambda prefix='': fake_device(hlp_fake_board))
+
+    def run(function, *arguments):
+        monkeypatch.setattr(sys, 'argv', [function.__name__, *arguments])
+        function()
+    return run
