@@ -26,8 +26,9 @@ Actions, light kinds and colour formats are GP2040-CE's own enum values,
 reported verbatim.
 
 See docs/host-lighting.md in the GP2040-CE repository for the full protocol
-reference. The hlp-* commands are in hostlighting_tools. Requires the
-`hidapi` package (`pip install hidapi`).
+reference. The hlp-* commands are in hostlighting_tools, and hlp-conformance
+and hlp-bench in hostlighting_conformance. Requires the `hidapi` package
+(`pip install hidapi`).
 
 SPDX-FileCopyrightText: © 2026 Jacob Simpson
 SPDX-License-Identifier: GPL-3.0-or-later
@@ -65,6 +66,9 @@ CMD_SET_ANIMATION_SPEED = 0x32
 CMD_SET_BRIGHTNESS = 0x33
 CMD_SET_INPUT_MODE = 0x70       # privileged (magic-guarded), 0x70-0x7F
 CMD_REBOOT = 0x71
+# the command groups; an addition takes the next free number in its group, and 0x50-0x6F is reserved for new
+# groups
+COMMAND_RANGES = ((0x01, 0x0F), (0x10, 0x1F), (0x20, 0x2F), (0x30, 0x4F), (0x50, 0x6F), (0x70, 0x7F))
 
 # request flags, the same on every command
 FLAG_COMMIT_AFTER = 0x01        # publish the staged frame after this command succeeds
@@ -92,6 +96,7 @@ PAGE_PROFILES = 9
 PAGE_CONTROLS = 10
 PAGE_LIGHTS = 11
 PAGE_ANIMATIONS = 12
+PAGE_RANGES = ((0, 7), (8, 15), (16, 23), (24, 31))     # board, configuration, diagnostics, reserved
 
 # every page reply's header; the records area is [12..59] and the state token [60..63]
 RECORDS_OFFSET = 12
@@ -503,21 +508,40 @@ class HostLightingDevice:
         """Close the HID device."""
         self.device.close()
 
-    def send(self, command: int, payload: bytes = b'', flags: int = 0) -> int:
+    def send(self, command: int, payload: bytes = b'', flags: int = 0, sequence: Optional[int] = None) -> int:
         """Send one request without waiting for its reply.
 
         :param command: HLP command byte
         :param payload: the command's bytes from [3]
         :param flags: request flags (FLAG_*); FLAG_HOLDER is added while this application holds an exclusive claim
+        :param sequence: the sequence number to send; None for the next one
         :return: the sequence number sent
         """
-        self.sequence = (self.sequence % 255) + 1
+        if sequence is None:
+            self.sequence = (self.sequence % 255) + 1
+            sequence = self.sequence
         if self.holding_exclusive:
             flags |= FLAG_HOLDER
-        self._await(command, self.sequence, flags)
+        self._await(command, sequence, flags)
         # the interface uses unnumbered reports; hidapi wants a leading 0x00 report ID on write
-        self.device.write(b'\x00' + build_request(command, self.sequence, payload, flags))
-        return self.sequence
+        self.device.write(b'\x00' + build_request(command, sequence, payload, flags))
+        return sequence
+
+    def collect(self, seconds: float) -> list:
+        """Read every report that arrives within a time: replies, other applications' replies and events.
+
+        :param seconds: how long to read
+        :return: the reports, in arrival order
+        """
+        reports: list = []
+        deadline = time.monotonic() + seconds
+        while True:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                return reports
+            report = bytes(self.device.read(REPORT_SIZE, max(1, int(left * 1000))))
+            if report:
+                reports.append(report)
 
     def wait_reply(self, command: int, sequence: int, timeout: float = 0.5, accept=None) -> bytes:
         """Wait for the reply to one request.
@@ -815,6 +839,34 @@ class HostLightingDevice:
             reply = self.request_ok(CMD_STAGE, payload, FLAG_COMMIT_AFTER if commit and last else 0)
             outcomes.append((reply[3], reply[4], _u32(reply, 5)))
         return outcomes
+
+    def stage_run(self, addressing: int, first: int, colours: list, pixel_format: int = PIXEL_RGB,
+                  commit: bool = False) -> tuple[int, int, int]:
+        """Stage consecutive LEDs or lights from a first index, as a streaming host does.
+
+        The colours are chunked to the report capacity. Every report but the last goes with NO_REPLY; the last
+        is answered, and publishes the frame with COMMIT_AFTER when commit is set, so one reply acknowledges
+        the run.
+
+        :param addressing: ADDRESSING_LED_RUN or ADDRESSING_LIGHT_RUN
+        :param first: the first LED index or light ordinal
+        :param colours: one colour per LED or light; as for encode_pixel
+        :param pixel_format: PIXEL_RGB, PIXEL_RGBW or PIXEL_RGB565
+        :param commit: publish the staged frame with the last report (COMMIT_AFTER)
+        :return: the last report's (applied, skipped, outcome mask)
+        """
+        if addressing not in (ADDRESSING_LED_RUN, ADDRESSING_LIGHT_RUN) or not colours:
+            raise ValueError("a run needs ADDRESSING_LED_RUN or ADDRESSING_LIGHT_RUN and at least one colour")
+        capacity = stage_capacity(addressing, pixel_format)
+        payloads = []
+        for start in range(0, len(colours), capacity):
+            chunk = colours[start:start + capacity]
+            payload = bytes([addressing | (pixel_format << 4)]) + struct.pack('<HB', first + start, len(chunk))
+            payloads.append(payload + b''.join(encode_pixel(colour, pixel_format) for colour in chunk))
+        for payload in payloads[:-1]:
+            self.send(CMD_STAGE, payload, FLAG_NO_REPLY)
+        reply = self.request_ok(CMD_STAGE, payloads[-1], FLAG_COMMIT_AFTER if commit else 0)
+        return reply[3], reply[4], _u32(reply, 5)
 
     def fill(self, colour: tuple, pixel_format: int = PIXEL_RGB, commit: bool = False) -> None:
         """Stage one colour on every LED below the addressable LED limit.

@@ -1,27 +1,31 @@
 """The hlp-* commands for GP2040-CE's Host Lighting add-on, built on hostlighting.
 
 hlp-ping, hlp-caps, hlp-settings, hlp-watch, hlp-fill, hlp-set-light,
-hlp-input-mode, hlp-reboot-webconfig and hlp-reboot-bootsel. Given
-GP2040-CE's .proto files (`-P`), they print enum names beside the values
-(`-S` uses the shipped snapshot, which may lag and name fewer).
+hlp-stream, hlp-buttons, hlp-input-mode, hlp-reboot-webconfig and
+hlp-reboot-bootsel. Given GP2040-CE's .proto files (`-P`), they print enum
+names beside the values (`-S` uses the shipped snapshot, which may lag and
+name fewer). hostlighting_conformance shares hlp_command, device_parser,
+ranged and holding_lights.
 
 SPDX-FileCopyrightText: © 2026 Jacob Simpson
 SPDX-License-Identifier: GPL-3.0-or-later
 """
 import argparse
+import colorsys
 import contextlib
 import functools
 import logging
 import secrets
 import struct
 import time
-from typing import Iterator
+from typing import Iterator, Optional
 
 from gp2040ce_bintools import args as core_args
 from gp2040ce_bintools import core_parser, get_config_pb2
-from gp2040ce_bintools.hostlighting import (ADDRESS_RANGES, ADDRESSING_ACTION, ADDRESSING_KIND, ADDRESSING_LIGHT,
-                                            ADDRESSING_PIN, ANIMATION_OFF, BRIGHTNESS_SAVED, CLAIM_GIVE_UP, CLAIM_TAKE,
-                                            CLAIM_TAKE_OVER, CMD_HELLO, CMD_REBOOT, CMD_RELEASE, CMD_SET_ANIMATION,
+from gp2040ce_bintools.hostlighting import (ADDRESS_RANGES, ADDRESSING_ACTION, ADDRESSING_KIND, ADDRESSING_LED_RUN,
+                                            ADDRESSING_LIGHT, ADDRESSING_LIGHT_RUN, ADDRESSING_PIN, ANIMATION_OFF,
+                                            BRIGHTNESS_SAVED, CLAIM_GIVE_UP, CLAIM_TAKE, CLAIM_TAKE_OVER, CMD_CLEAR,
+                                            CMD_HELLO, CMD_REBOOT, CMD_RELEASE, CMD_SET_ANIMATION,
                                             CMD_SET_ANIMATION_SPEED, CMD_SET_BRIGHTNESS, CMD_SET_INPUT_MODE,
                                             CMD_SET_PROFILE, EVENT_STATE_CHANGED, FLAG_KEEPALIVE, IDENTITY_FIELDS,
                                             KIND_BUTTON, KIND_CASE, KIND_PLAYERS, MAGIC_INPUT_MODE, MAGIC_REBOOT,
@@ -166,6 +170,10 @@ class LightsClaim:
                 return False
         return True
 
+    def let_lapse(self) -> None:
+        """Stop holding without handing back: the takeover and the claim end at the keepalive timeout."""
+        self.held = False
+
     def hand_back(self) -> bool:
         """Give up the claim, then restore the on-board animations and the CONFIGURE defaults.
 
@@ -189,19 +197,20 @@ class LightsClaim:
 
 
 @contextlib.contextmanager
-def holding_lights(device: HostLightingDevice, name: str, force: bool,
-                   exclusive: bool = False) -> Iterator[LightsClaim]:
+def holding_lights(device: HostLightingDevice, name: str, force: bool, exclusive: bool = False,
+                   brightness: bool = True) -> Iterator[LightsClaim]:
     """Claim a board's lights for a command and hand them back however the block ends.
 
-    The command claims the board, then sets whole-frame takeover, a 2 s keepalive and brightness scaling. An
-    application holding the claim keeps it, and the command exits, unless force takes it over. The lights are
-    handed back when the block ends, Ctrl-C and errors included, unless another application took them over.
+    The command claims the board, then sets whole-frame takeover and a 2 s keepalive. An application holding
+    the claim keeps it, and the command exits, unless force takes it over. The lights are handed back when the
+    block ends, Ctrl-C and errors included, unless another application took them over.
 
     :param device: an opened HostLightingDevice
     :param name: the command's name, shown in page 1 while it holds the claim
     :param force: take the claim over from another application
     :param exclusive: claim exclusively: until the lights are handed back, the board refuses other applications'
         changes
+    :param brightness: scale the command's pixels by the board's brightness
     :return: the LightsClaim, which renews the claim
     """
     token = secrets.randbits(32) or 1
@@ -211,11 +220,17 @@ def holding_lights(device: HostLightingDevice, name: str, force: bool,
         raise SystemExit(f"'{holder_name}' holds the lights (claim 0x{holder:08X}); add --force to take them over")
     claim = LightsClaim(device, name, token, exclusive)
     try:
-        device.configure(overlay=False, keepalive_ms=2000, brightness=True)
+        device.configure(overlay=False, keepalive_ms=2000, brightness=brightness)
         yield claim
     finally:
         if claim.held and claim.hand_back():
             print("released - on-board animations restored")
+
+
+def _hue(index: float, count: int) -> tuple:
+    """One of count evenly spaced, fully saturated hues."""
+    red, green, blue = colorsys.hsv_to_rgb((index / max(count, 1)) % 1.0, 1.0, 1.0)
+    return int(red * 255), int(green * 255), int(blue * 255)
 
 
 ############
@@ -602,6 +617,124 @@ def set_light():
             claim.keep(args.seconds)
     finally:
         device.close()
+
+
+@hlp_command
+def stream():
+    """Stream whole frames, as a worked example of a streaming host."""
+    parser = device_parser("Take a GP2040-CE board's lights over and stream whole frames: red, green and blue "
+                           "fills, then a rainbow at 60 fps, then hand the lights back. Each frame is LED runs "
+                           "sent with NO_REPLY, COMMIT_AFTER on the last report, which alone is answered.")
+    parser.add_argument('--seconds', type=float, default=5.0, help="how long the rainbow runs (default: 5)")
+    parser.add_argument('--leds', type=ranged(1, 0xFFFF), help="LEDs per frame (default: the LED extent)")
+    parser.add_argument('--timeout-test', action='store_true',
+                        help="after the rainbow, go silent and time how long the board keeps the frame")
+    add_claim_arguments(parser)
+    args, _ = parser.parse_known_args()
+    device = open_device(args.board_id)
+    try:
+        leds = args.leds or device.read_record(PAGE_SUMMARY)[0]['led_extent'] or 1
+        with holding_lights(device, 'hlp-stream', args.force, args.exclusive) as claim:
+            _stream(claim, leds, args.seconds, args.timeout_test)
+    finally:
+        device.close()
+
+
+def _stream(claim: LightsClaim, leds: int, seconds: float, timeout_test: bool) -> None:
+    """Run hlp-stream's fills, rainbow and timeout test, stopping if another application takes the lights over."""
+    for name, colour in (('red', (255, 0, 0)), ('green', (0, 255, 0)), ('blue', (0, 0, 255))):
+        claim.device.fill(colour, commit=True)
+        print(f"filled {name}")
+        if not claim.keep(1.0):
+            return
+    if _rainbow(claim, leds, seconds) and timeout_test and claim.renew():
+        claim.let_lapse()       # renewed just now: the keepalive and the claim's lease lapse together
+        _time_expiry(claim.device)
+
+
+def _rainbow(claim: LightsClaim, leds: int, seconds: float) -> bool:
+    """Stream a moving rainbow at about 60 fps, renewing the claim each second.
+
+    :return: False when another application took the lights over
+    """
+    frames = max(1, int(seconds * 60))
+    start = renewed = time.monotonic()
+    acknowledged = 0
+    failure: Optional[HostLightingError] = None
+    for frame in range(frames):
+        colours = [_hue(led + frame * leds / 120, leds) for led in range(leds)]
+        try:
+            claim.device.stage_run(ADDRESSING_LED_RUN, 0, colours, commit=True)
+            acknowledged += 1
+        except HostLightingError as error:
+            failure = failure or error
+        if time.monotonic() - renewed >= 1.0:
+            renewed = time.monotonic()
+            if not claim.renew():
+                return False
+        time.sleep(max(0.0, start + (frame + 1) / 60 - time.monotonic()))
+    print(f"rainbow: {acknowledged} of {frames} frames acknowledged ({leds} LEDs)")
+    if failure:
+        print(f"  the first unacknowledged frame: {failure}")
+    return True
+
+
+def _time_expiry(device: HostLightingDevice) -> None:
+    """Go silent and report when page 1 shows the takeover ended."""
+    print("silent: waiting for the keepalive timeout")
+    start = time.monotonic()
+    while device.read_record(PAGE_STATE)[0]['takeover_live'] and time.monotonic() - start < 15:
+        time.sleep(0.02)
+    print(f"takeover ended after {time.monotonic() - start:.2f} s")
+
+
+# the GpioAction values of B1-B4 (BUTTON_PRESS_B1 to BUTTON_PRESS_B4 in GP2040-CE's enums.proto)
+B1_TO_B4 = (5, 6, 7, 8)
+
+
+@hlp_command
+def buttons():
+    """Colour every lit control and every light with its own hue, then B1-B4 over the animations."""
+    parser = device_parser("Take a GP2040-CE board's lights over: every lit control its own hue (staged by "
+                           "action), then every light its own hue (one light run), then B1-B4 white over the "
+                           "running animations (overlay takeover), then hand the lights back.")
+    parser.add_argument('--seconds', type=float, default=5.0, help="how long each phase holds (default: 5)")
+    add_claim_arguments(parser)
+    args, _ = parser.parse_known_args()
+    device = open_device(args.board_id)
+    try:
+        controls, _ = device.read_table(PAGE_CONTROLS)
+        lights, _ = device.read_table(PAGE_LIGHTS)
+        with holding_lights(device, 'hlp-buttons', args.force, args.exclusive) as claim:
+            _buttons(claim, controls, lights, args.seconds)
+    finally:
+        device.close()
+
+
+def _buttons(claim: LightsClaim, controls: list, lights: list, seconds: float) -> None:
+    """Run hlp-buttons' three phases, stopping if another application takes the lights over.
+
+    The hand-back restores the CONFIGURE defaults, whole-frame takeover included.
+    """
+    device = claim.device
+    actions = sorted({control['action'] for control in controls if control['lit']})
+    if actions:
+        hues = [(action, _hue(i, len(actions))) for i, action in enumerate(actions)]
+        outcomes = device.stage_entries(ADDRESSING_ACTION, hues, commit=True)
+        print(f"phase 1: {sum(outcome[0] for outcome in outcomes)} of {len(actions)} lit actions, one hue each")
+        if not claim.keep(seconds):
+            return
+    if lights:
+        device.request_ok(CMD_CLEAR)
+        device.stage_run(ADDRESSING_LIGHT_RUN, 0, [_hue(i, len(lights)) for i in range(len(lights))], commit=True)
+        print(f"phase 2: {len(lights)} lights, one hue each")
+        if not claim.keep(seconds):
+            return
+    device.request_ok(CMD_CLEAR)
+    device.configure(overlay=True, keepalive_ms=2000, brightness=True)
+    outcomes = device.stage_entries(ADDRESSING_ACTION, [(action, (255, 255, 255)) for action in B1_TO_B4], commit=True)
+    print(f"phase 3: overlay, B1-B4 white over the animations ({sum(outcome[0] for outcome in outcomes)} applied)")
+    claim.keep(seconds)
 
 
 @hlp_command

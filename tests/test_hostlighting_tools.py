@@ -6,7 +6,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 import struct
 
 import pytest
-from hostlighting_fakes import other_event, state_event, state_record
+from hostlighting_fakes import other_event, state_event, state_record, summary_record
 
 from gp2040ce_bintools import hostlighting as hl
 from gp2040ce_bintools import hostlighting_tools as tools
@@ -318,3 +318,103 @@ def test_watch_prints_what_each_event_changes(hlp_run_on_fake_board, hlp_fake_bo
     assert lines[2].endswith(' no change')
     assert lines[3].endswith(' animation 0 -> off, holder_token 0x00000000 -> 0x00000005, holder_name  -> MESH')
     assert len(lines) == 4
+
+
+# -- streaming ------------------------------------------------------------------
+
+def test_stream_fills_streams_and_hands_back(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test hlp-stream: three fills and a rainbow of LED runs under a renewed claim, then the hand-back."""
+    hlp_run_on_model_board(tools.stream, '--seconds', '2')
+    out = capsys.readouterr().out
+    assert 'filled red\nfilled green\nfilled blue\n' in out
+    assert 'rainbow: 120 of 120 frames acknowledged (4 LEDs)' in out and 'released' in out
+    frames = [stage for stage in hlp_model_board.sent(hl.CMD_STAGE) if stage[2] == hl.FLAG_COMMIT_AFTER]
+    assert len(frames) == 120 and frames[0][3:7] == bytes([hl.ADDRESSING_LED_RUN, 0, 0, 4])
+    renewals = [claim for claim in hlp_model_board.sent(hl.CMD_CLAIM) if claim[2] == hl.FLAG_KEEPALIVE]
+    assert len(renewals) >= 4
+    assert not hlp_model_board.live and hlp_model_board.holder == 0 and hlp_model_board.sent(hl.CMD_RELEASE)
+
+
+def test_stream_timeout_test_times_the_keepalive(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test hlp-stream --timeout-test: one renewal, then silence until the 2 s keepalive and lease lapse."""
+    hlp_run_on_model_board(tools.stream, '--seconds', '0.5', '--timeout-test')
+    out = capsys.readouterr().out
+    assert 'silent: waiting for the keepalive timeout' in out and 'takeover ended after 2.0' in out
+    requests = hlp_model_board.requests
+    renewal = max(index for index, request in enumerate(requests) if request[0] == hl.CMD_CLAIM)
+    assert requests[renewal][2:4] == bytes([hl.FLAG_KEEPALIVE, hl.CLAIM_TAKE])
+    assert requests[renewal + 1:] and {request[0] for request in requests[renewal + 1:]} == {hl.CMD_GET_PAGE}
+    assert hlp_model_board.holder == 0 and 'released' not in out
+
+
+def test_stream_counts_frames_the_board_refuses(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test that a refused frame is counted, not fatal: here the extent reaches past the addressable limit."""
+    hlp_model_board.summary = summary_record(extent=120, width=2, height=2, profiles=1, controls=3, lit=1, unlit=2,
+                                             lights=2, animations=1)
+    hlp_run_on_model_board(tools.stream, '--seconds', '0.25')
+    out = capsys.readouterr().out
+    assert 'rainbow: 0 of 15 frames acknowledged (120 LEDs)\n' in out
+    assert '  the first unacknowledged frame: command 0x10 rejected: INVALID_ARG at request byte 4\n' in out
+
+
+def test_stream_frame_size(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test hlp-stream --leds: 40 LEDs are three LED runs per frame, whatever the extent."""
+    hlp_run_on_model_board(tools.stream, '--seconds', '0.25', '--leds', '40')
+    assert 'rainbow: 15 of 15 frames acknowledged (40 LEDs)\n' in capsys.readouterr().out
+    frame = [stage[3:7] for stage in hlp_model_board.sent(hl.CMD_STAGE)][-3:]
+    assert frame == [bytes([hl.ADDRESSING_LED_RUN, 0, 0, 19]), bytes([hl.ADDRESSING_LED_RUN, 19, 0, 19]),
+                     bytes([hl.ADDRESSING_LED_RUN, 38, 0, 2])]
+
+
+def test_buttons_runs_three_phases(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test hlp-buttons: lit actions, a light run, then B1-B4 in overlay; the hand-back restores whole-frame."""
+    hlp_run_on_model_board(tools.buttons, '--seconds', '1')
+    out = capsys.readouterr().out
+    assert 'phase 1: 1 of 1 lit actions, one hue each' in out
+    assert 'phase 2: 2 lights, one hue each' in out
+    assert 'phase 3: overlay, B1-B4 white over the animations (0 applied)' in out and 'released' in out
+    overlays = [configure[3] for configure in hlp_model_board.sent(hl.CMD_CONFIGURE)]
+    assert overlays == [0, 1, 0]
+    stages = hlp_model_board.sent(hl.CMD_STAGE)
+    assert stages[1][3:7] == bytes([hl.ADDRESSING_LIGHT_RUN, 0, 0, 2])
+    assert stages[2][3:5] == bytes([hl.ADDRESSING_ACTION, 4])
+    assert hlp_model_board.holder == 0 and not hlp_model_board.live
+
+
+@pytest.mark.parametrize('command', ['stream', 'buttons'])
+def test_streaming_tools_stop_when_taken_over(hlp_run_on_model_board, hlp_model_board, capsys, command):
+    """Test that hlp-stream and hlp-buttons stop, and hand nothing back, when another application takes over."""
+    hlp_model_board.steal_at = 0.5
+    hlp_run_on_model_board(getattr(tools, command), '--seconds', '3')
+    out = capsys.readouterr().out
+    assert "'Other' took the lights over" in out and 'released' not in out
+    assert not hlp_model_board.sent(hl.CMD_RELEASE) and hlp_model_board.holder == 0xB2
+
+
+@pytest.mark.parametrize('command', ['stream', 'buttons'])
+def test_streaming_tools_leave_another_holder_alone(hlp_run_on_model_board, hlp_model_board, command):
+    """Test that hlp-stream and hlp-buttons refuse while another application holds the claim."""
+    hlp_model_board.holder, hlp_model_board.holder_name = 0xA1, b'MESH'.ljust(16, b'\x00')
+    with pytest.raises(SystemExit, match="'MESH' holds the lights"):
+        hlp_run_on_model_board(getattr(tools, command))
+    assert not hlp_model_board.sent(hl.CMD_CONFIGURE) and not hlp_model_board.sent(hl.CMD_STAGE)
+    assert hlp_model_board.holder == 0xA1
+
+
+@pytest.mark.parametrize('command, after, overlays', [('stream', 3.5, [0, 0]), ('buttons', 1.5, [0, 1, 0])])
+def test_streaming_tools_hand_back_on_interrupt(hlp_run_on_model_board, hlp_model_board, capsys, monkeypatch,
+                                                command, after, overlays):
+    """Test that a Ctrl-C (in the rainbow, in the overlay phase) gives up, releases and restores CONFIGURE."""
+    sleep = hlp_model_board.sleep
+
+    def interrupt(seconds):
+        if hlp_model_board.now >= after:
+            raise KeyboardInterrupt
+        sleep(seconds)
+    monkeypatch.setattr(hlp_model_board, 'sleep', interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        hlp_run_on_model_board(getattr(tools, command), '--seconds', '1')
+    assert 'released - on-board animations restored' in capsys.readouterr().out
+    assert hlp_model_board.holder == 0 and not hlp_model_board.live and hlp_model_board.sent(hl.CMD_RELEASE)
+    assert [configure[3] for configure in hlp_model_board.sent(hl.CMD_CONFIGURE)] == overlays
+    assert (hlp_model_board.overlay, hlp_model_board.keepalive_ms, hlp_model_board.brightness) == (0, 2000, 1)

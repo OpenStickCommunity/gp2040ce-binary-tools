@@ -152,7 +152,14 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
   then restores the board's own animations; addresses skipped, with no light or none below the LED limit, are
   named. An eight-digit colour (`RRGGBBWW`) sends RGBW pixels. Put `--` before the entries when an address is
   negative (`--by action -- -10:FF0000`).
-* Both claim the board for as long as they drive its LEDs and give it back afterwards, Ctrl-C included,
+* `hlp-stream` streams whole frames as a worked example: red, green and blue fills, then a rainbow at 60 fps,
+  each frame LED runs sent with `NO_REPLY` and `COMMIT_AFTER` on the last report, which alone is answered.
+  `--leds` sets the frame size (default: the LED extent). `--timeout-test` then goes silent and times how long
+  the board keeps the frame (the keepalive timeout).
+* `hlp-buttons` gives every lit control its own hue (staged by action), then every light its own hue (one
+  light run), then B1-B4 white over the running animations (overlay takeover).
+* The tools that drive the LEDs (`hlp-fill`, `hlp-set-light`, `hlp-stream`, `hlp-buttons`, `hlp-bench`,
+  `hlp-conformance`) claim the board for as long as they do and give it back afterwards, Ctrl-C included,
   restoring the on-board animations and the `CONFIGURE` defaults. While another application (MESH, for
   example) holds the claim they leave the lights alone, unless `--force` takes them over. Their claim is
   shared unless `--exclusive` makes it exclusive: until the lights are handed back, the board then refuses
@@ -174,12 +181,20 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
   one.
 * `hlp-reboot-webconfig` / `hlp-reboot-bootsel` reboot the board into the web configurator or the BOOTSEL
   bootloader for flashing.
+* `hlp-conformance` checks a board against the protocol and prints each rule it checks: the HELLO
+  capabilities, framing, every page and field mask and the pages' cross-references, takeover, keepalive and
+  claim-lease timing, shared and exclusive claims, unsaved brightness, staging, events and board-feature
+  argument checks, then round trip and throughput. It holds the claim while it runs, renewed so that it never
+  keeps a takeover alive, so run it with no other lighting application. `--settings` also changes and
+  restores brightness, animation and a speed (settings flash writes), `--quick` shortens the timing runs.
+* `hlp-bench` measures round trip (median and p95) and frame rates: whole frames paced at 60 fps, then back
+  to back with every report answered and pipelined. `--leds` sets the frame size (default: the LED extent).
 
 Sample usage:
 
 ```
 % hlp-ping
-Haute42 COSMOX M Ultra (v0.7.12-88-g6ae1596), board ID 433030343237362E
+Haute42 COSMOX M Ultra (v0.7.12-88-gcfe8df1), board ID 433030343237362E
 magic GPHL, protocol 2.0, reply queue limit 16
 100 round trips in 200 ms (2.0 ms average)
 
@@ -216,6 +231,24 @@ brightness step 6 of 0-10 (maximum 199)
 % hlp-watch
    0.000 takeover_live False, brightness_unsaved False, input_mode 0, profile 1, player 1, animation 0, ...
    2.013 animation 0 -> off, brightness_step 5 -> 6
+
+% hlp-conformance
+HELLO:
+  PASS  protocol major 2
+  ...
+Takeover and keepalive:
+  ...
+  PASS  the takeover ends at the timeout
+        expiry seen after 302 ms (timeout 300)
+...
+RESULT: ALL PASS (134 passed, 0 failed)
+
+% hlp-bench
+round trip: median 2.00 ms, p95 2.01 ms (300 of 300 answered)
+60 fps: 300 of 300 frames acknowledged (46 LEDs, 3 reports per frame)
+unthrottled, every report answered: 166 frames/s
+unthrottled, pipelined: 249 frames/s
+released - on-board animations restored
 
 % hlp-fill --scope case 0000FF
 filled case with #0000FF for 3.0s

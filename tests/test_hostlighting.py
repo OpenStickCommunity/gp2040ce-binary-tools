@@ -456,3 +456,34 @@ def test_decode_state_changed_matches_page_1():
     assert record['holder_token'] == 7 and record['holder_name'] == 'MESH'
     with pytest.raises(hl.HostLightingError, match='event 1 is not STATE_CHANGED'):
         hl.decode_state_changed(other_event())
+
+
+def test_send_with_a_chosen_sequence(hlp_fake_device, hlp_fake_board):
+    """Test that a chosen sequence number is sent as given and leaves the running sequence alone."""
+    assert hlp_fake_device.send(hl.CMD_HELLO, flags=hl.FLAG_NO_REPLY, sequence=0) == 0
+    assert hlp_fake_device.send(hl.CMD_HELLO) == 1
+    assert [request[1] for request in hlp_fake_board.sent(hl.CMD_HELLO)] == [0, 1]
+
+
+def test_collect_returns_every_report(hlp_fake_device, hlp_fake_board):
+    """Test that collect returns replies, other applications' replies and events, in arrival order."""
+    hlp_fake_board.outbox += [hello_reply(9), state_event(profile=2), hello_reply(10)]
+    reports = hlp_fake_device.collect(0.01)
+    assert [(report[0], report[1]) for report in reports] == [(0x81, 9), (hl.EVENT_MARKER, 0), (0x81, 10)]
+    assert hlp_fake_device.collect(0.01) == []
+
+
+def test_stage_run_answers_only_the_last_report(hlp_model_board):
+    """Test that a run is chunked to the capacity, sent without replies but the last, which commits."""
+    device = fake_device(hlp_model_board)
+    assert device.stage_run(hl.ADDRESSING_LED_RUN, 0, [(1, 2, 3)] * 40, commit=True) == (2, 0, 0b11)
+    stages = hlp_model_board.sent(hl.CMD_STAGE)
+    assert [(stage[2], stage[4:7]) for stage in stages] == [
+        (hl.FLAG_NO_REPLY, bytes([0, 0, 19])), (hl.FLAG_NO_REPLY, bytes([19, 0, 19])),
+        (hl.FLAG_COMMIT_AFTER, bytes([38, 0, 2]))]
+    assert hlp_model_board.live
+    assert device.stage_run(hl.ADDRESSING_LIGHT_RUN, 1, [(9, 9, 9, 9)] * 2, hl.PIXEL_RGBW) == (1, 1, 1)
+    with pytest.raises(ValueError):
+        device.stage_run(hl.ADDRESSING_LIGHT, 0, [(1, 2, 3)])
+    with pytest.raises(ValueError):
+        device.stage_run(hl.ADDRESSING_LED_RUN, 0, [])

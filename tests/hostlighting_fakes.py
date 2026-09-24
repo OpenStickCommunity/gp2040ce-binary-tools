@@ -4,6 +4,7 @@ SPDX-FileCopyrightText: © 2026 Jacob Simpson
 SPDX-License-Identifier: GPL-3.0-or-later
 """
 import struct
+import zlib
 
 from gp2040ce_bintools import hostlighting as hl
 
@@ -14,9 +15,12 @@ DEVICE_CLASS = hl.HostLightingDevice
 
 
 def page_reply(page: int, records: list, start: int = 0, mask: int = 0, token: int = 0x1234ABCD,
-               sequence: int = 1, status: int = hl.STATUS_OK) -> bytes:
-    """Build a GET_PAGE reply as the firmware does: groups in bit order while one record fits in 48 bytes."""
-    widths = hl.PAGE_GROUPS[page]
+               sequence: int = 1, status: int = hl.STATUS_OK, widths: tuple = ()) -> bytes:
+    """Build a GET_PAGE reply as the firmware does: groups in bit order while one record fits in 48 bytes.
+
+    widths, when given, replaces the page's 2.0 group widths, for a later 2.x board's groups.
+    """
+    widths = widths or hl.PAGE_GROUPS[page]
     wanted = (mask or (1 << len(widths)) - 1) if status == hl.STATUS_OK else 0     # a stale reply echoes no groups
     groups = stride = 0
     for group, width in enumerate(widths):
@@ -81,13 +85,13 @@ def identity_reply(strings: list, mask: int = 0xFF, sequence: int = 1) -> bytes:
     return header + area[:hl.RECORDS_AREA].ljust(hl.RECORDS_AREA, b'\x00') + struct.pack('<I', 0x1234ABCD)
 
 
-def hello_reply(sequence=1, major=2, board_id=BOARD_ID) -> bytes:
+def hello_reply(sequence=1, major=2, board_id=BOARD_ID, subscribed=0, queue_limit=16) -> bytes:
     """Build a HELLO reply with this firmware's capabilities."""
     commands = sum(1 << c for c in (0x01, 0x02, 0x03, 0x04, 0x05, 0x10, 0x11, 0x12, 0x13, 0x20, 0x21,
                                     0x30, 0x31, 0x32, 0x33, 0x70, 0x71))
     pages = sum(1 << p for p in (0, 1, 2, 8, 9, 10, 11, 12))
-    body = b'GPHL' + bytes([major, 0]) + board_id + bytes([16, 0x0F]) + commands.to_bytes(16, 'little')
-    body += struct.pack('<IHHHH', pages, 0xF3, 0x07, 0x01, 0x00)
+    body = b'GPHL' + bytes([major, 0]) + board_id + bytes([queue_limit, 0x0F]) + commands.to_bytes(16, 'little')
+    body += struct.pack('<IHHHH', pages, 0xF3, 0x07, 0x01, subscribed)
     return (bytes([hl.CMD_HELLO | hl.REPLY_FLAG, sequence, 0]) + body).ljust(hl.REPORT_SIZE, b'\x00')
 
 
@@ -121,6 +125,7 @@ class FakeBoard:
         self.subscribed = 0
         self.before: dict = {}          # command -> reports that arrive between it and its reply
         self.after: dict = {}           # command -> reports queued after its reply (events)
+        self.later_groups: dict = {}    # page -> a group a later 2.x board adds, the same bytes in every record
 
     def write(self, data: bytes) -> int:
         """Take one report as hidapi writes it (report ID 0 first) and queue the reply."""
@@ -279,7 +284,11 @@ class FakeBoard:
                   hl.PAGE_ANIMATIONS: self.animations}
         if page not in tables:
             return bytes([hl.CMD_GET_PAGE | hl.REPLY_FLAG, sequence, hl.STATUS_INVALID, 3]) + bytes(60)
-        return page_reply(page, tables[page], start, mask, self.token, sequence)
+        records, widths = tables[page], hl.PAGE_GROUPS[page]
+        if page in self.later_groups:
+            later = self.later_groups[page]
+            records, widths = [list(record) + [later] for record in records], widths + (len(later),)
+        return page_reply(page, records, start, mask, self.token, sequence, widths=widths)
 
     def has_leds(self, ordinal: int) -> bool:
         """Say whether a light exists and has an LED below the addressable LED limit."""
@@ -336,3 +345,321 @@ def fake_device(board: FakeBoard) -> hl.HostLightingDevice:
     device.pending = []
     device.holding_exclusive = False
     return device
+
+
+class ModelBoard(FakeBoard):
+    """A fake board that follows the protocol's rules, on a clock the tests control.
+
+    It models what hlp-conformance checks: unknown and unanswerable commands, the reply queue limit (a request
+    that needs a reply while the queue is full is discarded), the takeover and its number, publishing, the
+    keepalive and the claim lease (both CONFIGURE's timeout), the exclusive claim's refusals, the unsaved
+    brightness step and its keepalive, events sent only while no reply waits, run and entry staging with the
+    capacity and limit rules, FILL, UNSTAGE, the magic-guarded commands, and a state token that follows the
+    configuration pages. Each report written takes 1 ms; a read with nothing to read
+    waits its timeout.
+    """
+
+    COMMANDS = {hl.CMD_HELLO, hl.CMD_GET_PAGE, hl.CMD_CLAIM, hl.CMD_CONFIGURE, hl.CMD_SUBSCRIBE, hl.CMD_STAGE,
+                hl.CMD_UNSTAGE, hl.CMD_FILL, hl.CMD_CLEAR, hl.CMD_COMMIT, hl.CMD_RELEASE, hl.CMD_SET_PROFILE,
+                hl.CMD_SET_ANIMATION, hl.CMD_SET_ANIMATION_SPEED, hl.CMD_SET_BRIGHTNESS, hl.CMD_SET_INPUT_MODE,
+                hl.CMD_REBOOT}
+
+    def __init__(self):
+        """Set up a small, self-consistent board: three controls (one lit; a Hall-effect trigger shares the lit
+        control's action), a button light and a case strip."""
+        super().__init__()
+        self.controls = [control_record(2, 1, dup=1, instances=2, rect=(1, 0, 1, 0), first_led=0, first_light=0,
+                                        count=1),
+                         control_record(12, 13, lit=0, count=0),
+                         control_record(hl.KEY_TRIGGER, 1, dup=1, lit=0, instance=2, instances=2, count=0)]
+        self.lights = [light_record(0, pin=2, action=1, dup=1, instance=1, instances=2, x=1, y=0),
+                       light_record(1, 3, kind=1, slot=0, x=0, y=1)]
+        self.summary = summary_record(extent=4, width=2, height=2, profiles=1, controls=3, lit=1, unlit=2,
+                                      lights=2, animations=1)
+        self.now = 0.0
+        self.live = False
+        self.number = 3
+        self.overlay, self.keepalive_ms, self.brightness = 0, 2000, 1
+        self.refreshed = self.leased = self.unsaved_refreshed = 0.0
+        self.pending = False
+        self.steal_at = None            # a time at which another application takes the claim over
+        self.queue_limit = 16
+        self._refresh()
+        self._seen = (tuple(self.state), self.token)
+
+    # -- the clock ---------------------------------------------------------------
+
+    def time(self) -> float:
+        """Read the board's clock, for time.monotonic and time.perf_counter."""
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        """Let time pass, for time.sleep."""
+        self.now += max(seconds, 0.0)
+        self._tick()
+
+    # -- hidapi ------------------------------------------------------------------
+
+    def write(self, data: bytes) -> int:
+        """Take one report, answer it and apply its flags when it succeeds."""
+        assert len(data) == hl.REPORT_SIZE + 1 and data[0] == 0, 'report ID 0 then 64 bytes'
+        request = bytes(data[1:])
+        self.requests.append(request)
+        command, sequence, flags = request[0], request[1], request[2]
+        if command in self.disconnect_on:
+            raise OSError("device disconnected")
+        self.now += 0.001
+        self._tick()
+        queued = [report for report in self.outbox if report[0] != hl.EVENT_MARKER]
+        if not flags & hl.FLAG_NO_REPLY and len(queued) >= self.queue_limit:
+            return len(data)            # discarded: neither executed nor answered
+        guarded = self.holder and self.holder_flags & hl.CLAIM_EXCLUSIVE and not flags & hl.FLAG_HOLDER
+        if guarded and self.refused(command, flags):
+            reply = self.claimed(command, sequence)
+        else:
+            reply = self.answer(command, sequence, request)
+        acts = self.flags_act(command, request, bool(guarded))
+        if reply is not None and reply[2] == hl.STATUS_OK and acts:
+            self._apply_flags(command, flags)
+        self.outbox.extend(self.before.pop(command, []))
+        if reply is not None and not flags & hl.FLAG_NO_REPLY:
+            self.outbox.append(reply)
+        self._note()
+        self.outbox.extend(self.after.pop(command, []))
+        return len(data)
+
+    def read(self, size: int, timeout_ms: int = 0) -> list:
+        """Give the next reply, else a pending event, else wait the timeout (none for a non-blocking read)."""
+        self._tick()
+        if self.outbox:
+            return list(self.outbox.pop(0))
+        if self.pending:
+            self.pending = False
+            return list(self._event())
+        if timeout_ms:
+            self.now += timeout_ms / 1000
+            self._tick()
+        return []
+
+    # -- rules -------------------------------------------------------------------
+
+    def refused(self, command: int, flags: int) -> bool:
+        """Say whether an exclusive claim refuses a request without HOLDER.
+
+        It refuses every command but HELLO, GET_PAGE, CLAIM and SUBSCRIBE, and those with COMMIT_AFTER or
+        KEEPALIVE but CLAIM, which is never refused; an unknown command is status 1.
+        """
+        if command not in self.COMMANDS or command == hl.CMD_CLAIM:
+            return False
+        reads = (hl.CMD_HELLO, hl.CMD_GET_PAGE, hl.CMD_SUBSCRIBE)
+        return command not in reads or bool(flags & (hl.FLAG_COMMIT_AFTER | hl.FLAG_KEEPALIVE))
+
+    def claimed(self, command: int, sequence: int) -> bytes:
+        """Build a status 4 reply: the exclusive claim's holder at [3..23], as page 1's Controller group."""
+        return (bytes([command | hl.REPLY_FLAG, sequence, hl.STATUS_CLAIMED]) + self.controller()).ljust(
+            hl.REPORT_SIZE, b'\x00')
+
+    def flags_act(self, command: int, request: bytes, guarded: bool) -> bool:
+        """Say whether a request's COMMIT_AFTER and KEEPALIVE act.
+
+        Under an exclusive claim, a request without HOLDER has them act only when it is a CLAIM that leaves the
+        sender holding the claim.
+        """
+        return not guarded or (command == hl.CMD_CLAIM and self.holder == struct.unpack_from('<I', request, 4)[0])
+
+    def answer(self, command: int, sequence: int, request: bytes):
+        """Build the reply to one request; None when the request gets none."""
+        if command == 0 or command & hl.REPLY_FLAG:
+            return None
+        ok = bytes([command | hl.REPLY_FLAG, sequence, hl.STATUS_OK])
+        if command not in self.COMMANDS:
+            return ok[:2] + bytes([hl.STATUS_UNSUPPORTED]) + bytes(61)
+        if command == hl.CMD_HELLO:
+            return hello_reply(sequence, subscribed=self.subscribed, queue_limit=self.queue_limit)
+        if command == hl.CMD_GET_PAGE:
+            self._refresh()
+            return self.page(sequence, request)
+        handlers = {hl.CMD_CLAIM: self.claim, hl.CMD_CONFIGURE: self.configure, hl.CMD_SUBSCRIBE: self.subscribe,
+                    hl.CMD_STAGE: self.stage, hl.CMD_UNSTAGE: self.unstage, hl.CMD_FILL: self.fill,
+                    hl.CMD_CLEAR: self.lifecycle, hl.CMD_COMMIT: self.lifecycle, hl.CMD_RELEASE: self.lifecycle,
+                    hl.CMD_SET_INPUT_MODE: self.guarded, hl.CMD_REBOOT: self.guarded}
+        if command in handlers:
+            return handlers[command](ok, request)
+        return self.feature(ok, command, request)
+
+    def claim(self, ok: bytes, request: bytes) -> bytes:
+        """Claim, take over or give up; each claim or take over by the holder renews the lease."""
+        action, token = request[3], struct.unpack_from('<I', request, 4)[0]
+        if action > hl.CLAIM_GIVE_UP:
+            return self._invalid(ok, 3)
+        if token == 0:
+            return self._invalid(ok, 4)
+        if action == hl.CLAIM_GIVE_UP:
+            if token == self.holder:
+                self._set_holder(0, bytes(16))
+        elif action == hl.CLAIM_TAKE_OVER or self.holder in (0, token):
+            self._set_holder(token, request[8:24], request[24] & hl.CLAIM_EXCLUSIVE)
+            self.leased = self.now
+        return (ok + request[3:8] + self.controller()).ljust(hl.REPORT_SIZE, b'\x00')
+
+    def set_brightness(self, request: bytes) -> int:
+        """SET_BRIGHTNESS; an unsaved step starts its keepalive."""
+        offset = super().set_brightness(request)
+        if not offset and self.unsaved():
+            self.unsaved_refreshed = self.now
+        return offset
+
+    def configure(self, ok: bytes, request: bytes) -> bytes:
+        """Set the takeover mode, the timeout (0 = 2000, clamped to 100-10000) and brightness scaling."""
+        overlay, timeout, brightness = request[3], struct.unpack_from('<H', request, 4)[0], request[6]
+        if overlay > 1:
+            return self._invalid(ok, 3)
+        if brightness > 1:
+            return self._invalid(ok, 6)
+        self.overlay, self.brightness = overlay, brightness
+        self.keepalive_ms = 2000 if timeout == 0 else min(max(timeout, 100), 10000)
+        settings = struct.pack('<BHB', self.overlay, self.keepalive_ms, self.brightness)
+        return (ok + settings).ljust(hl.REPORT_SIZE, b'\x00')
+
+    def subscribe(self, ok: bytes, request: bytes) -> bytes:
+        """Add event 0 when asked; the first subscription does not report changes made before it."""
+        first = not self.subscribed
+        reply = self.feature(ok, hl.CMD_SUBSCRIBE, request)
+        if first and self.subscribed:
+            self._refresh()
+            self._seen = (tuple(self.state), self.token)
+        return reply
+
+    def stage(self, ok: bytes, request: bytes) -> bytes:
+        """Stage a run or entries, with the capacity, limit and addressing rules."""
+        addressing, pixel_format = request[3] & 0x0F, request[3] >> 4
+        if pixel_format not in hl.PIXEL_SIZES:
+            return self._invalid(ok, 3)
+        if addressing in (hl.ADDRESSING_LED_RUN, hl.ADDRESSING_LIGHT_RUN):
+            return self._run(ok, request, addressing, hl.stage_capacity(addressing, pixel_format))
+        if addressing not in hl.ADDRESS_SIZES:
+            return self._invalid(ok, 3)
+        if not 0 < request[4] <= hl.stage_capacity(addressing, pixel_format):
+            return self._invalid(ok, 4)
+        return super().stage(ok, request)
+
+    def unstage(self, ok: bytes, request: bytes) -> bytes:
+        """Unstage a run or entries: the same addressing, no pixels; bits 4-7 are ignored."""
+        addressing = request[3] & 0x0F
+        if addressing in (hl.ADDRESSING_LED_RUN, hl.ADDRESSING_LIGHT_RUN):
+            return self._run(ok, request, addressing, hl.stage_capacity(addressing, None))
+        if addressing not in hl.ADDRESS_SIZES:
+            return self._invalid(ok, 3)
+        count, size = request[4], hl.ADDRESS_SIZES[addressing]
+        if not 0 < count <= hl.stage_capacity(addressing, None):
+            return self._invalid(ok, 4)
+        applied = [self.resolves(addressing, request[5 + i * size:5 + (i + 1) * size]) for i in range(count)]
+        return self._outcome(ok, applied)
+
+    def fill(self, ok: bytes, request: bytes) -> bytes:
+        """FILL: a known pixel format in bits 4-7; bits 0-3 are ignored."""
+        if request[3] >> 4 not in hl.PIXEL_SIZES:
+            return self._invalid(ok, 3)
+        return ok.ljust(hl.REPORT_SIZE, b'\x00')
+
+    def lifecycle(self, ok: bytes, request: bytes) -> bytes:
+        """CLEAR, COMMIT (starts a takeover when none is live) and RELEASE (ends it)."""
+        if request[0] == hl.CMD_COMMIT:
+            self._publish()
+        elif request[0] == hl.CMD_RELEASE:
+            self.live = False
+        return ok.ljust(hl.REPORT_SIZE, b'\x00')
+
+    def guarded(self, ok: bytes, request: bytes) -> bytes:
+        """SET_INPUT_MODE and REBOOT: a listed mode or a known target, then the magic, byte by byte."""
+        if request[0] == hl.CMD_SET_INPUT_MODE:
+            valid, magic = request[3] != 255 and request[3] in [mode[0][0] for mode in self.modes], hl.MAGIC_INPUT_MODE
+        else:
+            valid, magic = request[3] in (hl.REBOOT_GAMEPAD, hl.REBOOT_WEBCONFIG, hl.REBOOT_BOOTSEL), hl.MAGIC_REBOOT
+        if not valid:
+            return self._invalid(ok, 3)
+        wrong = self.wrong_magic(request, magic)
+        return self._invalid(ok, wrong) if wrong else ok.ljust(hl.REPORT_SIZE, b'\x00')
+
+    # -- state -------------------------------------------------------------------
+
+    def _run(self, ok: bytes, request: bytes, addressing: int, capacity: int) -> bytes:
+        first, count = struct.unpack_from('<H', request, 4)[0], request[6]
+        led_run = addressing == hl.ADDRESSING_LED_RUN
+        limit = struct.unpack_from('<H', self.summary[0], 2)[0]
+        if led_run and first >= limit:
+            return self._invalid(ok, 4)
+        if not 0 < count <= capacity or (led_run and first + count > limit):
+            return self._invalid(ok, 6)
+        if led_run:
+            return self._outcome(ok, [True] * count)
+        return self._outcome(ok, [self.has_leds(first + i) for i in range(count)])
+
+    @staticmethod
+    def _outcome(ok: bytes, applied: list) -> bytes:
+        mask = sum(1 << i for i, done in enumerate(applied) if done)
+        return (ok + bytes([sum(applied), len(applied) - sum(applied)]) + struct.pack('<I', mask)).ljust(
+            hl.REPORT_SIZE, b'\x00')
+
+    @staticmethod
+    def _invalid(ok: bytes, offset: int) -> bytes:
+        return ok[:2] + bytes([hl.STATUS_INVALID, offset]) + bytes(60)
+
+    def _apply_flags(self, command: int, flags: int) -> None:
+        if flags & hl.FLAG_COMMIT_AFTER:
+            self._publish()
+        if 0x10 <= command <= 0x2F or flags & (hl.FLAG_COMMIT_AFTER | hl.FLAG_KEEPALIVE):
+            self.refreshed = self.now
+            if self.unsaved():
+                self.unsaved_refreshed = self.now
+
+    def _publish(self) -> None:
+        if not self.live:
+            self.live = True
+            self.number = (self.number + 1) & 0xFF
+        self.refreshed = self.now
+
+    def _set_holder(self, token: int, name: bytes, flags: int = 0) -> None:
+        if token != self.holder:
+            self.live = False           # a change of holder ends the takeover and an unsaved step
+            self.show_step(self.saved_step)
+        self.holder, self.holder_name, self.holder_flags = token, bytes(name), flags
+
+    def unsaved(self) -> bool:
+        """Say whether the brightness step shown differs from the saved step."""
+        return self.state[0][6] != self.saved_step
+
+    def _tick(self) -> None:
+        timeout = self.keepalive_ms / 1000
+        if self.steal_at is not None and self.now >= self.steal_at:
+            self.steal_at = None
+            self._set_holder(0xB2, b'Other'.ljust(16, b'\x00'))
+            self.leased = self.now
+        if self.live and self.now - self.refreshed > timeout:
+            self.live = False
+        if self.holder and self.now - self.leased > timeout:
+            self._set_holder(0, bytes(16))
+        if self.unsaved() and self.now - self.unsaved_refreshed > timeout:
+            self.show_step(self.saved_step)
+        self._note()
+
+    def _refresh(self) -> None:
+        state = bytearray(self.state[0])
+        state[0], state[7] = int(self.live) | state[0] & 0x02, self.number
+        self.state = [bytes(state), self.controller(),
+                      struct.pack('<BHB', self.overlay, self.keepalive_ms, self.brightness)]
+        pages = repr((self.summary, self.profiles, self.controls, self.lights, self.animations)).encode()
+        self.token = zlib.crc32(pages) or 1
+
+    def _note(self) -> None:
+        self._refresh()
+        now = (tuple(self.state), self.token)
+        if now != self._seen:
+            self._seen = now
+            if self.subscribed & (1 << hl.EVENT_STATE_CHANGED):
+                self.pending = True
+
+    def _event(self) -> bytes:
+        self._refresh()
+        reply = page_reply(hl.PAGE_STATE, [self.state], token=self.token)
+        return bytes([hl.EVENT_MARKER, hl.EVENT_STATE_CHANGED, 0]) + reply[3:]
