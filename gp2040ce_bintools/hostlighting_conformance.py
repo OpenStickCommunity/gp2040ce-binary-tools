@@ -31,9 +31,9 @@ from gp2040ce_bintools.hostlighting import (ACTION_NONE, ADDRESSING_ACTION, ADDR
                                             PAGE_RANGES, PAGE_STATE, PAGE_SUMMARY, PIXEL_RGB, PIXEL_RGB565, PIXEL_RGBW,
                                             PIXEL_SIZES, PROTOCOL_MAJOR, RECORDS_AREA, RECORDS_OFFSET, REPLY_FLAG,
                                             STATUS_CLAIMED, STATUS_INVALID, STATUS_OK, STATUS_STALE, STATUS_UNSUPPORTED,
-                                            HostLightingDevice, HostLightingError, decode_controller, decode_key,
-                                            decode_page_header, decode_records, decode_state_changed, is_event,
-                                            key_name, open_device, stage_capacity)
+                                            HostLightingDevice, HostLightingError, HostLightingRejected,
+                                            decode_controller, decode_key, decode_page_header, decode_records,
+                                            decode_state_changed, is_event, key_name, open_device, stage_capacity)
 from gp2040ce_bintools.hostlighting_tools import (LightsClaim, add_claim_arguments, device_parser, hlp_command,
                                                   holding_lights, ranged)
 
@@ -605,10 +605,12 @@ def _check_claim(device: HostLightingDevice, checks: Checks, lease: _Lease) -> N
     previous = generation << FLAG_GENERATION_SHIFT
     stage = bytes([ADDRESSING_LED_RUN]) + struct.pack('<HB', 0, 1) + bytes(3)
     wrong = [f"0x{command:02X}: status {reply[2]}" for command, payload in (
-        (CMD_STAGE, stage), (CMD_COMMIT, b''), (CMD_HELLO, b''), (CMD_CONFIGURE, struct.pack('<BHB', 1, 0, 0)))
-        for reply in [device.request(command, payload, previous)] if _refused(reply) != holder]
-    checks.check(not wrong, "a request under the previous holder's generation is refused: status 4 with the "
-                 'holder now', ', '.join(wrong))
+        (CMD_STAGE, stage), (CMD_COMMIT, b''), (CMD_HELLO, b''), (CMD_CONFIGURE, struct.pack('<BHB', 1, 0, 0)),
+        (CMD_GET_PAGE, struct.pack('<BHIH', PAGE_STATE, 0, 0, 0)), (CMD_SUBSCRIBE, bytes(2)))
+        for reply in [device.request(command, payload, previous)]
+        if _refused(reply) != holder or any(reply[3 + CONTROLLER_SIZE:])]
+    checks.check(not wrong, "a request under the previous holder's generation is refused, reads included: status "
+                 '4 with the holder now, the rest zero', ', '.join(wrong))
     device.send(CMD_COMMIT, flags=previous | FLAG_NO_REPLY)
     state = _state(device)
     checks.check(not state['takeover_live'] and not state['overlay'], 'and changes nothing, answered or not')
@@ -628,10 +630,33 @@ def _check_claim(device: HostLightingDevice, checks: Checks, lease: _Lease) -> N
                  'with no claim held an outdated generation is refused too: status 4, holder 0', f"{lapsed}")
     taken = _claim(device, CLAIM_TAKE, ours, name.encode())
     _act_as(device, taken, ours)
-    checks.check(_holder(taken) == (ours, name), 'claim taken when unclaimed, holder shown')
+    checks.check(_holder(taken) == (ours, name), 'claim taken when unclaimed, holder shown: CLAIM ignores the '
+                 'outdated generation it was sent under')
     given = _claim(device, CLAIM_GIVE_UP, ours)
     _act_as(device, given, ours)
     checks.check(_holder(given)[0] == 0, 'give up clears the claim')
+    # a holder that stalled past the timeout: its renewal, which shows nothing, takes the claim again
+    device.send(CMD_CLAIM, bytes([CLAIM_TAKE]) + struct.pack('<I', ours) + name.encode()[:16].ljust(16, b'\x00'),
+                FLAG_NO_REPLY)
+    retaken = _refused(device.request(CMD_COMMIT, b'', taken[29] << FLAG_GENERATION_SHIFT))
+    checks.check(retaken.get('holder_token') == ours and retaken.get('claim_generation') == _next(given[29]),
+                 "a renewal without a reply takes a lapsed claim again: the holder's next request, under its old "
+                 'generation, is refused and shows its own token and the new generation', f"{retaken}")
+    _act_as(device, _claim(device, CLAIM_GIVE_UP, ours), ours)
+    # the first claim and the give up are changes of holder too; eight of them pass 7
+    steps, defaults = [_state(device)['claim_generation']], []
+    for _ in range(4):
+        for action in (CLAIM_TAKE, CLAIM_GIVE_UP):
+            _configure(device, 1, 777, 0)
+            reply = _claim(device, action, ours, name.encode())
+            _act_as(device, reply, ours)
+            state = _state(device)
+            steps.append(reply[29])
+            defaults.append((state['overlay'], state['keepalive_ms'], state['brightness_applied']))
+    checks.check(all(after == _next(before) for before, after in zip(steps, steps[1:])) and 1 in steps[1:],
+                 'the generation steps at a first claim and at a give up, and from 7 back to 1', f"{steps}")
+    checks.check(set(defaults) == {(False, 2000, True)}, 'and each puts the CONFIGURE settings back to their '
+                 'defaults', f"{sorted(set(defaults))}")
     checks.check(all(_echoes(reply, action, token) for reply, action, token in (
         (renamed, CLAIM_TAKE, ours), (refused, CLAIM_TAKE, other), (ignored, CLAIM_GIVE_UP, other),
         (took, CLAIM_TAKE_OVER, other), (taken, CLAIM_TAKE, ours), (given, CLAIM_GIVE_UP, ours))),
@@ -1114,6 +1139,10 @@ def _round_trips(device: HostLightingDevice, count: int) -> list:
         start = time.perf_counter()
         try:
             device.request_ok(CMD_HELLO)
+        except HostLightingRejected as refused:
+            if refused.status == STATUS_CLAIMED and refused.holder and refused.holder[0]:
+                raise _TakenOver(f"'{refused.holder[1]}' took the lights over") from None
+            continue
         except HostLightingError:
             continue
         trips.append((time.perf_counter() - start) * 1000)

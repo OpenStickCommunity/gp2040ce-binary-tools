@@ -164,7 +164,8 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
   `hlp-conformance`) claim the board for as long as they do and give the claim up afterwards, Ctrl-C included,
   which restores the on-board animations and the `CONFIGURE` defaults. While they hold the claim their
   requests carry its generation, so a tool whose claim another application took over is refused at once
-  instead of staging into that application's frame. While another application (MESH, for
+  instead of staging into that application's frame; a tool whose own claim lapsed (a stalled PC) takes it
+  again at its next renewal and sends its `CONFIGURE` settings again. While another application (MESH, for
   example) holds the claim they leave the lights alone, unless `--force` takes them over. Their claim is
   shared unless `--exclusive` makes it exclusive: until the lights are handed back, the board then refuses
   changes from applications that do not hold the claim (an `hlp-settings` run alongside is refused with

@@ -509,3 +509,18 @@ def test_stage_run_answers_only_the_last_report(hlp_model_board):
         device.stage_run(hl.ADDRESSING_LIGHT, 0, [(1, 2, 3)])
     with pytest.raises(ValueError):
         device.stage_run(hl.ADDRESSING_LED_RUN, 0, [])
+
+
+def test_a_claimed_page_read_names_the_holder(hlp_fake_device, hlp_fake_board):
+    """Test that a page read refused with status 4 carries the holder and generation too."""
+    holder = struct.pack('<I', 0xB2) + b'MESH'.ljust(16, b'\x00') + bytes([0, 5])
+    answer = hlp_fake_board.answer
+
+    def claimed(command, sequence, request):
+        if command == hl.CMD_GET_PAGE:
+            return bytes([command | hl.REPLY_FLAG, sequence, hl.STATUS_CLAIMED]) + holder + bytes(39)
+        return answer(command, sequence, request)
+    hlp_fake_board.answer = claimed
+    with pytest.raises(hl.HostLightingRejected) as rejected:
+        hlp_fake_device.get_page(hl.PAGE_STATE)
+    assert rejected.value.command == hl.CMD_GET_PAGE and rejected.value.holder == (0xB2, 'MESH', 5)

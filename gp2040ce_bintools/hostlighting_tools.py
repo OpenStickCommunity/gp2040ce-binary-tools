@@ -142,17 +142,35 @@ class LightsClaim:
         self.token = token
         self.exclusive = exclusive
         self.held = True
+        self.settings: dict = {}
+
+    def configure(self, overlay: bool = False, keepalive_ms: int = 2000, brightness: bool = True) -> dict:
+        """Send CONFIGURE and remember the settings, which renew() sends again once it retakes a lapsed claim.
+
+        :param overlay: True for overlay takeover, False for whole-frame
+        :param keepalive_ms: keepalive timeout in ms
+        :param brightness: scale host pixels by the board's brightness
+        :return: the settings the board applied
+        """
+        self.settings = {'overlay': overlay, 'keepalive_ms': keepalive_ms, 'brightness': brightness}
+        return self.device.configure(**self.settings)
 
     def renew(self) -> bool:
         """Renew the claim and, with KEEPALIVE, the takeover.
 
+        A new generation means the claim had lapsed and this renewal took it again: that change of holder put
+        the CONFIGURE settings back to their defaults, so the command's settings are sent again.
+
         :return: False, having said so, once another application has taken the lights over
         """
+        generation = self.device.generation
         holder, holder_name = self.device.claim(CLAIM_TAKE, self.token, self.name.encode(), FLAG_KEEPALIVE,
                                                 self.exclusive)
         if holder != self.token:
             print(f"'{holder_name}' took the lights over")
             self.held = False
+        elif self.device.generation != generation and self.settings:
+            self.device.configure(**self.settings)
         return self.held
 
     def keep(self, seconds: float) -> bool:
@@ -224,7 +242,7 @@ def holding_lights(device: HostLightingDevice, name: str, force: bool, exclusive
         raise SystemExit(f"'{holder_name}' holds the lights (claim 0x{holder:08X}); add --force to take them over")
     claim = LightsClaim(device, name, token, exclusive)
     try:
-        device.configure(overlay=False, keepalive_ms=2000, brightness=brightness)
+        claim.configure(overlay=False, keepalive_ms=2000, brightness=brightness)
         yield claim
     finally:
         if claim.held and claim.hand_back():
@@ -739,7 +757,7 @@ def _buttons(claim: LightsClaim, controls: list, lights: list, seconds: float) -
         if not claim.keep(seconds):
             return
     device.request_ok(CMD_CLEAR)
-    device.configure(overlay=True, keepalive_ms=2000, brightness=True)
+    claim.configure(overlay=True, keepalive_ms=2000, brightness=True)
     outcomes = device.stage_entries(ADDRESSING_ACTION, [(action, (255, 255, 255)) for action in B1_TO_B4], commit=True)
     print(f"phase 3: overlay, B1-B4 white over the animations ({sum(outcome[0] for outcome in outcomes)} applied)")
     claim.keep(seconds)

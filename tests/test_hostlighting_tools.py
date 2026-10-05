@@ -425,3 +425,27 @@ def test_streaming_tools_hand_back_on_interrupt(hlp_run_on_model_board, hlp_mode
     assert hlp_model_board.holder == 0 and not hlp_model_board.live
     assert [configure[3] for configure in hlp_model_board.sent(hl.CMD_CONFIGURE)] == overlays
     assert (hlp_model_board.overlay, hlp_model_board.keepalive_ms, hlp_model_board.brightness) == (0, 2000, 1)
+
+
+def test_a_retaken_claim_gets_its_settings_again():
+    """Test that a renewal which took a lapsed claim again sends the settings last set through the claim."""
+    class Device:
+        generation = 2
+        retaken = 0
+        configured: list = []
+
+        def claim(self, action, token, name, flags, exclusive):
+            self.generation = self.retaken or self.generation
+            return token, ''
+
+        def configure(self, **settings):
+            self.configured.append(settings)
+
+    device = Device()
+    claim = tools.LightsClaim(device, 'hlp-test', 0x51)
+    claim.configure(overlay=False, keepalive_ms=2000, brightness=False)
+    overlay = {'overlay': True, 'keepalive_ms': 2000, 'brightness': True}
+    claim.configure(**overlay)
+    assert claim.renew() and len(device.configured) == 2      # the same generation: nothing sent again
+    device.retaken = 4                                        # the claim lapsed: this renewal takes it again
+    assert claim.renew() and device.configured[2:] == [overlay]

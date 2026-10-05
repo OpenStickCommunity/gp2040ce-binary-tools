@@ -668,13 +668,18 @@ class HostLightingDevice:
         :raises HostLightingRejected: on any other status; for CLAIMED, naming the claim's holder
         """
         reply = self.request(command, payload, flags, timeout, accept)
-        if reply[2] == STATUS_CLAIMED:
-            holder = decode_controller(bytes(reply[3:3 + CONTROLLER_SIZE]))
-            raise HostLightingRejected(command, reply[2], reply[3], (holder['holder_token'], holder['holder_name'],
-                                                                     holder['claim_generation']))
         if reply[2] != STATUS_OK:
-            raise HostLightingRejected(command, reply[2], reply[3])
+            raise self._rejected(command, reply)
         return reply
+
+    @staticmethod
+    def _rejected(command: int, reply: bytes) -> HostLightingRejected:
+        """Build the error for a refused request; for CLAIMED, naming the claim's holder."""
+        if reply[2] != STATUS_CLAIMED:
+            return HostLightingRejected(command, reply[2], reply[3])
+        holder = decode_controller(bytes(reply[3:3 + CONTROLLER_SIZE]))
+        return HostLightingRejected(command, reply[2], 0, (holder['holder_token'], holder['holder_name'],
+                                                           holder['claim_generation']))
 
     def hello(self) -> dict:
         """Send HELLO and decode the reply.
@@ -716,7 +721,7 @@ class HostLightingDevice:
 
         reply = self.request(CMD_GET_PAGE, struct.pack('<BHIH', page, start, token, mask), accept=echoes)
         if reply[2] not in (STATUS_OK, STATUS_STALE):
-            raise HostLightingRejected(CMD_GET_PAGE, reply[2], reply[3])
+            raise self._rejected(CMD_GET_PAGE, reply)
         return reply
 
     def read_table(self, page: int, mask: int = 0, attempts: int = 5) -> tuple[list, int]:
