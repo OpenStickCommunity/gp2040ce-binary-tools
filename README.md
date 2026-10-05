@@ -143,9 +143,11 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
 ```
 
 * `hlp-ping` says HELLO, checks the magic and protocol version, and times the command round trip.
-* `hlp-caps` decodes everything the board reports about itself: the HELLO capabilities, identity, state, the
-  input modes it accepts, the summary, the input profiles, every control (lit or not), every light with its
-  LEDs, kind, owner and grid cell, and the on-board animations with their speeds.
+* `hlp-caps` decodes everything the board reports about itself: the HELLO capabilities, identity, state
+  (with the application holding the claim and the claim generation), the input modes it accepts, the summary
+  (with the display's button layouts and each configuration page's change counter), the input profiles, every
+  control (lit or not), every light with its LEDs, kind, owner and grid cell, and the on-board animations with
+  their speeds.
 * `hlp-fill` fills the LEDs with a colour (`--scope all|buttons|case|pleds`) as a quick visual test, then
   restores the board's own animations.
 * `hlp-set-light` colours lights by their light ordinal, or with `--by pin|action|kind` by what they belong to,
@@ -159,8 +161,10 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
 * `hlp-buttons` gives every lit control its own hue (staged by action), then every light its own hue (one
   light run), then B1-B4 white over the running animations (overlay takeover).
 * The tools that drive the LEDs (`hlp-fill`, `hlp-set-light`, `hlp-stream`, `hlp-buttons`, `hlp-bench`,
-  `hlp-conformance`) claim the board for as long as they do and give it back afterwards, Ctrl-C included,
-  restoring the on-board animations and the `CONFIGURE` defaults. While another application (MESH, for
+  `hlp-conformance`) claim the board for as long as they do and give the claim up afterwards, Ctrl-C included,
+  which restores the on-board animations and the `CONFIGURE` defaults. While they hold the claim their
+  requests carry its generation, so a tool whose claim another application took over is refused at once
+  instead of staging into that application's frame. While another application (MESH, for
   example) holds the claim they leave the lights alone, unless `--force` takes them over. Their claim is
   shared unless `--exclusive` makes it exclusive: until the lights are handed back, the board then refuses
   changes from applications that do not hold the claim (an `hlp-settings` run alongside is refused with
@@ -173,8 +177,8 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
   meanwhile (so `--force` and `--exclusive` apply), and the board shows the saved step again when it ends,
   Ctrl-C and a lost process included.
 * `hlp-watch` subscribes to the board's `STATE_CHANGED` event and prints what each one changes: input mode,
-  profile, player, animation, brightness (and whether unsaved), takeover, the application holding the claim
-  (and whether exclusively), the `CONFIGURE` settings and the state token. The subscription is shared: every
+  profile, player, animation, brightness (the step shown and the saved one), takeover, the application holding
+  the claim (whether exclusively, and the claim generation), the `CONFIGURE` settings and the state token. The subscription is shared: every
   application with the interface open receives the event until the board's USB session ends.
 * `hlp-input-mode` sets the board's input mode and reboots into it. It accepts the modes the board lists, and
   a mode without the lighting interface only with `--force`: these tools cannot switch the board back from
@@ -183,10 +187,12 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
   bootloader for flashing.
 * `hlp-conformance` checks a board against the protocol and prints each rule it checks: the HELLO
   capabilities, framing, every page and field mask and the pages' cross-references, takeover, keepalive and
-  claim-lease timing, shared and exclusive claims, unsaved brightness, staging, events and board-feature
-  argument checks, then round trip and throughput. It holds the claim while it runs, renewed so that it never
+  claim-lease timing, the claim generation and the `CONFIGURE` defaults at each change of holder, shared and
+  exclusive claims, unsaved brightness, staging, events and board-feature argument checks, whether a second
+  handle on the board receives every reply (the operating system's part of sharing a board), then round trip
+  and throughput. It holds the claim while it runs, renewed so that it never
   keeps a takeover alive, so run it with no other lighting application. `--settings` also changes and
-  restores brightness, animation and a speed (settings flash writes), `--quick` shortens the timing runs.
+  restores brightness, animation and a speed (settings flash writes) and checks the change counters, `--quick` shortens the timing runs.
 * `hlp-bench` measures round trip (median and p95) and frame rates: whole frames paced at 60 fps, then back
   to back with every report answered and pipelined. `--leds` sets the frame size (default: the LED extent).
 

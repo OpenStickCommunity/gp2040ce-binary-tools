@@ -37,18 +37,20 @@ def page_reply(page: int, records: list, start: int = 0, mask: int = 0, token: i
 
 
 def state_record(live=0, mode=0, profile=1, player=1, animation=0, step=5, number=3, token=0, name=b'',
-                 overlay=0, keepalive=2000, brightness=1, unsaved=0, exclusive=0) -> list:
-    """One page 1 record as its three groups."""
-    return [bytes([live | unsaved << 1, mode, profile, player]) + struct.pack('<H', animation) + bytes([step, number]),
-            struct.pack('<I', token) + name.ljust(16, b'\x00') + bytes([exclusive]),
+                 overlay=0, keepalive=2000, brightness=1, unsaved=0, exclusive=0, saved=None, generation=1) -> list:
+    """One page 1 record as its three groups; the saved step is the step shown unless given."""
+    return [bytes([live | unsaved << 1, mode, profile, player]) + struct.pack('<H', animation) +
+            bytes([step, number, step if saved is None else saved]),
+            struct.pack('<I', token) + name.ljust(16, b'\x00') + bytes([exclusive, generation]),
             struct.pack('<BHB', overlay, keepalive, brightness)]
 
 
 def summary_record(extent=19, limit=100, rate=40, colour=0, maximum=255, steps=10, speeds=10, width=9, height=6,
-                   profiles=3, controls=12, lit=10, unlit=2, lights=16, animations=3) -> list:
-    """One page 8 record."""
-    return [struct.pack('<HHHBBBBHHHHHHHH', extent, limit, rate, colour, maximum, steps, speeds, width, height,
-                        profiles, controls, lit, unlit, lights, animations)]
+                   profiles=3, controls=12, lit=10, unlit=2, lights=16, animations=3, layout=0, layout_right=0,
+                   changes=bytes(8)) -> list:
+    """One page 8 record as its two groups: the summary and the configuration pages' change counters."""
+    return [struct.pack('<HHHBBBBHHHHHHHHBB', extent, limit, rate, colour, maximum, steps, speeds, width, height,
+                        profiles, controls, lit, unlit, lights, animations, layout, layout_right), bytes(changes)]
 
 
 def control_record(key, action, dup=0, lit=1, instance=1, instances=1, first_led=0, rect=(1, 0, 1, 0),
@@ -90,9 +92,38 @@ def hello_reply(sequence=1, major=2, board_id=BOARD_ID, subscribed=0, queue_limi
     commands = sum(1 << c for c in (0x01, 0x02, 0x03, 0x04, 0x05, 0x10, 0x11, 0x12, 0x13, 0x20, 0x21,
                                     0x30, 0x31, 0x32, 0x33, 0x70, 0x71))
     pages = sum(1 << p for p in (0, 1, 2, 8, 9, 10, 11, 12))
-    body = b'GPHL' + bytes([major, 0]) + board_id + bytes([queue_limit, 0x0F]) + commands.to_bytes(16, 'little')
+    body = b'GPHL' + bytes([major, 0]) + board_id + bytes([queue_limit, 0x7F]) + commands.to_bytes(16, 'little')
     body += struct.pack('<IHHHH', pages, 0xF3, 0x07, 0x01, subscribed)
     return (bytes([hl.CMD_HELLO | hl.REPLY_FLAG, sequence, 0]) + body).ljust(hl.REPORT_SIZE, b'\x00')
+
+
+class Outbox(list):
+    """A fake board's reports waiting for its first handle.
+
+    Each report queued is copied to every other open handle, as the operating system delivers each input
+    report to every application with the interface open.
+    """
+
+    def __init__(self, board):
+        """Start empty, for one board."""
+        super().__init__()
+        self.board = board
+
+    def append(self, report) -> None:
+        """Queue one report."""
+        super().append(report)
+        self.copy([report])
+
+    def extend(self, reports) -> None:
+        """Queue several reports."""
+        reports = list(reports)
+        super().extend(reports)
+        self.copy(reports)
+
+    def copy(self, reports) -> None:
+        """Give the other open handles their copies."""
+        for handle in self.board.handles:
+            handle.inbox.extend(bytes(report) for report in reports)
 
 
 class FakeBoard:
@@ -115,12 +146,16 @@ class FakeBoard:
                          '0.7.12', 'a83f820', 'Release', 'GP2040-CE_0.7.12_Haute42COSMOXMUltra']
         self.token = 0x1234ABCD
         self.requests: list = []
-        self.outbox: list = []
+        self.outbox: list = Outbox(self)
+        self.handles: list = []         # other applications' handles (SecondHandle), beside the first
+        self.opened = False
         self.stale_once_at = None       # a GET_PAGE start at which the token changes once
-        self.disconnect_on: set = set()  # commands after which the board drops off the bus
+        # commands, or (command, [3]) pairs, at which the board drops off the bus
+        self.disconnect_on: set = set()
         self.holder = 0
         self.holder_name = bytes(16)
         self.holder_flags = 0
+        self.generation = 1             # steps 1 to 7 and back to 1 at every change of holder
         self.saved_step = self.state[0][6]
         self.subscribed = 0
         self.before: dict = {}          # command -> reports that arrive between it and its reply
@@ -133,7 +168,7 @@ class FakeBoard:
         request = bytes(data[1:])
         self.requests.append(request)
         command, sequence, flags = request[0], request[1], request[2]
-        if command in self.disconnect_on:
+        if command in self.disconnect_on or (command, request[3]) in self.disconnect_on:
             raise OSError("device disconnected")
         reply = self.answer(command, sequence, request)
         self.outbox.extend(self.before.pop(command, []))
@@ -179,6 +214,7 @@ class FakeBoard:
             action == hl.CLAIM_TAKE_OVER or not self.holder)
         if given_up or taken:
             self.show_step(self.saved_step)     # a change of holder ends an unsaved step
+            self.generation = self.generation % hl.GENERATION_MAX + 1
         if action == hl.CLAIM_GIVE_UP:
             if token == self.holder:
                 self.holder, self.holder_name, self.holder_flags = 0, bytes(16), 0
@@ -187,8 +223,8 @@ class FakeBoard:
         return (ok + request[3:8] + self.controller()).ljust(hl.REPORT_SIZE, b'\x00')
 
     def controller(self) -> bytes:
-        """Page 1's Controller group: the holder's token, name and claim flags."""
-        return struct.pack('<I', self.holder) + self.holder_name + bytes([self.holder_flags])
+        """Page 1's Controller group: the holder's token, name and claim flags, and the claim generation."""
+        return struct.pack('<I', self.holder) + self.holder_name + bytes([self.holder_flags, self.generation])
 
     def feature(self, ok: bytes, command: int, request: bytes) -> bytes:
         """Answer SUBSCRIBE and the board-feature commands as the firmware checks them."""
@@ -255,6 +291,7 @@ class FakeBoard:
     def show_step(self, step: int) -> None:
         """Show a brightness step in page 1, flagged unsaved while it differs from the saved step."""
         self.set_state(6, bytes([step]))
+        self.set_state(8, bytes([self.saved_step]))
         self.set_state(0, bytes([self.state[0][0] & ~0x02 | (0x02 if step != self.saved_step else 0)]))
 
     def stage(self, ok: bytes, request: bytes) -> bytes:
@@ -316,6 +353,7 @@ class FakeBoard:
 
     def close(self) -> None:
         """Close, as hidapi does."""
+        self.opened = False
 
     def sent(self, command: int) -> list:
         """Every request with this command."""
@@ -335,14 +373,45 @@ def other_event() -> bytes:
     return bytes(event)
 
 
+class SecondHandle:
+    """Another application's handle on a fake board that is already open.
+
+    It writes to the board and reads its own copy of every report.
+    """
+
+    def __init__(self, board: FakeBoard):
+        """Open a handle beside the board's first."""
+        self.board = board
+        self.inbox: list = []
+        board.handles.append(self)
+
+    def write(self, data: bytes) -> int:
+        """Send one report to the board."""
+        return self.board.write(data)
+
+    def read(self, size: int, timeout_ms: int = 0) -> list:
+        """Give this handle's next report; with none, wait the timeout on the board's clock when it has one."""
+        if self.inbox:
+            return list(self.inbox.pop(0))
+        if timeout_ms and hasattr(self.board, 'sleep'):
+            self.board.sleep(timeout_ms / 1000)
+        return []
+
+    def close(self) -> None:
+        """Close this handle."""
+        self.board.handles.remove(self)
+
+
 def fake_device(board: FakeBoard) -> hl.HostLightingDevice:
-    """Wire a HostLightingDevice to a FakeBoard instead of hidapi."""
+    """Wire a HostLightingDevice to a FakeBoard instead of hidapi; to a second handle while the board is open."""
     device = DEVICE_CLASS.__new__(DEVICE_CLASS)
-    device.device = board
+    device.device = SecondHandle(board) if board.opened else board
+    board.opened = True
     device.sequence = 0
     device.events = []
     device.awaited = set()
     device.pending = []
+    device.generation = 0
     device.holding_exclusive = False
     return device
 
@@ -352,10 +421,11 @@ class ModelBoard(FakeBoard):
 
     It models what hlp-conformance checks: unknown and unanswerable commands, the reply queue limit (a request
     that needs a reply while the queue is full is discarded), the takeover and its number, publishing, the
-    keepalive and the claim lease (both CONFIGURE's timeout), the exclusive claim's refusals, the unsaved
+    keepalive and the claim lease (both CONFIGURE's timeout), the claim generation and the refusal of an
+    outdated one, the CONFIGURE defaults at every change of holder, the exclusive claim's refusals, the unsaved
     brightness step and its keepalive, events sent only while no reply waits, run and entry staging with the
-    capacity and limit rules, FILL, UNSTAGE, the magic-guarded commands, and a state token that follows the
-    configuration pages. Each report written takes 1 ms; a read with nothing to read
+    capacity and limit rules, FILL, UNSTAGE, the magic-guarded commands, and a state token and change counters
+    that follow the configuration pages. Each report written takes 1 ms; a read with nothing to read
     waits its timeout.
     """
 
@@ -384,6 +454,7 @@ class ModelBoard(FakeBoard):
         self.pending = False
         self.steal_at = None            # a time at which another application takes the claim over
         self.queue_limit = 16
+        self._hashes: list = []         # each configuration page as last hashed, for the change counters
         self._refresh()
         self._seen = (tuple(self.state), self.token)
 
@@ -406,15 +477,20 @@ class ModelBoard(FakeBoard):
         request = bytes(data[1:])
         self.requests.append(request)
         command, sequence, flags = request[0], request[1], request[2]
-        if command in self.disconnect_on:
+        if command in self.disconnect_on or (command, request[3]) in self.disconnect_on:
             raise OSError("device disconnected")
         self.now += 0.001
         self._tick()
         queued = [report for report in self.outbox if report[0] != hl.EVENT_MARKER]
         if not flags & hl.FLAG_NO_REPLY and len(queued) >= self.queue_limit:
             return len(data)            # discarded: neither executed nor answered
-        guarded = self.holder and self.holder_flags & hl.CLAIM_EXCLUSIVE and not flags & hl.FLAG_HOLDER
-        if guarded and self.refused(command, flags):
+        generation = (flags & hl.FLAG_GENERATION_MASK) >> hl.FLAG_GENERATION_SHIFT
+        # a request other than CLAIM under a generation that is no longer current: the holder has changed
+        outdated = (command in self.COMMANDS and command != hl.CMD_CLAIM and
+                    generation not in (0, self.generation))
+        guarded = self.holder and self.holder_flags & hl.CLAIM_EXCLUSIVE and not (
+            flags & hl.FLAG_HOLDER and generation == self.generation)
+        if outdated or (guarded and self.refused(command, flags)):
             reply = self.claimed(command, sequence)
         else:
             reply = self.answer(command, sequence, request)
@@ -435,7 +511,9 @@ class ModelBoard(FakeBoard):
             return list(self.outbox.pop(0))
         if self.pending:
             self.pending = False
-            return list(self._event())
+            event = self._event()
+            self.outbox.copy([event])
+            return list(event)
         if timeout_ms:
             self.now += timeout_ms / 1000
             self._tick()
@@ -444,7 +522,7 @@ class ModelBoard(FakeBoard):
     # -- rules -------------------------------------------------------------------
 
     def refused(self, command: int, flags: int) -> bool:
-        """Say whether an exclusive claim refuses a request without HOLDER.
+        """Say whether an exclusive claim refuses a request without HOLDER and the current generation.
 
         It refuses every command but HELLO, GET_PAGE, CLAIM and SUBSCRIBE, and those with COMMIT_AFTER or
         KEEPALIVE but CLAIM, which is never refused; an unknown command is status 1.
@@ -455,15 +533,15 @@ class ModelBoard(FakeBoard):
         return command not in reads or bool(flags & (hl.FLAG_COMMIT_AFTER | hl.FLAG_KEEPALIVE))
 
     def claimed(self, command: int, sequence: int) -> bytes:
-        """Build a status 4 reply: the exclusive claim's holder at [3..23], as page 1's Controller group."""
+        """Build a status 4 reply: the holder at [3..24], as page 1's Controller group."""
         return (bytes([command | hl.REPLY_FLAG, sequence, hl.STATUS_CLAIMED]) + self.controller()).ljust(
             hl.REPORT_SIZE, b'\x00')
 
     def flags_act(self, command: int, request: bytes, guarded: bool) -> bool:
         """Say whether a request's COMMIT_AFTER and KEEPALIVE act.
 
-        Under an exclusive claim, a request without HOLDER has them act only when it is a CLAIM that leaves the
-        sender holding the claim.
+        Under an exclusive claim, a request without HOLDER and the current generation has them act only when
+        it is a CLAIM that leaves the sender holding the claim.
         """
         return not guarded or (command == hl.CMD_CLAIM and self.holder == struct.unpack_from('<I', request, 4)[0])
 
@@ -621,8 +699,12 @@ class ModelBoard(FakeBoard):
 
     def _set_holder(self, token: int, name: bytes, flags: int = 0) -> None:
         if token != self.holder:
-            self.live = False           # a change of holder ends the takeover and an unsaved step
+            # a change of holder ends the takeover and an unsaved step, puts the CONFIGURE settings back to
+            # their defaults and steps the generation
+            self.live = False
             self.show_step(self.saved_step)
+            self.overlay, self.keepalive_ms, self.brightness = 0, 2000, 1
+            self.generation = self.generation % hl.GENERATION_MAX + 1
         self.holder, self.holder_name, self.holder_flags = token, bytes(name), flags
 
     def unsaved(self) -> bool:
@@ -648,8 +730,17 @@ class ModelBoard(FakeBoard):
         state[0], state[7] = int(self.live) | state[0] & 0x02, self.number
         self.state = [bytes(state), self.controller(),
                       struct.pack('<BHB', self.overlay, self.keepalive_ms, self.brightness)]
-        pages = repr((self.summary, self.profiles, self.controls, self.lights, self.animations)).encode()
-        self.token = zlib.crc32(pages) or 1
+        # the token follows what the configuration pages report, the change counters apart; a page that
+        # changed since it was last hashed steps its counter (pages 8 to 12 here)
+        pages = [self.summary[0], self.profiles, self.controls, self.lights, self.animations]
+        hashes = [zlib.crc32(repr(page).encode()) for page in pages]
+        changes = bytearray(self.summary[1])
+        for index, (was, now) in enumerate(zip(self._hashes, hashes)):
+            if was != now:
+                changes[index] = (changes[index] + 1) & 0xFF
+        self._hashes = hashes
+        self.summary = [self.summary[0], bytes(changes)]
+        self.token = zlib.crc32(repr(hashes).encode()) or 1
 
     def _note(self) -> None:
         self._refresh()

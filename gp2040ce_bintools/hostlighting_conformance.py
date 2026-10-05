@@ -2,14 +2,16 @@
 
 hlp-conformance checks one board against the protocol and reports each rule it checks: the HELLO
 capabilities, framing, every page and field mask, the pages' cross-references, takeover and keepalive timing,
-the claim lease, shared and exclusive claims, unsaved brightness, staging, events and board-feature argument
-checks, then round trip and throughput. hlp-bench runs the round trip and frame-rate measurements on their own,
+the claim lease and generation, shared and exclusive claims, unsaved brightness, staging, events and
+board-feature argument checks, delivery of replies to a second handle, then round trip and throughput.
+hlp-bench runs the round trip and frame-rate measurements on their own,
 at length. Both hold the claim while they run,
 so other applications leave the lights alone, and hand the lights back at the end.
 
 SPDX-FileCopyrightText: © 2026 Jacob Simpson
 SPDX-License-Identifier: GPL-3.0-or-later
 """
+import contextlib
 import statistics
 import struct
 import time
@@ -21,23 +23,23 @@ from gp2040ce_bintools.hostlighting import (ACTION_NONE, ADDRESSING_ACTION, ADDR
                                             CMD_GET_PAGE, CMD_HELLO, CMD_REBOOT, CMD_RELEASE, CMD_SET_ANIMATION,
                                             CMD_SET_ANIMATION_SPEED, CMD_SET_BRIGHTNESS, CMD_SET_INPUT_MODE,
                                             CMD_SET_PROFILE, CMD_STAGE, CMD_SUBSCRIBE, CMD_UNSTAGE, COMMAND_RANGES,
-                                            EVENT_STATE_CHANGED, FLAG_COMMIT_AFTER, FLAG_HOLDER, FLAG_KEEPALIVE,
-                                            FLAG_NO_REPLY, IDENTITY_FIELDS, KEY_EXPANDER, KEY_TRIGGER,
-                                            MAGIC_INPUT_MODE, MAGIC_REBOOT, NONE_8,
-                                            PAGE_ANIMATIONS, PAGE_CONTROLS, PAGE_GROUPS, PAGE_IDENTITY,
-                                            PAGE_INPUT_MODES, PAGE_LIGHTS, PAGE_PROFILES, PAGE_RANGES, PAGE_STATE,
-                                            PAGE_SUMMARY, PIXEL_RGB, PIXEL_RGB565, PIXEL_RGBW, PIXEL_SIZES,
-                                            PROTOCOL_MAJOR, RECORDS_AREA, RECORDS_OFFSET, REPLY_FLAG, STATUS_CLAIMED,
-                                            STATUS_INVALID, STATUS_OK, STATUS_STALE, STATUS_UNSUPPORTED,
-                                            HostLightingDevice, HostLightingError, decode_page_header, decode_records,
-                                            decode_key, decode_state_changed, is_event, key_name,
-                                            open_device, stage_capacity)
+                                            CONTROLLER_SIZE, EVENT_STATE_CHANGED, FLAG_COMMIT_AFTER,
+                                            FLAG_GENERATION_MASK, FLAG_GENERATION_SHIFT, FLAG_HOLDER, FLAG_KEEPALIVE,
+                                            FLAG_NO_REPLY, GENERATION_MAX, IDENTITY_FIELDS, KEY_EXPANDER, KEY_TRIGGER,
+                                            MAGIC_INPUT_MODE, MAGIC_REBOOT, NONE_8, PAGE_ANIMATIONS, PAGE_CONTROLS,
+                                            PAGE_GROUPS, PAGE_IDENTITY, PAGE_INPUT_MODES, PAGE_LIGHTS, PAGE_PROFILES,
+                                            PAGE_RANGES, PAGE_STATE, PAGE_SUMMARY, PIXEL_RGB, PIXEL_RGB565, PIXEL_RGBW,
+                                            PIXEL_SIZES, PROTOCOL_MAJOR, RECORDS_AREA, RECORDS_OFFSET, REPLY_FLAG,
+                                            STATUS_CLAIMED, STATUS_INVALID, STATUS_OK, STATUS_STALE, STATUS_UNSUPPORTED,
+                                            HostLightingDevice, HostLightingError, decode_controller, decode_key,
+                                            decode_page_header, decode_records, decode_state_changed, is_event,
+                                            key_name, open_device, stage_capacity)
 from gp2040ce_bintools.hostlighting_tools import (LightsClaim, add_claim_arguments, device_parser, hlp_command,
                                                   holding_lights, ranged)
 
 # what a protocol 2.0 board implements, from the protocol reference; a later 2.x board lists more
 REQUEST_FLAGS = {FLAG_COMMIT_AFTER.bit_length() - 1, FLAG_NO_REPLY.bit_length() - 1, FLAG_KEEPALIVE.bit_length() - 1,
-                 FLAG_HOLDER.bit_length() - 1}
+                 FLAG_HOLDER.bit_length() - 1} | {bit for bit in range(8) if FLAG_GENERATION_MASK >> bit & 1}
 COMMANDS = {CMD_HELLO, CMD_GET_PAGE, CMD_CLAIM, CMD_CONFIGURE, CMD_SUBSCRIBE, CMD_STAGE, CMD_UNSTAGE, CMD_FILL,
             CMD_CLEAR, CMD_COMMIT, CMD_RELEASE, CMD_SET_PROFILE, CMD_SET_ANIMATION, CMD_SET_ANIMATION_SPEED,
             CMD_SET_BRIGHTNESS, CMD_SET_INPUT_MODE, CMD_REBOOT}
@@ -94,19 +96,29 @@ class _Lease:
         """Hold the claim holding_lights took, under its 2 s keepalive timeout."""
         self.claim = claim
         self.timeout = 2.0
+        self.settings: tuple = ()       # the CONFIGURE settings last applied through configure()
         self.renewed = time.monotonic()
 
     def renew(self) -> None:
         """Renew the claim now, shared or exclusive as the claim is held.
 
+        A new generation means the claim was taken again after a check gave it away: that change of holder
+        put the CONFIGURE settings back to their defaults, so the settings last applied are sent again.
+
         :raises _TakenOver: once another application holds the claim
         """
-        holder, holder_name = self.claim.device.claim(CLAIM_TAKE, self.claim.token, self.claim.name.encode(),
-                                                      exclusive=self.claim.exclusive)
+        device = self.claim.device
+        generation = device.generation
+        holder, holder_name = device.claim(CLAIM_TAKE, self.claim.token, self.claim.name.encode(),
+                                           exclusive=self.claim.exclusive)
         self.renewed = time.monotonic()
         if holder != self.claim.token:
             self.claim.held = False
             raise _TakenOver(f"'{holder_name}' took the lights over")
+        if device.generation != generation:
+            self.timeout = 2.0
+            if self.settings:
+                self._apply(*self.settings)
 
     def keep(self) -> None:
         """Renew the claim once a third of the keepalive timeout has passed since the last renewal."""
@@ -126,9 +138,13 @@ class _Lease:
         :return: the reply
         """
         self.renew()
+        return self._apply(overlay, timeout, brightness)
+
+    def _apply(self, overlay: int, timeout: int, brightness: int) -> bytes:
         reply = _configure(self.claim.device, overlay, timeout, brightness)
         if reply[2] == STATUS_OK:
             self.timeout = struct.unpack_from('<H', reply, 4)[0] / 1000
+            self.settings = (overlay, timeout, brightness)
         return reply
 
 
@@ -138,8 +154,13 @@ def _status(reply: bytes) -> tuple:
 
 
 def _state(device: HostLightingDevice) -> dict:
-    """Read page 1 as one dict, with the state token."""
-    record, token = device.read_record(PAGE_STATE)
+    """Read page 1 as one dict, with the state token.
+
+    It is read as an application that holds no claim would, which no claim refuses: the checks read it
+    while another token holds the claim too.
+    """
+    with _other(device):
+        record, token = device.read_record(PAGE_STATE)
     return dict(record, token=token)
 
 
@@ -168,13 +189,45 @@ def _configure(device: HostLightingDevice, overlay: int, timeout: int, brightnes
     return device.request(CMD_CONFIGURE, struct.pack('<BHB', overlay, timeout, brightness))
 
 
-def _as_other(device: HostLightingDevice, command: int, payload: bytes = b'', flags: int = 0) -> bytes:
-    """Send a request as an application that holds no exclusive claim: without FLAG_HOLDER."""
-    holding, device.holding_exclusive = device.holding_exclusive, False
+@contextlib.contextmanager
+def _other(device: HostLightingDevice):
+    """Send requests as an application that holds no claim.
+
+    They carry no FLAG_HOLDER, and no generation but one a request's own flags carry.
+    """
+    held = device.generation, device.holding_exclusive
+    device.generation, device.holding_exclusive = 0, False
     try:
-        return device.request(command, payload, flags)
+        yield
     finally:
-        device.holding_exclusive = holding
+        device.generation, device.holding_exclusive = held
+
+
+def _as_other(device: HostLightingDevice, command: int, payload: bytes = b'', flags: int = 0) -> bytes:
+    """Send a request as an application that holds no claim."""
+    with _other(device):
+        return device.request(command, payload, flags)
+
+
+def _act_as(device: HostLightingDevice, reply: bytes, token: int) -> None:
+    """Have the device's requests carry what a token would send after its CLAIM reply.
+
+    When the token holds the claim: the generation shown, and FLAG_HOLDER under an exclusive claim. When it
+    does not: neither.
+    """
+    holds = reply[2] == STATUS_OK and _holder(reply)[0] == token
+    device.generation = reply[29] if holds else 0
+    device.holding_exclusive = holds and bool(reply[28] & CLAIM_EXCLUSIVE)
+
+
+def _next(generation: int) -> int:
+    """Return the claim generation after a change of holder: 1 to 7, then 1 again."""
+    return generation % GENERATION_MAX + 1
+
+
+def _refused(reply: bytes) -> dict:
+    """Return the holder a status 4 reply shows; empty for any other reply."""
+    return decode_controller(bytes(reply[3:3 + CONTROLLER_SIZE])) if reply[2] == STATUS_CLAIMED else {}
 
 
 def _unlisted(listed: set, ranges: tuple) -> list:
@@ -286,6 +339,10 @@ def _check_pages(device: HostLightingDevice, checks: Checks, hello: dict) -> int
     echoed = (header['page'], header['start'], header['token']) == (PAGE_LIGHTS, 1, token)
     checks.check(reply[2] == STATUS_STALE and echoed and (header['count'], header['groups']) == (0, 0),
                  'stale token: status 3, page and start echoed, no records, no groups')
+    changes = device.read_record(PAGE_SUMMARY, 0b10)[0]['page_changes']
+    checks.check(all(count == 0 for page, count in changes.items() if page not in hello['pages']),
+                 'Summary change counters: 0 for the pages the board does not have', f"{changes}")
+    checks.check(device.read_record(PAGE_SUMMARY, 0b10)[0]['page_changes'] == changes, 'a read steps no counter')
     identity = device.read_identity()
     checks.check(len(identity) == len(IDENTITY_FIELDS), 'page 0: every identity string')
     checks.note(f"{identity.get(0, '?')} ({identity.get(1, '?')}, {identity.get(2, '?')}), "
@@ -515,9 +572,12 @@ def _check_claim(device: HostLightingDevice, checks: Checks, lease: _Lease) -> N
     ours, name = lease.claim.token, lease.claim.name
     other = ours ^ 0xFFFFFFFF or 1          # any other non-zero token
     lease.renew()
+    generation = device.generation
     renamed = _claim(device, CLAIM_TAKE, ours, b'hlp-renamed')
     checks.check(_holder(renamed) == (ours, 'hlp-renamed') and _state(device)['holder_name'] == 'hlp-renamed',
                  'a renewal keeps the claim and records the new name')
+    checks.check(1 <= generation <= GENERATION_MAX and renamed[29] == generation,
+                 'the claim generation is 1-7, and a renewal keeps it', f"{renamed[29]} after {generation}")
     refused = _claim(device, CLAIM_TAKE, other, b'other')
     checks.check(_holder(refused)[0] == ours, 'another token is refused, reply OK')
     ignored = _claim(device, CLAIM_GIVE_UP, other)
@@ -532,14 +592,45 @@ def _check_claim(device: HostLightingDevice, checks: Checks, lease: _Lease) -> N
                  'RELEASE ends the takeover, not the claim')
     device.request_ok(CMD_COMMIT)
     took = _claim(device, CLAIM_TAKE_OVER, other, b'other')
-    checks.check(_holder(took)[0] == other and not _state(device)['takeover_live'], 'take over ends the takeover')
+    _act_as(device, took, other)
+    state = _state(device)
+    checks.check(_holder(took)[0] == other and not state['takeover_live'], 'take over ends the takeover')
+    checks.check(took[29] == _next(generation) and state['claim_generation'] == took[29],
+                 'a change of holder steps the claim generation', f"{took[29]} after {generation}")
+    settings = (state['overlay'], state['keepalive_ms'], state['brightness_applied'])
+    checks.check(settings == (False, 2000, True), 'and puts the CONFIGURE settings back to their defaults',
+                 f"{settings}")
+    # the previous holder has not seen the change: its requests still carry its generation
+    holder = {'holder_token': other, 'holder_name': 'other', 'claim_exclusive': False, 'claim_generation': took[29]}
+    previous = generation << FLAG_GENERATION_SHIFT
+    stage = bytes([ADDRESSING_LED_RUN]) + struct.pack('<HB', 0, 1) + bytes(3)
+    wrong = [f"0x{command:02X}: status {reply[2]}" for command, payload in (
+        (CMD_STAGE, stage), (CMD_COMMIT, b''), (CMD_HELLO, b''), (CMD_CONFIGURE, struct.pack('<BHB', 1, 0, 0)))
+        for reply in [device.request(command, payload, previous)] if _refused(reply) != holder]
+    checks.check(not wrong, "a request under the previous holder's generation is refused: status 4 with the "
+                 'holder now', ', '.join(wrong))
+    device.send(CMD_COMMIT, flags=previous | FLAG_NO_REPLY)
+    state = _state(device)
+    checks.check(not state['takeover_live'] and not state['overlay'], 'and changes nothing, answered or not')
+    checks.check(device.request(CMD_CLEAR)[2] == STATUS_OK and _as_other(device, CMD_CLEAR)[2] == STATUS_OK,
+                 'the current generation acts, and so does a request that carries none')
+    _configure(device, 0, KEEPALIVE_MS, 1)    # as the holder now, whose lease nothing renews
     _events(device, 0.05)
-    time.sleep(KEEPALIVE_MS * 1.5 / 1000)     # nothing renews the other token's lease
-    checks.check(_state(device)['holder_token'] == 0, 'the lease lapses after the timeout')
+    time.sleep(KEEPALIVE_MS * 1.5 / 1000)
+    state = _state(device)
+    checks.check(state['holder_token'] == 0, 'the lease lapses after the timeout')
+    checks.check(state['claim_generation'] == _next(took[29]) and state['keepalive_ms'] == 2000,
+                 'a lapse is a change of holder too: the generation steps, the settings return',
+                 f"generation {state['claim_generation']}, keepalive {state['keepalive_ms']} ms")
     checks.check(any(event['holder_token'] == 0 for event in _events(device, 0.05)), 'STATE_CHANGED on the lapse')
+    lapsed = _refused(device.request(CMD_COMMIT))    # still under the lapsed claim's generation
+    checks.check(lapsed.get('holder_token') == 0 and lapsed.get('claim_generation') == state['claim_generation'],
+                 'with no claim held an outdated generation is refused too: status 4, holder 0', f"{lapsed}")
     taken = _claim(device, CLAIM_TAKE, ours, name.encode())
+    _act_as(device, taken, ours)
     checks.check(_holder(taken) == (ours, name), 'claim taken when unclaimed, holder shown')
     given = _claim(device, CLAIM_GIVE_UP, ours)
+    _act_as(device, given, ours)
     checks.check(_holder(given)[0] == 0, 'give up clears the claim')
     checks.check(all(_echoes(reply, action, token) for reply, action, token in (
         (renamed, CLAIM_TAKE, ours), (refused, CLAIM_TAKE, other), (ignored, CLAIM_GIVE_UP, other),
@@ -549,7 +640,10 @@ def _check_claim(device: HostLightingDevice, checks: Checks, lease: _Lease) -> N
 
 
 def _check_exclusive(device: HostLightingDevice, checks: Checks, tables: dict, lease: _Lease) -> None:
-    """Check the exclusive claim: what it refuses without HOLDER, what it lets through, and CLAIM under it."""
+    """Check the exclusive claim: what it refuses, what it lets through, and CLAIM under it.
+
+    It refuses a change sent without both HOLDER and the current generation.
+    """
     checks.section('Exclusive claim')
     claim, kind = lease.claim, lease.claim.exclusive
     other = claim.token ^ 0xFFFFFFFF or 1          # any other non-zero token
@@ -562,7 +656,9 @@ def _check_exclusive(device: HostLightingDevice, checks: Checks, tables: dict, l
     checks.check(state['claim_exclusive'] and state['holder_token'] == claim.token, 'page 1 shows the exclusive claim')
     checks.check(any(event['claim_exclusive'] for event in _events(device, 0.05)),
                  "STATE_CHANGED when the holder's renewal changes the claim flags")
-    holder = struct.pack('<I', claim.token) + claim.name.encode()[:16].ljust(16, b'\x00') + bytes([CLAIM_EXCLUSIVE])
+    generation = device.generation
+    holder = struct.pack('<I', claim.token) + claim.name.encode()[:16].ljust(16, b'\x00') + bytes([CLAIM_EXCLUSIVE,
+                                                                                                  generation])
     device.request_ok(CMD_RELEASE)
     number = _state(device)['takeover_number']
     # harmless were they executed: the current settings, an empty run, the saved step, a profile and a REBOOT target
@@ -575,15 +671,18 @@ def _check_exclusive(device: HostLightingDevice, checks: Checks, tables: dict, l
     wrong = []
     for command, payload in changes:
         reply = _as_other(device, command, payload)
-        if reply[2] != STATUS_CLAIMED or bytes(reply[3:24]) != holder:
+        if reply[2] != STATUS_CLAIMED or bytes(reply[3:3 + CONTROLLER_SIZE]) != holder:
             wrong.append(f"0x{command:02X}: status {reply[2]}")
     checks.check(not wrong, 'without HOLDER, changes are refused before their arguments are checked: status 4 with '
                  'the holder', ', '.join(wrong))
+    partial = (FLAG_HOLDER, generation << FLAG_GENERATION_SHIFT,
+               FLAG_HOLDER | _next(generation) << FLAG_GENERATION_SHIFT)
+    checks.check(all(_as_other(device, CMD_COMMIT, b'', flags)[2] == STATUS_CLAIMED for flags in partial),
+                 'HOLDER without the current generation, and the generation without HOLDER, are refused too')
     state = _state(device)
     checks.check(not state['takeover_live'] and state['takeover_number'] == number, 'a refused request changes nothing')
-    device.holding_exclusive = False
-    device.send(CMD_COMMIT, flags=FLAG_NO_REPLY)
-    device.holding_exclusive = True
+    with _other(device):
+        device.send(CMD_COMMIT, flags=FLAG_NO_REPLY)
     checks.check(not _state(device)['takeover_live'], 'a refused NO_REPLY request is not executed either')
     page_1 = struct.pack('<BHIH', PAGE_STATE, 0, 0, 0)
     reads = [_as_other(device, CMD_HELLO), _as_other(device, CMD_GET_PAGE, page_1),
@@ -595,7 +694,7 @@ def _check_exclusive(device: HostLightingDevice, checks: Checks, tables: dict, l
     unlisted = _unlisted(tables['hello']['commands'], COMMAND_RANGES)[0]
     checks.check(_as_other(device, unlisted)[2] == STATUS_UNSUPPORTED, 'an unlisted command is still status 1')
     checks.check(device.request(CMD_COMMIT)[2] == STATUS_OK and _state(device)['takeover_live'],
-                 "the holder's requests, with HOLDER, act")
+                 "the holder's requests, with HOLDER and the generation, act")
     other_claim = bytes([CLAIM_TAKE]) + struct.pack('<I', other) + b'other'.ljust(16, b'\x00')
     replies = []
     for _ in range(4):          # the holder renews its lease only
@@ -612,11 +711,15 @@ def _check_exclusive(device: HostLightingDevice, checks: Checks, tables: dict, l
     checks.check(took[2] == STATUS_OK and _holder(took)[0] == other and not state['claim_exclusive'],
                  "a take over records the taker's claim flags")
     checks.check(state['takeover_live'], 'without HOLDER, a take over has its COMMIT_AFTER act for the taker')
+    _act_as(device, took, other)
     checks.check(_as_other(device, CMD_SET_BRIGHTNESS, bytes([BRIGHTNESS_SAVED]))[2] == STATUS_OK,
                  'a shared claim refuses nothing')
     checks.check(device.request(CMD_SET_BRIGHTNESS, bytes([BRIGHTNESS_SAVED]), FLAG_HOLDER)[2] == STATUS_OK,
                  'under a shared claim HOLDER is ignored: a request carrying it acts')
-    _claim(device, CLAIM_GIVE_UP, other)
+    reply = _as_other(device, CMD_SET_BRIGHTNESS, bytes([BRIGHTNESS_SAVED]), generation << FLAG_GENERATION_SHIFT)
+    checks.check(_refused(reply).get('holder_token') == other,
+                 "but not a request under the previous holder's generation: status 4 with the holder now")
+    _act_as(device, _claim(device, CLAIM_GIVE_UP, other), other)
     claim.exclusive = kind
     lease.renew()
 
@@ -638,6 +741,8 @@ def _check_unsaved(device: HostLightingDevice, checks: Checks, tables: dict, lea
     state = _state(device)
     checks.check(state['brightness_step'] == step and state['brightness_unsaved'],
                  'an unsaved step is shown at once, flagged unsaved')
+    checks.check(state['saved_brightness_step'] == saved, 'page 1 still shows the saved step',
+                 f"{state['saved_brightness_step']} vs {saved}")
     checks.check(any(event['brightness_unsaved'] for event in _events(device, 0.05)),
                  'STATE_CHANGED for the unsaved step')
     longest, start = 0.0, time.monotonic()
@@ -870,14 +975,22 @@ def _check_settings(device: HostLightingDevice, checks: Checks, tables: dict, le
     if animations:
         speeds = animations[0]['speeds']
         before = decode_page_header(device.get_page(PAGE_ANIMATIONS))['token']
+        counted = device.read_record(PAGE_SUMMARY, 0b10)[0]['page_changes']
         new = (speeds[0] + 1) % (summary['speed_steps'] + 1)
         ok = device.request(CMD_SET_ANIMATION_SPEED, struct.pack('<H', 0) + bytes([new, 0xFF, 0xFF]))[2] == STATUS_OK
         reply = device.get_page(PAGE_ANIMATIONS)
         checks.check(ok and decode_records(reply)[0]['speeds'][0] == new and
                      decode_page_header(reply)['token'] != before, 'SET_ANIMATION_SPEED: page 12 and the token change')
+        stepped = dict(counted)
+        stepped[PAGE_ANIMATIONS] = (counted[PAGE_ANIMATIONS] + 1) & 0xFF
+        changes = device.read_record(PAGE_SUMMARY, 0b10)[0]['page_changes']
+        checks.check(changes == stepped, "page 12's change counter steps, and no other", f"{counted} to {changes}")
         device.request(CMD_SET_ANIMATION_SPEED, struct.pack('<H', 0) + bytes(speeds))
         checks.check(decode_page_header(device.get_page(PAGE_ANIMATIONS))['token'] == before,
                      'speeds restored: the token returns')
+        stepped[PAGE_ANIMATIONS] = (stepped[PAGE_ANIMATIONS] + 1) & 0xFF
+        checks.check(device.read_record(PAGE_SUMMARY, 0b10)[0]['page_changes'] == stepped,
+                     'the counter steps again: it counts changes, the token follows the content')
     lease.wait(1.5)             # the board writes its settings flash shortly after a change
 
 
@@ -902,9 +1015,37 @@ def _check_timing(device: HostLightingDevice, checks: Checks, tables: dict, quic
     device.request_ok(CMD_RELEASE)
 
 
-def _run_checks(device: HostLightingDevice, checks: Checks, lease: _Lease, settings: bool, quick: bool) -> None:
+def _check_delivery(device: HostLightingDevice, checks: Checks, open_second) -> None:
+    """Check that the operating system delivers each reply to every application with the interface open.
+
+    The protocol's sharing rules rest on it. A second handle is opened on the board; each handle must read
+    the reply to the other's request.
+    """
+    checks.section('Delivery to every application')
+    try:
+        second = open_second()
+    except (HostLightingError, OSError) as error:
+        checks.note(f"not checked: a second handle could not be opened ({error})")
+        return
+    try:
+        for sender, reader, what in ((device, second, "a second handle reads the reply to the first's request"),
+                                     (second, device, "and the first the reply to the second's")):
+            reader.collect(0.05)
+            sequence = sender.send(CMD_HELLO)
+            sender.wait_reply(CMD_HELLO, sequence)
+            copies = [report for report in reader.collect(0.2)
+                      if (report[0], report[1]) == (CMD_HELLO | REPLY_FLAG, sequence)]
+            checks.check(len(copies) == 1, what, f"{len(copies)} copies")
+    finally:
+        second.close()
+
+
+def _run_checks(device: HostLightingDevice, checks: Checks, lease: _Lease, settings: bool, quick: bool,
+                open_second=None) -> None:
     hello = _check_hello(device, checks)
     _check_framing(device, checks, hello)
+    if open_second is not None:
+        _check_delivery(device, checks, open_second)
     lease.keep()
     token = _check_pages(device, checks, hello)
     lease.keep()
@@ -932,7 +1073,8 @@ def conformance():
     """Check a board's Host Lighting implementation against the protocol."""
     parser = device_parser("Check a GP2040-CE board's Host Lighting implementation against the protocol: HELLO, "
                            "framing, the pages and their cross-references, takeover, keepalive and claim timing, "
-                           "shared and exclusive claims, unsaved brightness, staging, events and argument checks, "
+                           "the claim generation, shared and exclusive claims, unsaved brightness, staging, events, "
+                           "argument checks and delivery of replies to a second handle, "
                            "then round trip and throughput. It holds the "
                            "claim while it runs, so run it with no other lighting application.")
     parser.add_argument('--settings', action='store_true',
@@ -946,7 +1088,8 @@ def conformance():
     try:
         with holding_lights(device, 'hlp-conformance', args.force, args.exclusive) as claim:
             try:
-                _run_checks(device, checks, _Lease(claim), args.settings, args.quick)
+                _run_checks(device, checks, _Lease(claim), args.settings, args.quick,
+                            lambda: open_device(args.board_id))
             except (_TakenOver, HostLightingError, OSError) as error:
                 checks.check(False, 'the checks ran to the end', str(error))
     finally:

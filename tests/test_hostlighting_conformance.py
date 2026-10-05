@@ -17,7 +17,7 @@ def test_conformance_passes_on_a_conforming_board(hlp_run_on_model_board, hlp_mo
     hlp_model_board.after[0xFF] = [hello_reply(77)]     # another application's reply during the framing checks
     hlp_run_on_model_board(conformance.conformance, '--quick')
     out = capsys.readouterr().out
-    assert 'FAIL' not in out and 'RESULT: ALL PASS (141 passed, 0 failed)' in out
+    assert 'FAIL' not in out and 'RESULT: ALL PASS (156 passed, 0 failed)' in out
     assert 'input modes: 0 XINPUT (lighting once a PC is detected), 3 KEYBOARD (lighting), 4 PS4\n' in out
     assert '1 reports for another application ignored' in out and '20 pipelined: 16 answered' in out
     assert 'expiry seen after 3' in out and 'round trip: median 1.00 ms' in out
@@ -30,7 +30,7 @@ def test_conformance_settings_change_and_restore(hlp_run_on_model_board, hlp_mod
     before = (hlp_model_board.state[0][2:7], list(hlp_model_board.animations))
     hlp_run_on_model_board(conformance.conformance, '--quick', '--settings')
     out = capsys.readouterr().out
-    assert 'Settings (writes the settings flash):' in out and 'RESULT: ALL PASS (147 passed, 0 failed)' in out
+    assert 'Settings (writes the settings flash):' in out and 'RESULT: ALL PASS (164 passed, 0 failed)' in out
     hlp_model_board._refresh()
     assert (hlp_model_board.state[0][2:7], list(hlp_model_board.animations)) == before
 
@@ -66,8 +66,10 @@ def test_conformance_holds_the_claim_while_it_runs(hlp_run_on_model_board, hlp_m
     driving = [holder for command, holder in sent if command in (hl.CMD_CONFIGURE, hl.CMD_STAGE, hl.CMD_UNSTAGE,
                                                                  hl.CMD_FILL, hl.CMD_CLEAR, hl.CMD_COMMIT,
                                                                  hl.CMD_RELEASE)]
-    assert set(driving[:-2]) == {token} and driving[-2:] == [0, 0]     # RELEASE and CONFIGURE, once given up
-    assert [command for command, _ in sent[-3:]] == [hl.CMD_CLAIM, hl.CMD_RELEASE, hl.CMD_CONFIGURE]
+    # under its own claim, or under the other token the claim checks take over with
+    other = token ^ 0xFFFFFFFF
+    assert set(driving) == {token, other} and driving.count(token) > 10 * driving.count(other)
+    assert sent[-1] == (hl.CMD_CLAIM, token)                # the give up hands back: nothing follows it
 
 
 def test_conformance_catches_a_claim_that_keeps_the_takeover(hlp_run_on_model_board, hlp_model_board, capsys):
@@ -161,7 +163,7 @@ def test_conformance_passes_holding_an_exclusive_claim(hlp_run_on_model_board, h
     """Test hlp-conformance --exclusive: every check passes under its own exclusive claim, handed back after."""
     hlp_run_on_model_board(conformance.conformance, '--quick', '--exclusive')
     out = capsys.readouterr().out
-    assert 'FAIL' not in out and 'RESULT: ALL PASS (141 passed, 0 failed)' in out
+    assert 'FAIL' not in out and 'RESULT: ALL PASS (156 passed, 0 failed)' in out
     assert hlp_model_board.sent(hl.CMD_CLAIM)[0][24] == hl.CLAIM_EXCLUSIVE and hlp_model_board.holder == 0
 
 
@@ -217,7 +219,7 @@ def test_conformance_passes_a_board_with_later_additions(hlp_run_on_model_board,
     hlp_model_board.answer = later
     hlp_run_on_model_board(conformance.conformance, '--quick')
     out = capsys.readouterr().out
-    assert 'RESULT: ALL PASS (141 passed, 0 failed)' in out
+    assert 'RESULT: ALL PASS (156 passed, 0 failed)' in out
     assert 'commands beyond 2.0: [6]' in out and 'pages beyond 2.0: [3]' in out
     assert 'pixel formats beyond 2.0: [3]' in out and 'events beyond 2.0: [1]' in out
     assert 'unlisted command 0x07: status 1' in out and 'unlisted page 4: status 2 at [3]' in out
@@ -420,13 +422,14 @@ def test_conformance_stops_when_taken_over(hlp_run_on_model_board, hlp_model_boa
 
 
 def test_conformance_counts_a_lost_board_as_a_failure(hlp_run_on_model_board, hlp_model_board, capsys, caplog):
-    """Test that an interface error ends the run as a failed check, and the hand-back is still attempted."""
+    """Test that an interface error ends the run as a failed check, and the claim is still given up."""
     hlp_model_board.disconnect_on = {hl.CMD_RELEASE}
     with pytest.raises(SystemExit) as exited:
         hlp_run_on_model_board(conformance.conformance, '--quick')
     out = capsys.readouterr().out
     assert exited.value.code == 1 and 'FAIL  the checks ran to the end  (device disconnected)' in out
-    assert 'could not hand the lights back' in caplog.text and hlp_model_board.holder == 0
+    assert 'could not hand the lights back' not in caplog.text and hlp_model_board.holder == 0
+    assert hlp_model_board.requests[-1][0] == hl.CMD_CLAIM and hlp_model_board.requests[-1][3] == hl.CLAIM_GIVE_UP
 
 
 def test_conformance_on_a_board_without_led_output(hlp_run_on_model_board, hlp_model_board, capsys):
@@ -440,7 +443,7 @@ def test_conformance_on_a_board_without_led_output(hlp_run_on_model_board, hlp_m
     hlp_run_on_model_board(conformance.conformance, '--quick', '--settings')
     out = capsys.readouterr().out
     # no lights: the light run, entry and UNSTAGE checks have nothing to address
-    assert 'no LED output: nothing to change' in out and 'RESULT: ALL PASS (128 passed, 0 failed)' in out
+    assert 'no LED output: nothing to change' in out and 'RESULT: ALL PASS (142 passed, 0 failed)' in out
 
 
 def test_conformance_passes_a_board_with_lights_past_the_limit(hlp_run_on_model_board, hlp_model_board, capsys):
@@ -455,7 +458,7 @@ def test_conformance_passes_a_board_with_lights_past_the_limit(hlp_run_on_model_
                                    animations=1)
     hlp_run_on_model_board(conformance.conformance, '--quick')
     out = capsys.readouterr().out
-    assert 'RESULT: ALL PASS (141 passed, 0 failed)' in out
+    assert 'RESULT: ALL PASS (156 passed, 0 failed)' in out
     assert 'PASS  light run: every light within the limit applies, the rest are skipped' in out
 
 
@@ -468,7 +471,7 @@ def test_conformance_passes_a_board_with_a_light_of_no_leds(hlp_run_on_model_boa
     hlp_run_on_model_board(conformance.conformance, '--quick')
     out = capsys.readouterr().out
     assert 'PASS  extent = highest LED below the limit + 1' in out
-    assert 'RESULT: ALL PASS (141 passed, 0 failed)' in out
+    assert 'RESULT: ALL PASS (156 passed, 0 failed)' in out
 
 
 def test_bench_prints_the_figures(hlp_run_on_model_board, hlp_model_board, capsys):
@@ -479,8 +482,9 @@ def test_bench_prints_the_figures(hlp_run_on_model_board, hlp_model_board, capsy
     assert '60 fps: 60 of 60 frames acknowledged (4 LEDs, 1 reports per frame)' in out
     assert 'unthrottled, every report answered: ' in out and 'unthrottled, pipelined: ' in out
     assert out.endswith('released - on-board animations restored\n')
-    assert [claim[2] for claim in hlp_model_board.sent(hl.CMD_CLAIM)].count(hl.FLAG_KEEPALIVE) >= 2
-    assert [configure[6] for configure in hlp_model_board.sent(hl.CMD_CONFIGURE)] == [0, 1]
+    renewals = [claim[2] & 0x0F for claim in hlp_model_board.sent(hl.CMD_CLAIM)]
+    assert renewals.count(hl.FLAG_KEEPALIVE) >= 2
+    assert [configure[6] for configure in hlp_model_board.sent(hl.CMD_CONFIGURE)] == [0]
     assert hlp_model_board.holder == 0 and not hlp_model_board.live and hlp_model_board.brightness == 1
 
 
@@ -503,12 +507,138 @@ def test_bench_stops_when_taken_over(hlp_run_on_model_board, hlp_model_board, ca
 
 
 def test_bench_hands_back_on_interrupt(hlp_run_on_model_board, hlp_model_board, capsys, monkeypatch):
-    """Test that a Ctrl-C during hlp-bench gives the claim up, releases and restores the CONFIGURE defaults."""
+    """Test that a Ctrl-C during hlp-bench gives the claim up, which restores the CONFIGURE defaults."""
     def interrupt(seconds):
         raise KeyboardInterrupt
     monkeypatch.setattr(hlp_model_board, 'sleep', interrupt)
     with pytest.raises(KeyboardInterrupt):
         hlp_run_on_model_board(conformance.bench, '--quick')
     assert 'released - on-board animations restored' in capsys.readouterr().out
-    assert hlp_model_board.holder == 0 and not hlp_model_board.live and hlp_model_board.sent(hl.CMD_RELEASE)
+    assert hlp_model_board.holder == 0 and not hlp_model_board.live
     assert (hlp_model_board.overlay, hlp_model_board.keepalive_ms, hlp_model_board.brightness) == (0, 2000, 1)
+
+
+def test_conformance_catches_a_generation_that_does_not_step(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test that a board whose claim generation stays the same across a change of holder fails the check."""
+    set_holder = hlp_model_board._set_holder
+
+    def same_generation(token, name, flags=0):
+        generation = hlp_model_board.generation
+        set_holder(token, name, flags)
+        hlp_model_board.generation = generation
+    hlp_model_board._set_holder = same_generation
+    with pytest.raises(SystemExit):
+        hlp_run_on_model_board(conformance.conformance, '--quick')
+    out = capsys.readouterr().out
+    assert 'FAIL  a change of holder steps the claim generation  (1 after 1)' in out
+    assert "FAIL  a request under the previous holder's generation is refused: status 4 with the holder now" in out
+
+
+def test_conformance_catches_settings_that_outlast_their_holder(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test that a board that keeps the CONFIGURE settings across a change of holder fails the checks for it."""
+    set_holder = hlp_model_board._set_holder
+
+    def keeping_settings(token, name, flags=0):
+        settings = hlp_model_board.overlay, hlp_model_board.keepalive_ms, hlp_model_board.brightness
+        set_holder(token, name, flags)
+        hlp_model_board.overlay, hlp_model_board.keepalive_ms, hlp_model_board.brightness = settings
+    hlp_model_board._set_holder = keeping_settings
+    with pytest.raises(SystemExit):
+        hlp_run_on_model_board(conformance.conformance, '--quick')
+    out = capsys.readouterr().out
+    assert 'FAIL  and puts the CONFIGURE settings back to their defaults  ((False, 300, True))' in out
+    assert 'FAIL  a lapse is a change of holder too: the generation steps, the settings return' in out
+
+
+def test_conformance_catches_a_board_that_ignores_the_generation(hlp_run_on_model_board, hlp_model_board, capsys,
+                                                                 monkeypatch):
+    """Test that a board acting on a request under an outdated generation fails, shared and exclusive."""
+    write = hlp_model_board.write
+
+    def without_generation(data):
+        # as a board that reads no generation: the holder's requests keep theirs, so its claim still works
+        report = bytearray(data)
+        if (report[3] & hl.FLAG_GENERATION_MASK) >> hl.FLAG_GENERATION_SHIFT != hlp_model_board.generation:
+            report[3] &= ~hl.FLAG_GENERATION_MASK
+        return write(bytes(report))
+    monkeypatch.setattr(hlp_model_board, 'write', without_generation)
+    with pytest.raises(SystemExit):
+        hlp_run_on_model_board(conformance.conformance, '--quick')
+    out = capsys.readouterr().out
+    assert "FAIL  a request under the previous holder's generation is refused: status 4 with the holder now" in out
+    assert 'FAIL  and changes nothing, answered or not' in out
+    assert 'FAIL  with no claim held an outdated generation is refused too: status 4, holder 0' in out
+    assert "FAIL  but not a request under the previous holder's generation: status 4 with the holder now" in out
+
+
+def test_conformance_catches_an_exclusive_claim_that_needs_no_generation(hlp_run_on_model_board, hlp_model_board,
+                                                                         capsys, monkeypatch):
+    """Test that a board whose exclusive claim is satisfied by HOLDER alone fails the check for it."""
+    write = hlp_model_board.write
+
+    def holder_is_enough(data):
+        report = bytearray(data)
+        if report[3] & hl.FLAG_HOLDER and not report[3] & hl.FLAG_GENERATION_MASK:
+            report[3] |= hlp_model_board.generation << hl.FLAG_GENERATION_SHIFT
+        return write(bytes(report))
+    monkeypatch.setattr(hlp_model_board, 'write', holder_is_enough)
+    with pytest.raises(SystemExit):
+        hlp_run_on_model_board(conformance.conformance, '--quick')
+    out = capsys.readouterr().out
+    assert 'FAIL  HOLDER without the current generation, and the generation without HOLDER, are refused too' in out
+
+
+def test_conformance_catches_a_change_counter_that_does_not_step(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test --settings on a board whose Summary change counters never move."""
+    refresh = hlp_model_board._refresh
+
+    def no_counters():
+        refresh()
+        hlp_model_board.summary = [hlp_model_board.summary[0], bytes(8)]
+    hlp_model_board._refresh = no_counters
+    with pytest.raises(SystemExit):
+        hlp_run_on_model_board(conformance.conformance, '--quick', '--settings')
+    out = capsys.readouterr().out
+    assert "FAIL  page 12's change counter steps, and no other" in out
+    assert 'FAIL  the counter steps again: it counts changes, the token follows the content' in out
+    assert 'PASS  speeds restored: the token returns' in out
+
+
+def test_conformance_catches_a_saved_step_that_follows_the_step_shown(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test that a board whose page 1 saved step is the step shown fails the unsaved-brightness check."""
+    show_step = hlp_model_board.show_step
+
+    def saved_is_shown(step):
+        show_step(step)
+        hlp_model_board.set_state(8, bytes([step]))
+    hlp_model_board.show_step = saved_is_shown
+    with pytest.raises(SystemExit):
+        hlp_run_on_model_board(conformance.conformance, '--quick')
+    assert 'FAIL  page 1 still shows the saved step  (4 vs 5)' in capsys.readouterr().out
+
+
+def test_conformance_checks_delivery_to_a_second_handle(hlp_run_on_model_board, hlp_model_board, capsys, monkeypatch):
+    """Test the two-handle check: each handle reads the other's reply, a system that delivers a reply to one
+    handle only fails, and one that opens no second handle is noted."""
+    import hostlighting_fakes
+    hlp_run_on_model_board(conformance.conformance, '--quick')
+    out = capsys.readouterr().out
+    assert "PASS  a second handle reads the reply to the first's request" in out
+    assert "PASS  and the first the reply to the second's" in out and not hlp_model_board.handles
+    copy = hostlighting_fakes.Outbox.copy
+    monkeypatch.setattr(hostlighting_fakes.Outbox, 'copy', lambda self, reports: None)
+    with pytest.raises(SystemExit):
+        hlp_run_on_model_board(conformance.conformance, '--quick')
+    out = capsys.readouterr().out
+    assert "FAIL  a second handle reads the reply to the first's request  (0 copies)" in out
+    assert not hlp_model_board.handles                      # closed, though the check failed
+
+    def no_second_handle(prefix=''):
+        if hlp_model_board.opened:
+            raise OSError('open failed')
+        return hostlighting_fakes.fake_device(hlp_model_board)
+    monkeypatch.setattr(hostlighting_fakes.Outbox, 'copy', copy)
+    monkeypatch.setattr(conformance, 'open_device', no_second_handle)
+    hlp_run_on_model_board(conformance.conformance, '--quick')
+    out = capsys.readouterr().out
+    assert 'not checked: a second handle could not be opened (open failed)' in out and 'RESULT: ALL PASS' in out

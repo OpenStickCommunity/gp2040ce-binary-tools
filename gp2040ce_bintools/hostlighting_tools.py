@@ -25,15 +25,15 @@ from gp2040ce_bintools import core_parser, get_config_pb2
 from gp2040ce_bintools.hostlighting import (ADDRESS_RANGES, ADDRESSING_ACTION, ADDRESSING_KIND, ADDRESSING_LED_RUN,
                                             ADDRESSING_LIGHT, ADDRESSING_LIGHT_RUN, ADDRESSING_PIN, ANIMATION_OFF,
                                             BRIGHTNESS_SAVED, CLAIM_GIVE_UP, CLAIM_TAKE, CLAIM_TAKE_OVER, CMD_CLEAR,
-                                            CMD_HELLO, CMD_REBOOT, CMD_RELEASE, CMD_SET_ANIMATION,
-                                            CMD_SET_ANIMATION_SPEED, CMD_SET_BRIGHTNESS, CMD_SET_INPUT_MODE,
-                                            CMD_SET_PROFILE, EVENT_STATE_CHANGED, FLAG_KEEPALIVE, IDENTITY_FIELDS,
-                                            KIND_BUTTON, KIND_CASE, KIND_PLAYERS, MAGIC_INPUT_MODE, MAGIC_REBOOT,
-                                            PAGE_ANIMATIONS, PAGE_CONTROLS, PAGE_INPUT_MODES, PAGE_LIGHTS,
-                                            PAGE_PROFILES, PAGE_STATE, PAGE_SUMMARY, PIXEL_RGB, PIXEL_RGBW,
-                                            REBOOT_BOOTSEL, REBOOT_WEBCONFIG, SPEED_UNCHANGED, HostLightingDevice,
-                                            HostLightingError, HostLightingRejected, decode_state_changed, key_name,
-                                            open_device, send_reboot, stage_capacity)
+                                            CMD_HELLO, CMD_REBOOT, CMD_SET_ANIMATION, CMD_SET_ANIMATION_SPEED,
+                                            CMD_SET_BRIGHTNESS, CMD_SET_INPUT_MODE, CMD_SET_PROFILE,
+                                            EVENT_STATE_CHANGED, FLAG_KEEPALIVE, IDENTITY_FIELDS, KIND_BUTTON,
+                                            KIND_CASE, KIND_PLAYERS, MAGIC_INPUT_MODE, MAGIC_REBOOT, PAGE_ANIMATIONS,
+                                            PAGE_CONTROLS, PAGE_INPUT_MODES, PAGE_LIGHTS, PAGE_PROFILES, PAGE_STATE,
+                                            PAGE_SUMMARY, PIXEL_RGB, PIXEL_RGBW, REBOOT_BOOTSEL, REBOOT_WEBCONFIG,
+                                            SPEED_UNCHANGED, HostLightingDevice, HostLightingError,
+                                            HostLightingRejected, decode_state_changed, key_name, open_device,
+                                            send_reboot, stage_capacity)
 
 logger = logging.getLogger(__name__)
 
@@ -171,14 +171,20 @@ class LightsClaim:
         return True
 
     def let_lapse(self) -> None:
-        """Stop holding without handing back: the takeover and the claim end at the keepalive timeout."""
+        """Stop holding without handing back: the takeover and the claim end at the keepalive timeout.
+
+        The command's requests then carry neither the claim generation nor FLAG_HOLDER, as those of an
+        application that holds no claim: once the claim has lapsed, its generation would be refused.
+        """
         self.held = False
+        self.device.generation = 0
+        self.device.holding_exclusive = False
 
     def hand_back(self) -> bool:
-        """Give up the claim, then restore the on-board animations and the CONFIGURE defaults.
+        """Give up the claim, which restores the on-board animations and the CONFIGURE defaults.
 
-        Giving up ends the takeover while the command still holds the claim. When another application holds it
-        (the lease lapsed unnoticed and it claimed), its lights and settings are left alone.
+        Giving up ends the takeover and an unsaved brightness step and puts the settings back. When another
+        application holds the claim (the lease lapsed unnoticed and it claimed), nothing changes.
 
         :return: True when the lights were handed back
         """
@@ -188,8 +194,6 @@ class LightsClaim:
             if holder:
                 print(f"'{holder_name}' took the lights over")
                 return False
-            self.device.request_ok(CMD_RELEASE)
-            self.device.configure()
             return True
         except (HostLightingError, OSError):
             logger.warning("could not hand the lights back; the keepalive timeout restores the animations")
@@ -303,16 +307,17 @@ def _print_state(device: HostLightingDevice) -> None:
     animation = 'off' if state['animation'] is None else state['animation']
     print(f"page 1 (state), token 0x{token:08X}: input mode {state['input_mode']}, profile {state['profile']}, "
           f"player {state['player']}, animation {animation}, brightness step {state['brightness_step']}"
-          f"{' (unsaved)' if state['brightness_unsaved'] else ''}")
+          + (f" (unsaved; saved step {state['saved_brightness_step']})" if state['brightness_unsaved'] else ''))
     live = 'live' if state['takeover_live'] else 'not live'
     print(f"  takeover {live} (number {state['takeover_number']}), "
           f"{'overlay' if state['overlay'] else 'whole-frame'}, keepalive {state['keepalive_ms']} ms, "
           f"board brightness {'applied' if state['brightness_applied'] else 'not applied'} to host pixels")
     if state['holder_token']:
         kind = 'exclusive' if state['claim_exclusive'] else 'shared'
-        print(f"  claimed by '{state['holder_name']}' (token 0x{state['holder_token']:08X}, {kind})")
+        print(f"  claimed by '{state['holder_name']}' (token 0x{state['holder_token']:08X}, {kind}), "
+              f"claim generation {state['claim_generation']}")
     else:
-        print("  unclaimed")
+        print(f"  unclaimed, claim generation {state['claim_generation']}")
 
 
 def _print_input_modes(device: HostLightingDevice) -> None:
@@ -336,6 +341,9 @@ def _print_summary(device: HostLightingDevice, names: dict) -> None:
           f"animation speed steps {summary['speed_steps']}; grid {summary['grid_width']}x{summary['grid_height']}")
     print(f"  {summary['profiles']} profiles, {summary['controls']} controls ({summary['lit_controls']} lit, "
           f"{summary['unlit_controls']} unlit), {summary['lights']} lights, {summary['animations']} animations")
+    print(f"  button layouts {_named(summary['button_layout'], names, 'ButtonLayout')} and "
+          f"{_named(summary['button_layout_right'], names, 'ButtonLayoutRight')}; changes counted on pages "
+          + ', '.join(f"{page}: {count}" for page, count in summary['page_changes'].items()))
 
 
 def _print_profiles(device: HostLightingDevice) -> None:

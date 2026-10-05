@@ -11,12 +11,13 @@ echoes the command with bit 7 set: `[0] command|0x80, [1] sequence,
 the board and lists its capabilities; GET_PAGE reads the pages:
 
 * page 0 (identity): board label, board config, platform and build strings
-* page 1 (state): input mode, profile, player, animation, brightness step and
-  whether it is unsaved, takeover, the application holding CLAIM and whether
-  exclusively, and the CONFIGURE settings
+* page 1 (state): input mode, profile, player, animation, the brightness step
+  shown and the saved one, takeover, the application holding CLAIM, whether
+  exclusively and the claim generation, and the CONFIGURE settings
 * page 2 (input modes): every mode SET_INPUT_MODE accepts, named by the firmware
 * page 8 (summary): LED extent and limit, render rate, colour format,
-  brightness and speed steps, grid size, and each configuration page's total
+  brightness and speed steps, grid size, each configuration page's total,
+  the display's button layouts, and a change counter per configuration page
 * page 9 (profiles), page 10 (controls: every input with an action, lit or
   not, keyed by GPIO pin, Hall-effect trigger or expander pin), page 11
   (lights: every light's LEDs, kind, owner and grid cell) and page 12 (the
@@ -75,6 +76,11 @@ FLAG_COMMIT_AFTER = 0x01        # publish the staged frame after this command su
 FLAG_NO_REPLY = 0x02            # send no reply
 FLAG_KEEPALIVE = 0x04           # refresh a live takeover's and an unsaved brightness step's keepalive
 FLAG_HOLDER = 0x08              # sent by the holder of an exclusive claim, which refuses changes without it
+# bits 4-6 carry the claim generation the sender acts under (1-7; 0 none): a request other than CLAIM under a
+# generation that is no longer current is refused, and an exclusive claim needs it beside FLAG_HOLDER
+FLAG_GENERATION_SHIFT = 4
+FLAG_GENERATION_MASK = 0x70
+GENERATION_MAX = 7
 
 REPLY_FLAG = 0x80
 EVENT_MARKER = 0x80             # [0] of an event; there is no command 0x00
@@ -106,9 +112,9 @@ TOKEN_OFFSET = 60
 # each page's field groups, in mask bit order, and their widths in bytes; page 0's groups are
 # strings of up to 48 bytes each
 PAGE_GROUPS = {
-    PAGE_STATE: (8, 21, 4),
+    PAGE_STATE: (9, 22, 4),
     PAGE_INPUT_MODES: (2, 22),
-    PAGE_SUMMARY: (26,),
+    PAGE_SUMMARY: (28, 8),
     PAGE_PROFILES: (18,),
     PAGE_CONTROLS: (4, 4, 6, 4),
     PAGE_LIGHTS: (4, 2, 3, 4, 2, 1),
@@ -154,7 +160,9 @@ CLAIM_TAKE = 0                  # take the claim when unclaimed, keep it when he
 CLAIM_TAKE_OVER = 1
 CLAIM_GIVE_UP = 2
 CLAIM_NAME_SIZE = 16
-CLAIM_EXCLUSIVE = 0x01          # refuse other applications' changes: requests without FLAG_HOLDER
+# an exclusive claim refuses other applications' changes: requests without FLAG_HOLDER and the current generation
+CLAIM_EXCLUSIVE = 0x01
+CONTROLLER_SIZE = 22            # page 1's Controller group, which the CLAIM and status 4 replies carry
 
 # CONFIGURE
 TAKEOVER_WHOLE_FRAME = 0
@@ -318,12 +326,21 @@ def _state_group(group: int, data: bytes) -> dict:
         return {'takeover_live': bool(data[0] & 0x01), 'brightness_unsaved': bool(data[0] & 0x02),
                 'input_mode': data[1], 'profile': data[2], 'player': data[3],
                 'animation': None if _u16(data, 4) == ANIMATION_OFF else _u16(data, 4),
-                'brightness_step': data[6], 'takeover_number': data[7]}
+                'brightness_step': data[6], 'takeover_number': data[7], 'saved_brightness_step': data[8]}
     if group == 1:
-        return {'holder_token': _u32(data, 0), 'holder_name': _string(data[4:20]),
-                'claim_exclusive': bool(data[20] & CLAIM_EXCLUSIVE)}
+        return decode_controller(data)
     return {'overlay': data[0] == TAKEOVER_OVERLAY, 'keepalive_ms': _u16(data, 1),
             'brightness_applied': bool(data[3])}
+
+
+def decode_controller(data: bytes) -> dict:
+    """Decode page 1's Controller group, which the CLAIM reply ([8..29]) and a status 4 reply ([3..24]) carry too.
+
+    :param data: the group's 22 bytes
+    :return: the holder's token (0 unclaimed) and name, whether its claim is exclusive, and the claim generation
+    """
+    return {'holder_token': _u32(data, 0), 'holder_name': _string(data[4:20]),
+            'claim_exclusive': bool(data[20] & CLAIM_EXCLUSIVE), 'claim_generation': data[21]}
 
 
 def _input_mode_group(group: int, data: bytes) -> dict:
@@ -333,11 +350,15 @@ def _input_mode_group(group: int, data: bytes) -> dict:
 
 
 def _summary_group(group: int, data: bytes) -> dict:
+    if group == 1:
+        # one change counter for each configuration page, 8 to 15
+        return {'page_changes': {PAGE_SUMMARY + index: count for index, count in enumerate(data[:8])}}
     return {'led_extent': _u16(data, 0), 'led_limit': _u16(data, 2), 'render_hz': _u16(data, 4),
             'colour_format': data[6], 'brightness_maximum': data[7], 'brightness_steps': data[8],
             'speed_steps': data[9], 'grid_width': _u16(data, 10), 'grid_height': _u16(data, 12),
             'profiles': _u16(data, 14), 'controls': _u16(data, 16), 'lit_controls': _u16(data, 18),
-            'unlit_controls': _u16(data, 20), 'lights': _u16(data, 22), 'animations': _u16(data, 24)}
+            'unlit_controls': _u16(data, 20), 'lights': _u16(data, 22), 'animations': _u16(data, 24),
+            'button_layout': data[26], 'button_layout_right': data[27]}
 
 
 def _profile_group(group: int, data: bytes) -> dict:
@@ -471,14 +492,18 @@ class HostLightingRejected(HostLightingError):
     """The board answered a command with a non-OK status."""
 
     def __init__(self, command: int, status: int, offset: int, holder: Optional[tuple] = None):
-        """Record the rejected command, its status, and the byte at fault or the exclusive claim's holder."""
+        """Record the rejected command, its status, and the byte at fault or the claim's holder.
+
+        :param holder: for CLAIMED, (token, name, generation) as the reply shows them; token 0 when unclaimed
+        """
         self.command = command
         self.status = status
         self.offset = offset
         self.holder = holder
         detail = f" at request byte {offset}" if status == STATUS_INVALID else ''
         if status == STATUS_CLAIMED and holder:
-            detail = f" by '{holder[1]}' (exclusive claim 0x{holder[0]:08X})"
+            detail = (f" by '{holder[1]}' (claim 0x{holder[0]:08X}, generation {holder[2]})" if holder[0]
+                      else f": the claim has ended (generation {holder[2]})")
         super().__init__(f"command 0x{command:02X} rejected: {STATUS_NAMES.get(status, hex(status))}{detail}")
 
 
@@ -501,7 +526,9 @@ class HostLightingDevice:
         # the requests sent whose replies are awaited, and those replies when read while waiting for another
         self.awaited: set = set()
         self.pending: list = []
-        # this application holds an exclusive claim: its requests carry FLAG_HOLDER, which the claim requires
+        # this application holds the claim under this generation (0: it holds none): its requests carry it,
+        # and FLAG_HOLDER while the claim is exclusive, which that claim requires
+        self.generation = 0
         self.holding_exclusive = False
 
     def close(self) -> None:
@@ -513,13 +540,16 @@ class HostLightingDevice:
 
         :param command: HLP command byte
         :param payload: the command's bytes from [3]
-        :param flags: request flags (FLAG_*); FLAG_HOLDER is added while this application holds an exclusive claim
+        :param flags: request flags (FLAG_*); while this application holds the claim its generation is added
+            unless the flags carry one, and FLAG_HOLDER while the claim is exclusive
         :param sequence: the sequence number to send; None for the next one
         :return: the sequence number sent
         """
         if sequence is None:
             self.sequence = (self.sequence % 255) + 1
             sequence = self.sequence
+        if not flags & FLAG_GENERATION_MASK:
+            flags |= self.generation << FLAG_GENERATION_SHIFT
         if self.holding_exclusive:
             flags |= FLAG_HOLDER
         self._await(command, sequence, flags)
@@ -635,11 +665,13 @@ class HostLightingDevice:
         :param timeout: seconds to wait for the reply
         :param accept: optional test a matching report must also pass
         :return: the reply report
-        :raises HostLightingRejected: on any other status; for CLAIMED, naming the exclusive claim's holder
+        :raises HostLightingRejected: on any other status; for CLAIMED, naming the claim's holder
         """
         reply = self.request(command, payload, flags, timeout, accept)
         if reply[2] == STATUS_CLAIMED:
-            raise HostLightingRejected(command, reply[2], reply[3], (_u32(reply, 3), _string(reply[7:23])))
+            holder = decode_controller(bytes(reply[3:3 + CONTROLLER_SIZE]))
+            raise HostLightingRejected(command, reply[2], reply[3], (holder['holder_token'], holder['holder_name'],
+                                                                     holder['claim_generation']))
         if reply[2] != STATUS_OK:
             raise HostLightingRejected(command, reply[2], reply[3])
         return reply
@@ -751,8 +783,10 @@ class HostLightingDevice:
 
         The reply echoes the action and token, which tells it apart from another application's CLAIM reply.
         Each claim or take over that leaves this application holding the claim records the claim flags sent,
-        so a holder renews an exclusive claim with exclusive set. While this application holds an exclusive
-        claim, its requests carry FLAG_HOLDER.
+        so a holder renews an exclusive claim with exclusive set. While this application holds the claim, its
+        requests carry the claim generation the reply showed (`generation`), and FLAG_HOLDER while the claim
+        is exclusive. Every change of holder puts the CONFIGURE settings back to their defaults, so a holder
+        calls configure() after it claims.
 
         :param action: CLAIM_TAKE, CLAIM_TAKE_OVER or CLAIM_GIVE_UP
         :param token: this application's non-zero token
@@ -760,8 +794,8 @@ class HostLightingDevice:
         :param flags: request flags (FLAG_*); FLAG_KEEPALIVE also refreshes a live takeover and an unsaved
             brightness step
         :param exclusive: claim exclusively: until the claim ends, the board refuses other applications'
-            requests without FLAG_HOLDER but CLAIM, and HELLO, GET_PAGE and SUBSCRIBE without COMMIT_AFTER or
-            KEEPALIVE
+            requests without FLAG_HOLDER and the generation but CLAIM, and HELLO, GET_PAGE and SUBSCRIBE
+            without COMMIT_AFTER or KEEPALIVE
         :return: the holder now: (token, name); token 0 when unclaimed
         """
         payload = bytes([action]) + struct.pack('<I', token) + name[:CLAIM_NAME_SIZE].ljust(CLAIM_NAME_SIZE, b'\x00')
@@ -773,6 +807,7 @@ class HostLightingDevice:
 
         reply = self.request_ok(CMD_CLAIM, payload, flags, accept=echoes)
         holder = _u32(reply, 8)
+        self.generation = reply[29] if holder == token else 0
         self.holding_exclusive = holder == token and exclusive
         return holder, _string(reply[12:12 + CLAIM_NAME_SIZE])
 
