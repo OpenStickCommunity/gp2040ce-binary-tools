@@ -206,8 +206,7 @@ def test_claim_takes_an_invalid_argument_reply_without_an_echo(hlp_fake_device):
 
 
 def test_exclusive_claim_sends_the_flag_and_holder(hlp_fake_device, hlp_fake_board):
-    """Test that an exclusive claim sends claim flag bit 0 and that its holder's requests carry FLAG_HOLDER and
-    the claim generation its CLAIM reply showed; under a shared claim, the generation alone."""
+    """Test that an exclusive claim's holder sends FLAG_HOLDER and the generation, a shared one the generation."""
     assert hlp_fake_device.claim(hl.CLAIM_TAKE, 0xAAAA, b'app-a', exclusive=True) == (0xAAAA, 'app-a')
     assert hlp_fake_board.sent(hl.CMD_CLAIM)[-1][24] == hl.CLAIM_EXCLUSIVE and hlp_fake_device.holding_exclusive
     assert hlp_fake_board.sent(hl.CMD_CLAIM)[-1][2] == 0 and hlp_fake_device.generation == 2
@@ -227,8 +226,7 @@ def test_exclusive_claim_sends_the_flag_and_holder(hlp_fake_device, hlp_fake_boa
 
 
 def test_a_refused_exclusive_claim_sends_no_holder_flag(hlp_fake_device, hlp_fake_board):
-    """Test that an exclusive claim another application holds leaves this one's requests without FLAG_HOLDER and
-    without a generation."""
+    """Test that requests under another application's exclusive claim carry no FLAG_HOLDER and no generation."""
     hlp_fake_board.holder, hlp_fake_board.holder_name = 0xB2, b'MESH'.ljust(16, b'\x00')
     assert hlp_fake_device.claim(hl.CLAIM_TAKE, 0xAAAA, b'app-a', exclusive=True) == (0xB2, 'MESH')
     hlp_fake_device.hello()

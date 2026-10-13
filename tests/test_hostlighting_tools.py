@@ -50,8 +50,7 @@ def test_fill_scopes(hlp_run_on_fake_board, hlp_fake_board, capsys):
 
 
 def test_fill_claims_exclusively_with_exclusive(hlp_run_on_fake_board, hlp_fake_board):
-    """Test --exclusive: claim flag bit 0 on the claim and each renewal, FLAG_HOLDER and the generation while the
-    claim is held."""
+    """Test that --exclusive sets claim flag bit 0 on each claim and FLAG_HOLDER with the generation while held."""
     hlp_run_on_fake_board(tools.fill, '--seconds', '2', '--exclusive', 'FF8000')
     claims = hlp_fake_board.sent(hl.CMD_CLAIM)
     holder = hl.FLAG_HOLDER | 2 << hl.FLAG_GENERATION_SHIFT
@@ -446,8 +445,7 @@ def test_streaming_tools_leave_another_holder_alone(hlp_run_on_model_board, hlp_
 @pytest.mark.parametrize('command, after, overlays', [('stream', 3.5, [0]), ('buttons', 1.5, [0, 1])])
 def test_streaming_tools_hand_back_on_interrupt(hlp_run_on_model_board, hlp_model_board, capsys, monkeypatch,
                                                 command, after, overlays):
-    """Test that a Ctrl-C (in the rainbow, in the overlay phase) gives up, which restores the animations and the
-    CONFIGURE defaults."""
+    """Test that a Ctrl-C in either phase gives up, restoring the animations and the CONFIGURE defaults."""
     sleep = hlp_model_board.sleep
 
     def interrupt(seconds):

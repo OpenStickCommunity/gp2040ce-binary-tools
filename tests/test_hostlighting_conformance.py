@@ -638,8 +638,7 @@ def test_conformance_catches_a_saved_step_that_follows_the_step_shown(hlp_run_on
 
 
 def test_conformance_checks_delivery_to_a_second_handle(hlp_run_on_model_board, hlp_model_board, capsys, monkeypatch):
-    """Test the two-handle check: each handle reads the other's reply, a system that delivers a reply to one
-    handle only fails, and one that opens no second handle is noted."""
+    """Test that the two-handle check passes, fails on one-handle delivery and notes a missing second handle."""
     import hostlighting_fakes
     hlp_run_on_model_board(conformance.conformance, '--quick')
     out = capsys.readouterr().out
