@@ -366,8 +366,11 @@ def _profile_group(group: int, data: bytes) -> dict:
 
 
 def decode_key(key: int) -> tuple:
-    """Decode a page 10 key as (source, index): ('gpio', pin), ('hall_effect', trigger), ('expander', pin), or
-    ('unknown', key) for a key protocol 2.0 does not define (a later 2.x board may use one)."""
+    """Decode a page 10 key as (source, index).
+
+    :return: ('gpio', pin), ('hall_effect', trigger) or ('expander', pin); ('unknown', key) for a key protocol
+        2.0 does not define, which a later 2.x board may use
+    """
     for source, base, count in KEY_SOURCES:
         if base <= key < base + count:
             return source, key - base
@@ -507,6 +510,14 @@ class HostLightingRejected(HostLightingError):
         super().__init__(f"command 0x{command:02X} rejected: {STATUS_NAMES.get(status, hex(status))}{detail}")
 
 
+class HostLightingTimeout(HostLightingError):
+    """No reply arrived in time; the board may be busy, for example writing its settings."""
+
+
+class HostLightingDisconnected(HostLightingError):
+    """A read or a write on the HID device failed: the board has left the bus."""
+
+
 class HostLightingDevice:
     """One GP2040-CE board's Host Lighting interface."""
 
@@ -535,6 +546,31 @@ class HostLightingDevice:
         """Close the HID device."""
         self.device.close()
 
+    def _write(self, report: bytes) -> None:
+        """Write one report.
+
+        hidapi reports a failed write by a negative result, and does not raise.
+
+        :raises HostLightingDisconnected: if the device does not take the report
+        """
+        try:
+            written = self.device.write(report)
+        except OSError as error:
+            raise HostLightingDisconnected("the board is no longer connected") from error
+        if isinstance(written, int) and written < 0:
+            raise HostLightingDisconnected("the board is no longer connected")
+
+    def _read(self, timeout_ms: int) -> bytes:
+        """Read one report, or nothing within the timeout.
+
+        :param timeout_ms: how long to wait; 0 returns at once
+        :raises HostLightingDisconnected: if the device cannot be read
+        """
+        try:
+            return bytes(self.device.read(REPORT_SIZE, timeout_ms))
+        except OSError as error:
+            raise HostLightingDisconnected("the board is no longer connected") from error
+
     def send(self, command: int, payload: bytes = b'', flags: int = 0, sequence: Optional[int] = None) -> int:
         """Send one request without waiting for its reply.
 
@@ -554,7 +590,11 @@ class HostLightingDevice:
             flags |= FLAG_HOLDER
         self._await(command, sequence, flags)
         # the interface uses unnumbered reports; hidapi wants a leading 0x00 report ID on write
-        self.device.write(b'\x00' + build_request(command, sequence, payload, flags))
+        try:
+            self._write(b'\x00' + build_request(command, sequence, payload, flags))
+        except HostLightingDisconnected:
+            self.awaited.discard((command, sequence))
+            raise
         return sequence
 
     def collect(self, seconds: float) -> list:
@@ -569,7 +609,7 @@ class HostLightingDevice:
             left = deadline - time.monotonic()
             if left <= 0:
                 return reports
-            report = bytes(self.device.read(REPORT_SIZE, max(1, int(left * 1000))))
+            report = self._read(max(1, int(left * 1000)))
             if report:
                 reports.append(report)
 
@@ -599,7 +639,7 @@ class HostLightingDevice:
                 break
             # a read that blocks until a report or the timeout: no polling sleep, which is ~16 ms on Windows
             # before Python 3.11
-            report = bytes(self.device.read(REPORT_SIZE, max(1, int(left * 1000))))
+            report = self._read(max(1, int(left * 1000)))
             if not report:
                 continue
             if not match_reply(report, command, sequence):
@@ -609,7 +649,7 @@ class HostLightingDevice:
                 return report
             # otherwise another application's reply with this request's numbers: dropped
         self.awaited.discard((command, sequence))
-        raise HostLightingError(f"no reply to command 0x{command:02X} within {timeout}s")
+        raise HostLightingTimeout(f"no reply to command 0x{command:02X} within {timeout}s")
 
     def _await(self, command: int, sequence: int, flags: int) -> None:
         """Note a request that will be answered; no report kept for an earlier one with its numbers answers it."""
@@ -630,7 +670,7 @@ class HostLightingDevice:
         None of them is the reply to a request not yet sent.
         """
         while True:
-            report = bytes(self.device.read(REPORT_SIZE, 0))
+            report = self._read(0)
             if not report:
                 return
             self._keep(report)
@@ -851,7 +891,7 @@ class HostLightingDevice:
             left = deadline - time.monotonic()
             if left <= 0:
                 return None
-            report = bytes(self.device.read(REPORT_SIZE, max(1, int(left * 1000))))
+            report = self._read(max(1, int(left * 1000)))
             if not report:
                 continue
             if is_event(report):

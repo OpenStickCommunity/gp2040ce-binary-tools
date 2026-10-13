@@ -229,8 +229,23 @@ def test_input_mode_notes_detection(hlp_run_on_fake_board, hlp_fake_board, capsy
 def test_tool_errors_are_one_line(hlp_run_on_fake_board, hlp_fake_board):
     """Test that a board vanishing mid-command ends a tool with a message, not a traceback."""
     hlp_fake_board.disconnect_on.add(hl.CMD_GET_PAGE)
-    with pytest.raises(SystemExit, match='error: device disconnected'):
+    with pytest.raises(SystemExit, match='error: the board is no longer connected'):
         hlp_run_on_fake_board(tools.caps)
+
+
+def test_stream_stops_when_the_board_has_gone(hlp_run_on_model_board, hlp_model_board, monkeypatch):
+    """Test that hlp-stream ends when the board leaves the bus, where it used to send every frame unanswered."""
+    staged = []
+
+    def depart(self, addressing, first, colours, pixel_format=hl.PIXEL_RGB, commit=False):
+        staged.append(first)
+        hlp_model_board.departed = True
+        self.send(hl.CMD_STAGE, b'')
+
+    monkeypatch.setattr(hl.HostLightingDevice, 'stage_run', depart)
+    with pytest.raises(SystemExit, match='error: the board is no longer connected'):
+        hlp_run_on_model_board(tools.stream, '--seconds', '1')
+    assert len(staged) == 1
 
 
 def test_enum_names_from_the_proto_files(monkeypatch):

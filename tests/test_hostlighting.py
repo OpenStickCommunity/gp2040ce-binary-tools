@@ -339,6 +339,44 @@ def test_fill_and_configure(hlp_fake_device, hlp_fake_board):
         'overlay': True, 'keepalive_ms': 300, 'brightness_applied': False}
 
 
+def test_a_late_reply_is_a_timeout(hlp_fake_device, hlp_fake_board):
+    """Test that no reply in time raises HostLightingTimeout, which is a HostLightingError."""
+    sequence = hlp_fake_device.send(hl.CMD_HELLO)
+    hlp_fake_board.outbox.clear()
+    with pytest.raises(hl.HostLightingTimeout, match='no reply to command 0x01'):
+        hlp_fake_device.wait_reply(hl.CMD_HELLO, sequence, timeout=0.01)
+    assert issubclass(hl.HostLightingTimeout, hl.HostLightingError)
+    assert not issubclass(hl.HostLightingTimeout, hl.HostLightingDisconnected)
+
+
+def test_a_failed_write_is_a_departed_board(hlp_fake_device, hlp_fake_board):
+    """Test that a write hidapi reports as failed raises at once and leaves no request awaited."""
+    hlp_fake_board.departed = True
+    with pytest.raises(hl.HostLightingDisconnected):
+        hlp_fake_device.send(hl.CMD_HELLO)
+    assert not hlp_fake_device.awaited and not hlp_fake_board.requests
+    assert issubclass(hl.HostLightingDisconnected, hl.HostLightingError)
+
+
+def test_a_failed_read_is_a_departed_board(hlp_fake_device, hlp_fake_board):
+    """Test that a read error raises HostLightingDisconnected from every call that reads."""
+    sequence = hlp_fake_device.send(hl.CMD_HELLO)
+    hlp_fake_board.departed = True
+    with pytest.raises(hl.HostLightingDisconnected) as raised:
+        hlp_fake_device.wait_reply(hl.CMD_HELLO, sequence)
+    assert isinstance(raised.value.__cause__, OSError)
+    with pytest.raises(hl.HostLightingDisconnected):
+        hlp_fake_device.collect(0.01)
+    with pytest.raises(hl.HostLightingDisconnected):
+        hlp_fake_device.next_event(0.01)
+
+
+def test_send_reboot_tolerates_a_departed_board(hlp_fake_device, hlp_fake_board):
+    """Test that a board already gone still means the reboot is under way."""
+    hlp_fake_board.departed = True
+    assert not hl.send_reboot(hlp_fake_device, hl.CMD_REBOOT, bytes([hl.REBOOT_BOOTSEL]) + hl.MAGIC_REBOOT)
+
+
 def test_send_reboot_tolerates_the_board_leaving(hlp_fake_device, hlp_fake_board):
     """Test that a vanished board means the reboot is under way, and a rejection still raises."""
     payload = bytes([hl.REBOOT_BOOTSEL]) + hl.MAGIC_REBOOT

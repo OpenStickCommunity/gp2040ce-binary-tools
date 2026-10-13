@@ -31,9 +31,9 @@ from gp2040ce_bintools.hostlighting import (ADDRESS_RANGES, ADDRESSING_ACTION, A
                                             KIND_CASE, KIND_PLAYERS, MAGIC_INPUT_MODE, MAGIC_REBOOT, PAGE_ANIMATIONS,
                                             PAGE_CONTROLS, PAGE_INPUT_MODES, PAGE_LIGHTS, PAGE_PROFILES, PAGE_STATE,
                                             PAGE_SUMMARY, PIXEL_RGB, PIXEL_RGBW, REBOOT_BOOTSEL, REBOOT_WEBCONFIG,
-                                            SPEED_UNCHANGED, HostLightingDevice, HostLightingError,
-                                            HostLightingRejected, decode_state_changed, key_name, open_device,
-                                            send_reboot, stage_capacity)
+                                            SPEED_UNCHANGED, HostLightingDevice, HostLightingDisconnected,
+                                            HostLightingError, HostLightingRejected, decode_state_changed, key_name,
+                                            open_device, send_reboot, stage_capacity)
 
 logger = logging.getLogger(__name__)
 
@@ -692,6 +692,8 @@ def _rainbow(claim: LightsClaim, leds: int, seconds: float) -> bool:
         try:
             claim.device.stage_run(ADDRESSING_LED_RUN, 0, colours, commit=True)
             acknowledged += 1
+        except HostLightingDisconnected:
+            raise
         except HostLightingError as error:
             failure = failure or error
         if time.monotonic() - renewed >= 1.0:

@@ -31,9 +31,10 @@ from gp2040ce_bintools.hostlighting import (ACTION_NONE, ADDRESSING_ACTION, ADDR
                                             PAGE_RANGES, PAGE_STATE, PAGE_SUMMARY, PIXEL_RGB, PIXEL_RGB565, PIXEL_RGBW,
                                             PIXEL_SIZES, PROTOCOL_MAJOR, RECORDS_AREA, RECORDS_OFFSET, REPLY_FLAG,
                                             STATUS_CLAIMED, STATUS_INVALID, STATUS_OK, STATUS_STALE, STATUS_UNSUPPORTED,
-                                            HostLightingDevice, HostLightingError, HostLightingRejected,
-                                            decode_controller, decode_key, decode_page_header, decode_records,
-                                            decode_state_changed, is_event, key_name, open_device, stage_capacity)
+                                            HostLightingDevice, HostLightingDisconnected, HostLightingError,
+                                            HostLightingRejected, decode_controller, decode_key, decode_page_header,
+                                            decode_records, decode_state_changed, is_event, key_name, open_device,
+                                            stage_capacity)
 from gp2040ce_bintools.hostlighting_tools import (LightsClaim, add_claim_arguments, device_parser, hlp_command,
                                                   holding_lights, ranged)
 
@@ -243,6 +244,8 @@ def _answered(device: HostLightingDevice, command: int, sequence: int, timeout: 
     try:
         device.wait_reply(command, sequence, timeout)
         return True
+    except HostLightingDisconnected:
+        raise
     except HostLightingError:
         return False
 
@@ -1148,6 +1151,8 @@ def _round_trips(device: HostLightingDevice, count: int) -> list:
             if refused.status == STATUS_CLAIMED and refused.holder and refused.holder[0]:
                 raise _TakenOver(f"'{refused.holder[1]}' took the lights over") from None
             continue
+        except HostLightingDisconnected:
+            raise
         except HostLightingError:
             continue
         trips.append((time.perf_counter() - start) * 1000)
@@ -1170,6 +1175,8 @@ def _frame(device: HostLightingDevice, leds: int, index: int, pipelined: bool) -
             payload = bytes([ADDRESSING_LED_RUN]) + struct.pack('<HB', first, count) + bytes(colours[0]) * count
             device.request_ok(CMD_STAGE, payload, FLAG_COMMIT_AFTER if first + count >= leds else 0)
         return True
+    except HostLightingDisconnected:
+        raise
     except HostLightingError:
         return False
 

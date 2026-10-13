@@ -152,6 +152,7 @@ class FakeBoard:
         self.stale_once_at = None       # a GET_PAGE start at which the token changes once
         # commands, or (command, [3]) pairs, at which the board drops off the bus
         self.disconnect_on: set = set()
+        self.departed = False           # the board has left the bus: a write fails and a read raises
         self.holder = 0
         self.holder_name = bytes(16)
         self.holder_flags = 0
@@ -165,6 +166,8 @@ class FakeBoard:
     def write(self, data: bytes) -> int:
         """Take one report as hidapi writes it (report ID 0 first) and queue the reply."""
         assert len(data) == hl.REPORT_SIZE + 1 and data[0] == 0, 'report ID 0 then 64 bytes'
+        if self.departed:
+            return -1                   # as hidapi reports a write the device did not take
         request = bytes(data[1:])
         self.requests.append(request)
         command, sequence, flags = request[0], request[1], request[2]
@@ -349,6 +352,8 @@ class FakeBoard:
 
     def read(self, size: int, timeout_ms: int = 0) -> list:
         """Give hidapi's next input report, or nothing."""
+        if self.departed:
+            raise OSError("read error")
         return list(self.outbox.pop(0)) if self.outbox else []
 
     def close(self) -> None:
@@ -435,8 +440,11 @@ class ModelBoard(FakeBoard):
                 hl.CMD_REBOOT}
 
     def __init__(self):
-        """Set up a small, self-consistent board: three controls (one lit; a Hall-effect trigger shares the lit
-        control's action), a button light and a case strip."""
+        """Set up a small, self-consistent board.
+
+        It has three controls, one lit, with a Hall-effect trigger that shares the lit control's action, a button
+        light and a case strip.
+        """
         super().__init__()
         self.controls = [control_record(2, 1, dup=1, instances=2, rect=(1, 0, 1, 0), first_led=0, first_light=0,
                                         count=1),
@@ -474,6 +482,8 @@ class ModelBoard(FakeBoard):
     def write(self, data: bytes) -> int:
         """Take one report, answer it and apply its flags when it succeeds."""
         assert len(data) == hl.REPORT_SIZE + 1 and data[0] == 0, 'report ID 0 then 64 bytes'
+        if self.departed:
+            return -1                   # as hidapi reports a write the device did not take
         request = bytes(data[1:])
         self.requests.append(request)
         command, sequence, flags = request[0], request[1], request[2]
@@ -506,6 +516,8 @@ class ModelBoard(FakeBoard):
 
     def read(self, size: int, timeout_ms: int = 0) -> list:
         """Give the next reply, else a pending event, else wait the timeout (none for a non-blocking read)."""
+        if self.departed:
+            raise OSError("read error")
         self._tick()
         if self.outbox:
             return list(self.outbox.pop(0))

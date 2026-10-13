@@ -445,7 +445,7 @@ def test_conformance_counts_a_lost_board_as_a_failure(hlp_run_on_model_board, hl
     with pytest.raises(SystemExit) as exited:
         hlp_run_on_model_board(conformance.conformance, '--quick')
     out = capsys.readouterr().out
-    assert exited.value.code == 1 and 'FAIL  the checks ran to the end  (device disconnected)' in out
+    assert exited.value.code == 1 and 'FAIL  the checks ran to the end  (the board is no longer connected)' in out
     assert 'could not hand the lights back' not in caplog.text and hlp_model_board.holder == 0
     assert hlp_model_board.requests[-1][0] == hl.CMD_CLAIM and hlp_model_board.requests[-1][3] == hl.CLAIM_GIVE_UP
 
