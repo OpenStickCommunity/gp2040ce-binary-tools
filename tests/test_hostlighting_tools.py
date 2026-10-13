@@ -6,7 +6,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 import struct
 
 import pytest
-from hostlighting_fakes import other_event, state_event, state_record, summary_record
+from hostlighting_fakes import control_record, light_record, other_event, state_event, state_record, summary_record
 
 from gp2040ce_bintools import hostlighting as hl
 from gp2040ce_bintools import hostlighting_tools as tools
@@ -373,18 +373,39 @@ def test_stream_frame_size(hlp_run_on_model_board, hlp_model_board, capsys):
 
 
 def test_buttons_runs_three_phases(hlp_run_on_model_board, hlp_model_board, capsys):
-    """Test hlp-buttons: lit actions, a light run, then B1-B4 in overlay; giving up restores whole-frame."""
+    """Test hlp-buttons: lit actions, a light run, then the overlay; giving up restores whole-frame."""
     hlp_run_on_model_board(tools.buttons, '--seconds', '1')
     out = capsys.readouterr().out
     assert 'phase 1: 1 of 1 lit actions, one hue each' in out
     assert 'phase 2: 2 lights, one hue each' in out
-    assert 'phase 3: overlay, B1-B4 white over the animations (0 applied)' in out and 'released' in out
+    assert 'phase 3: overlay, the board lights none of B1-B4, L1, R1, L2 and R2' in out and 'released' in out
     overlays = [configure[3] for configure in hlp_model_board.sent(hl.CMD_CONFIGURE)]
     assert overlays == [0, 1] and hlp_model_board.overlay == 0
     stages = hlp_model_board.sent(hl.CMD_STAGE)
     assert stages[1][3:7] == bytes([hl.ADDRESSING_LIGHT_RUN, 0, 0, 2])
-    assert stages[2][3:5] == bytes([hl.ADDRESSING_ACTION, 4])
+    assert len(stages) == 2                                    # the model board lights none of those buttons
     assert hlp_model_board.holder == 0 and not hlp_model_board.live
+
+
+def test_buttons_overlay_takes_the_buttons_the_board_lights(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test that hlp-buttons' third phase stages the lit buttons among B1-B4, L1, R1, L2 and R2, and no others."""
+    hlp_model_board.controls[0] = control_record(2, 5, rect=(1, 0, 1, 0), first_led=0, first_light=0, count=1)
+    hlp_model_board.controls[1] = control_record(12, 9, rect=(0, 1, 0, 1), first_led=1, first_light=1, count=1)
+    hlp_model_board.lights[0] = light_record(0, pin=2, action=5, instance=1, instances=1, x=1, y=0)
+    hlp_run_on_model_board(tools.buttons, '--seconds', '1')
+    assert 'phase 3: overlay, B1 L1 white over the animations (1 applied)' in capsys.readouterr().out
+    stages = hlp_model_board.sent(hl.CMD_STAGE)
+    assert stages[2][3:5] == bytes([hl.ADDRESSING_ACTION, 2])
+    assert stages[2][5:7] == bytes([5, 0]) and stages[2][10:12] == bytes([9, 0])
+
+
+def test_overlay_buttons_follow_the_proto_names_when_given():
+    """Test that a button's action comes from the .proto names when present, and from enums.proto's value if not."""
+    controls = [{'action': 40, 'lit': True}, {'action': 6, 'lit': True}, {'action': 7, 'lit': False},
+                {'action': 1, 'lit': True}]
+    assert tools.overlay_buttons(controls, {}) == [('B2', 6)]
+    names = {'GpioAction': {40: 'BUTTON_PRESS_B1', 6: 'BUTTON_PRESS_B2', 7: 'BUTTON_PRESS_B3'}}
+    assert tools.overlay_buttons(controls, names) == [('B1', 40), ('B2', 6)]
 
 
 @pytest.mark.parametrize('command', ['stream', 'buttons'])

@@ -161,7 +161,8 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="24c6", ATTRS{idProduct}=="5bad", TAG+="uacc
   answered. `--leds` sets the frame size (default: the LED extent). `--timeout-test` then goes silent and
   times how long the board keeps the frame, which is the keepalive timeout.
 * `hlp-buttons` gives every lit control its own hue (staged by action), then every light its own hue (one
-  light run), then B1-B4 white over the running animations (overlay takeover).
+  light run), then the buttons the board lights among B1-B4, L1, R1, L2 and R2 white over the running
+  animations (overlay takeover).
 * `hlp-settings` shows the input profile, animation, animation speeds and brightness with the values each
   accepts, and changes them (`--profile`, `--animation N|off`, `--speed ORDINAL --idle/--pressed/--case`,
   `--brightness`). `--profile` switches the live button mapping. Each differing value is written to the

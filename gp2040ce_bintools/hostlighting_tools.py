@@ -714,16 +714,32 @@ def _time_expiry(device: HostLightingDevice) -> None:
     print(f"takeover ended after {time.monotonic() - start:.2f} s")
 
 
-# the GpioAction values of B1-B4 (BUTTON_PRESS_B1 to BUTTON_PRESS_B4 in GP2040-CE's enums.proto)
-B1_TO_B4 = (5, 6, 7, 8)
+# The buttons hlp-buttons lights in its third phase, as GpioAction names of GP2040-CE's enums.proto. Each value is
+# used when the .proto files were not given.
+OVERLAY_BUTTONS = (('BUTTON_PRESS_B1', 5), ('BUTTON_PRESS_B2', 6), ('BUTTON_PRESS_B3', 7), ('BUTTON_PRESS_B4', 8),
+                   ('BUTTON_PRESS_L1', 9), ('BUTTON_PRESS_R1', 10), ('BUTTON_PRESS_L2', 11), ('BUTTON_PRESS_R2', 12))
+
+
+def overlay_buttons(controls: list, names: dict) -> list:
+    """Pick the buttons of OVERLAY_BUTTONS that the board lights.
+
+    :param controls: the page 10 records
+    :param names: enum_names(); its GpioAction names give the values when present
+    :return: [(label, action)] in the order of OVERLAY_BUTTONS, for the controls the board reports as lit
+    """
+    values = {name: value for value, name in names.get('GpioAction', {}).items()}
+    lit = {control['action'] for control in controls if control['lit']}
+    return [(name[len('BUTTON_PRESS_'):], values.get(name, fallback)) for name, fallback in OVERLAY_BUTTONS
+            if values.get(name, fallback) in lit]
 
 
 @hlp_command
 def buttons():
-    """Colour every lit control and every light with its own hue, then B1-B4 over the animations."""
+    """Colour every lit control and every light with its own hue, then the lit buttons over the animations."""
     parser = device_parser("Take a GP2040-CE board's lights over: every lit control its own hue (staged by "
-                           "action), then every light its own hue (one light run), then B1-B4 white over the "
-                           "running animations (overlay takeover), then hand the lights back.")
+                           "action), then every light its own hue (one light run), then the lit buttons among "
+                           "B1-B4, L1, R1, L2 and R2 white over the running animations (overlay takeover), then "
+                           "hand the lights back.")
     parser.add_argument('--seconds', type=float, default=5.0, help="how long each phase holds (default: 5)")
     add_claim_arguments(parser)
     args, _ = parser.parse_known_args()
@@ -732,12 +748,12 @@ def buttons():
         controls, _ = device.read_table(PAGE_CONTROLS)
         lights, _ = device.read_table(PAGE_LIGHTS)
         with holding_lights(device, 'hlp-buttons', args.force, args.exclusive) as claim:
-            _buttons(claim, controls, lights, args.seconds)
+            _buttons(claim, controls, lights, args.seconds, overlay_buttons(controls, enum_names()))
     finally:
         device.close()
 
 
-def _buttons(claim: LightsClaim, controls: list, lights: list, seconds: float) -> None:
+def _buttons(claim: LightsClaim, controls: list, lights: list, seconds: float, overlay: list) -> None:
     """Run hlp-buttons' three phases, stopping if another application takes the lights over.
 
     The hand-back restores the CONFIGURE defaults, whole-frame takeover included.
@@ -758,8 +774,13 @@ def _buttons(claim: LightsClaim, controls: list, lights: list, seconds: float) -
             return
     device.request_ok(CMD_CLEAR)
     claim.configure(overlay=True, keepalive_ms=2000, brightness=True)
-    outcomes = device.stage_entries(ADDRESSING_ACTION, [(action, (255, 255, 255)) for action in B1_TO_B4], commit=True)
-    print(f"phase 3: overlay, B1-B4 white over the animations ({sum(outcome[0] for outcome in outcomes)} applied)")
+    if overlay:
+        outcomes = device.stage_entries(ADDRESSING_ACTION, [(action, (255, 255, 255)) for _, action in overlay],
+                                        commit=True)
+        print(f"phase 3: overlay, {' '.join(label for label, _ in overlay)} white over the animations "
+              f"({sum(outcome[0] for outcome in outcomes)} applied)")
+    else:
+        print("phase 3: overlay, the board lights none of B1-B4, L1, R1, L2 and R2")
     claim.keep(seconds)
 
 
