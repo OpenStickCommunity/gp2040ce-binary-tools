@@ -309,12 +309,27 @@ def test_conformance_reports_an_unlit_control_with_a_position(hlp_run_on_model_b
     assert 'control GP12: unlit, but its position group is not FFFF 0000 0000' in out
 
 
-def test_conformance_reports_a_lit_addon_control(hlp_run_on_model_board, hlp_model_board, capsys):
-    """Test that a Hall-effect or expander control, which no light follows, must not be flagged lit."""
-    hlp_model_board.controls[2] = control_record(hl.KEY_TRIGGER, 1, dup=1, instance=2, instances=2, count=0)
+def test_conformance_reports_a_lit_expander_control(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test that an expander control, which no light follows, must not be flagged lit."""
+    hlp_model_board.controls[2] = control_record(hl.KEY_EXPANDER, 1, dup=1, instance=2, instances=2, count=0)
     with pytest.raises(SystemExit):
         hlp_run_on_model_board(conformance.conformance, '--quick')
-    assert 'FAIL  add-on controls (Hall-effect, expander) unlit' in capsys.readouterr().out
+    assert 'FAIL  only GPIO and Hall-effect controls are lit' in capsys.readouterr().out
+
+
+def test_conformance_accepts_a_light_on_a_hall_effect_trigger(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test that a Hall-effect trigger can own a light: its control is lit and STAGE by its key reaches it."""
+    hlp_model_board.controls[2] = control_record(hl.KEY_TRIGGER, 1, dup=1, instance=2, instances=2,
+                                                 rect=(0, 1, 0, 1), first_led=1, first_light=1, count=1)
+    hlp_model_board.lights[1] = light_record(1, 3, pin=hl.KEY_TRIGGER, action=1, dup=1, instance=2, instances=2,
+                                             x=0, y=1)
+    hlp_model_board.summary = summary_record(extent=4, width=2, height=2, profiles=1, controls=3, lit=2, unlit=1,
+                                             lights=2, animations=1)
+    hlp_run_on_model_board(conformance.conformance, '--quick')
+    out = capsys.readouterr().out
+    assert 'FAIL' not in out
+    assert 'PASS  Lights owner pins are GPIO pins or Hall-effect triggers' in out
+    assert 'PASS  add-on keys that own no light match no light' in out
 
 
 def test_conformance_reports_controls_out_of_key_order(hlp_run_on_model_board, hlp_model_board, capsys):
@@ -354,11 +369,11 @@ def test_conformance_reports_a_key_listed_twice(hlp_run_on_model_board, hlp_mode
 
 def test_conformance_reports_a_light_owned_by_a_key_past_the_gpio_pins(hlp_run_on_model_board, hlp_model_board,
                                                                        capsys):
-    """Test that a light's owner pin must be a GPIO pin: only GPIO pins drive lights."""
+    """Test that a light's owner must be a GPIO pin or a Hall-effect trigger: no other input drives lights."""
     hlp_model_board.lights[1] = light_record(1, 3, pin=0x40, action=13, x=0, y=1)
     with pytest.raises(SystemExit):
         hlp_run_on_model_board(conformance.conformance, '--quick')
-    assert 'FAIL  Lights owner pins are GPIO pins  (0x40)' in capsys.readouterr().out
+    assert 'FAIL  Lights owner pins are GPIO pins or Hall-effect triggers  (0x40)' in capsys.readouterr().out
 
 
 def test_conformance_reports_a_lit_control_no_light_owns(hlp_run_on_model_board, hlp_model_board, capsys):
@@ -369,14 +384,15 @@ def test_conformance_reports_a_lit_control_no_light_owns(hlp_run_on_model_board,
     assert 'FAIL  lit control keys = the Lights owner pins that are controls' in capsys.readouterr().out
 
 
-def test_conformance_reports_a_light_on_an_addon_key(hlp_run_on_model_board, hlp_model_board, capsys):
-    """Test that STAGE by an add-on key must skip: no light is tied to a Hall-effect trigger or expander pin."""
-    hlp_model_board.lights[1] = light_record(1, 3, pin=hl.KEY_TRIGGER, action=1, x=0, y=1)
+def test_conformance_reports_a_light_on_an_expander_key(hlp_run_on_model_board, hlp_model_board, capsys):
+    """Test that an expander pin must own no light: the owner is refused and STAGE by its key must skip."""
+    hlp_model_board.lights[1] = light_record(1, 3, pin=hl.KEY_EXPANDER, action=1, x=0, y=1)
     with pytest.raises(SystemExit):
         hlp_run_on_model_board(conformance.conformance, '--quick')
     out = capsys.readouterr().out
-    assert 'FAIL  add-on keys (Hall-effect, expander) match no light' in out
-    assert 'FAIL  UNSTAGE: add-on keys match no light' in out
+    assert 'FAIL  Lights owner pins are GPIO pins or Hall-effect triggers  (0xC0)' in out
+    assert 'FAIL  add-on keys that own no light match no light' in out
+    assert 'FAIL  UNSTAGE: add-on keys that own no light match no light' in out
 
 
 def test_conformance_probes_the_guard_with_the_current_input_mode(hlp_run_on_model_board, hlp_model_board, capsys):

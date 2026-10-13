@@ -449,8 +449,8 @@ def _check_controls(checks: Checks, controls: list, lights: list, unlit_position
     later = [key_name(key) for key in keys if decode_key(key)[0] == 'unknown' and key != NONE_8]
     if later:
         checks.note(f"keys beyond 2.0: {', '.join(later)}")
-    checks.check(not any(control['lit'] for control in controls if control['source'] != 'gpio'),
-                 'add-on controls (Hall-effect, expander) unlit')
+    checks.check(not any(control['lit'] for control in controls if control['source'] not in ('gpio', 'hall_effect')),
+                 'only GPIO and Hall-effect controls are lit')
     owners = {light['owner_pin'] for light in lights} & set(keys)
     checks.check({control['key'] for control in controls if control['lit']} == owners,
                  'lit control keys = the Lights owner pins that are controls')
@@ -473,8 +473,9 @@ def _check_lights(checks: Checks, controls: list, lights: list) -> None:
             checks.note(f"light {ordinal}: {got} vs {expected}")
     checks.check(not wrong, 'Lights owner action, flag and instances agree with Controls')
     owners = sorted({light['owner_pin'] for light in lights if light['owner_pin'] is not None
-                     and decode_key(light['owner_pin'])[0] != 'gpio'})
-    checks.check(not owners, 'Lights owner pins are GPIO pins', ', '.join(f"0x{pin:02X}" for pin in owners))
+                     and decode_key(light['owner_pin'])[0] not in ('gpio', 'hall_effect')})
+    checks.check(not owners, 'Lights owner pins are GPIO pins or Hall-effect triggers',
+                 ', '.join(f"0x{pin:02X}" for pin in owners))
 
 
 def _check_subscribe(device: HostLightingDevice, checks: Checks, events: set) -> None:
@@ -850,10 +851,14 @@ def _check_entries(device: HostLightingDevice, checks: Checks, controls: list, l
     checks.check((reply[3], reply[4]) == (0, 2), 'action 0x8000 and an absent action are skipped')
     reply = device.request(CMD_STAGE, bytes([ADDRESSING_PIN, 1, 0xFF, 1, 1, 1]))
     checks.check(reply[3] == 0, 'pin 0xFF matches no light')
-    reply = device.request(CMD_STAGE, bytes([ADDRESSING_PIN, 2, KEY_TRIGGER, 1, 1, 1, KEY_EXPANDER, 1, 1, 1]))
-    checks.check((reply[3], reply[4]) == (0, 2), 'add-on keys (Hall-effect, expander) match no light')
-    reply = device.request(CMD_UNSTAGE, bytes([ADDRESSING_PIN, 2, KEY_TRIGGER, KEY_EXPANDER]))
-    checks.check((reply[3], reply[4]) == (0, 2), 'UNSTAGE: add-on keys match no light')
+    # A Hall-effect trigger can own a light, so take a trigger key that no light carries
+    owned = {light['owner_pin'] for light in lights}
+    unowned = [key for key in range(KEY_TRIGGER, KEY_EXPANDER) if key not in owned][:1] + [KEY_EXPANDER]
+    body = b''.join(bytes([key, 1, 1, 1]) for key in unowned)
+    reply = device.request(CMD_STAGE, bytes([ADDRESSING_PIN, len(unowned)]) + body)
+    checks.check((reply[3], reply[4]) == (0, len(unowned)), 'add-on keys that own no light match no light')
+    reply = device.request(CMD_UNSTAGE, bytes([ADDRESSING_PIN, len(unowned)] + unowned))
+    checks.check((reply[3], reply[4]) == (0, len(unowned)), 'UNSTAGE: add-on keys that own no light match no light')
     pins = sorted({control['key'] for control in controls if control['lit']}
                   & {light['owner_pin'] for light in reached})
     pins = pins[:stage_capacity(ADDRESSING_PIN, PIXEL_RGB)]

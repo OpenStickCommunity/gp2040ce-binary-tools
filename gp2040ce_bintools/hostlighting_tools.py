@@ -402,7 +402,7 @@ def _print_lights(device: HostLightingDevice, names: dict) -> None:
             pieces.append(f"x{light['led_count']}")
         pieces.append('kind ' + _named(light['kind'], names, 'LightType'))
         if light['owner_pin'] is not None:
-            owner = f"GP{light['owner_pin']}"
+            owner = key_name(light['owner_pin'])
             if light['owner_action'] is not None:
                 owner += ' action ' + _named(light['owner_action'], names, 'GpioAction')
             if light['owner_instances'] > 1:
