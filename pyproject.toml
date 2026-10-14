@@ -11,7 +11,7 @@ authors = [
     {name = "Brian S. Stephan", email = "bss@incorporeal.org"},
 ]
 requires-python = ">=3.9"
-dependencies = ["grpcio-tools", "pyusb", "textual"]
+dependencies = ["grpcio-tools", "hidapi", "pyusb", "textual"]
 dynamic = ["version"]
 classifiers = [
     "Environment :: Console",
@@ -38,6 +38,19 @@ concatenate = "gp2040ce_bintools.builder:concatenate"
 dump-config = "gp2040ce_bintools.storage:dump_config"
 dump-gp2040ce = "gp2040ce_bintools.builder:dump_gp2040ce"
 edit-config = "gp2040ce_bintools.gui:edit_config"
+hlp-bench = "gp2040ce_bintools.hostlighting_conformance:bench"
+hlp-buttons = "gp2040ce_bintools.hostlighting_tools:buttons"
+hlp-caps = "gp2040ce_bintools.hostlighting_tools:caps"
+hlp-conformance = "gp2040ce_bintools.hostlighting_conformance:conformance"
+hlp-fill = "gp2040ce_bintools.hostlighting_tools:fill"
+hlp-input-mode = "gp2040ce_bintools.hostlighting_tools:input_mode"
+hlp-ping = "gp2040ce_bintools.hostlighting_tools:ping"
+hlp-reboot-bootsel = "gp2040ce_bintools.hostlighting_tools:reboot_bootsel"
+hlp-reboot-webconfig = "gp2040ce_bintools.hostlighting_tools:reboot_webconfig"
+hlp-set-light = "gp2040ce_bintools.hostlighting_tools:set_light"
+hlp-settings = "gp2040ce_bintools.hostlighting_tools:settings"
+hlp-stream = "gp2040ce_bintools.hostlighting_tools:stream"
+hlp-watch = "gp2040ce_bintools.hostlighting_tools:watch"
 summarize-gp2040ce = "gp2040ce_bintools.builder:summarize_gp2040ce"
 visualize-config = "gp2040ce_bintools.storage:visualize"
 
